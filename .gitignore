@@ -1,0 +1,8 @@
+# --- SECRETS & CONFIG ---
+# Fichiers contenant les mots de passe de la DB et les tokens
+.env
+.env.local
+
+# --- LOGS ---
+# Historique des erreurs des conteneurs
+*.log
