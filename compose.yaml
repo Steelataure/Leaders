@@ -14,5 +14,20 @@ services:
       # Ce volume permet de ne pas perdre tes données si tu supprimes le conteneur
       - postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leaders_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/leaders_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: password123
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - database
 volumes:
   postgres_data:
