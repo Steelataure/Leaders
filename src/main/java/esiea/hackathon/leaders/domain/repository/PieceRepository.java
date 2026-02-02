@@ -1,4 +1,4 @@
-package esiea.hackathon.leaders.adapter.out.persistence;
+package esiea.hackathon.leaders.domain.repository;
 
 import esiea.hackathon.leaders.domain.model.Piece;
 import org.springframework.data.jpa.repository.JpaRepository;

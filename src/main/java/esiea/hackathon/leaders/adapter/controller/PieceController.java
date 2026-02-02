@@ -1,11 +1,11 @@
-package esiea.hackathon.leaders.adapter.in.web;
+package esiea.hackathon.leaders.adapter.controller;
 
-import esiea.hackathon.leaders.application.service.MovementService;
 import esiea.hackathon.leaders.domain.model.Piece;
-import esiea.hackathon.leaders.adapter.out.persistence.PieceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import esiea.hackathon.leaders.domain.repository.PieceRepository;
+import esiea.hackathon.leaders.application.services.MovementService;
 
 import java.util.List;
 import java.util.UUID;

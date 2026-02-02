@@ -1,7 +1,7 @@
-package esiea.hackathon.leaders.application.service;
+package esiea.hackathon.leaders.application.services;
 
 import esiea.hackathon.leaders.domain.model.Piece;
-import esiea.hackathon.leaders.adapter.out.persistence.PieceRepository;
+import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
