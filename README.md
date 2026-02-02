@@ -1,6 +1,10 @@
 # Hackathon-ZeFallK
 
+## Lancer la base de données
 
+```bash
+docker exec -it leaders_db psql -U admin -d leaders_db
+```
 
 ## Getting started
 
