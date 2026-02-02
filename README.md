@@ -1,7 +1,12 @@
 # Hackathon-ZeFallK
 
 ## Lancer la base de données
+Il faut d'abord lancer les conteneurs avec la commande 
 
+```bash
+docker compose up -d 
+```
+Il faut bien evidemment docker installé, ensuite pour lancer les bdd:
 ```bash
 docker exec -it leaders_db psql -U admin -d leaders_db
 ```
