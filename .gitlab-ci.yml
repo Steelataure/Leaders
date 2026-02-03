@@ -26,7 +26,7 @@ test_frontend:
   stage: test
   image: node:18
   script:
-    - echo "🎨 Vérification du Frontend..."
+    - echo "Vérification du Frontend..."
     - cd frontend
     - npm install
     - npm run build
