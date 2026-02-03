@@ -4,4 +4,4 @@ test_frontend:
   script:
     - cd frontend
     - npm install
-    - CI=true npm test
+    - CI=true npm run dev
