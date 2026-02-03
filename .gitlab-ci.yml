@@ -1,0 +1,7 @@
+image: node:20
+
+test_frontend:
+  script:
+    - cd frontend
+    - npm install
+    - CI=true npm test
