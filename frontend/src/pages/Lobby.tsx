@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { authService } from "../services/auth.service";
+import type { User } from "../types/auth.types";
 
 // --- ANIMATIONS CSS (à garder dans le fichier ou index.css) ---
 const styles = `
@@ -24,25 +25,41 @@ export default function Lobby({
   const [code, setCode] = useState(["", "", "", "", "", ""]);
 
   // Login State
+  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const currentUser = authService.getUser();
+    setUser(currentUser);
+  }, []);
+
   const handleLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await authService.login({ email, password });
+      const response = await authService.login({ email, password });
+      if (response.user) {
+        setUser(response.user);
+      } else {
+        // Fallback/Mock si l'API ne renvoie pas l'user complet
+        setUser({ username: "Joueur", id: "0", email, roles: [] });
+      }
       setLoginOpen(false);
-      // Optionnel : Notifier le succès ou recharger l'état user
-      alert("Connexion réussie !");
     } catch (err) {
       setError("Échec de la connexion. Vérifiez vos identifiants.");
       console.error(err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+    setDropdownOpen(false);
   };
 
   // Gestion de l'input segmenté pour le code
@@ -80,7 +97,9 @@ export default function Lobby({
           onClick={() => setDropdownOpen(!dropdownOpen)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-blue-400 rounded-lg transition-all backdrop-blur-md"
         >
-          <span className="text-sm font-bold uppercase tracking-wider">Connexion</span>
+          <span className="text-sm font-bold uppercase tracking-wider">
+            {user ? user.username : "CONNEXION"}
+          </span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -100,15 +119,24 @@ export default function Lobby({
         {dropdownOpen && (
           <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-blue-500/30 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="py-1">
-              <button
-                onClick={() => {
-                  setLoginOpen(true);
-                  setDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
-              >
-                Se connecter
-              </button>
+              {!user ? (
+                <button
+                  onClick={() => {
+                    setLoginOpen(true);
+                    setDropdownOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
+                >
+                  Se connecter
+                </button>
+              ) : (
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 transition-colors border-b border-white/5"
+                >
+                  Déconnexion
+                </button>
+              )}
               <button
                 className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
                 onClick={() => console.log("Settings placeholder")}
