@@ -60,6 +60,9 @@ public class MovementService {
      */
     @Transactional
     public PieceEntity movePiece(UUID pieceId, short toQ, short toR) {
+        if (!isValidHexCoord(toQ, toR)) {
+            throw new IllegalArgumentException("Invalid hex coordinates");
+        }
         // 1. Récupère la pièce
         PieceEntity pieceEntity = pieceRepository.findById(pieceId)
             .orElseThrow(() -> new IllegalArgumentException("Piece not found: " + pieceId));

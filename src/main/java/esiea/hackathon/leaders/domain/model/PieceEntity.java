@@ -1,14 +1,10 @@
 package esiea.hackathon.leaders.domain.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class PieceEntity {
 
     private UUID id;
