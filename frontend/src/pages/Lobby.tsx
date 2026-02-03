@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authService } from "../services/auth.service";
 
 // --- ANIMATIONS CSS (à garder dans le fichier ou index.css) ---
 const styles = `
@@ -21,6 +22,28 @@ export default function Lobby({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+
+  // Login State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await authService.login({ email, password });
+      setLoginOpen(false);
+      // Optionnel : Notifier le succès ou recharger l'état user
+      alert("Connexion réussie !");
+    } catch (err) {
+      setError("Échec de la connexion. Vérifiez vos identifiants.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Gestion de l'input segmenté pour le code
   const handleCodeChange = (index: number, value: string) => {
@@ -295,12 +318,19 @@ export default function Lobby({
             </h2>
 
             <div className="space-y-4">
+              {error && (
+                <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 p-2 rounded">
+                  {error}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
                   Identifiant
                 </label>
                 <input
                   type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
                   placeholder="Pseudo ou Email"
                 />
@@ -311,6 +341,8 @@ export default function Lobby({
                 </label>
                 <input
                   type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
                   placeholder="••••••••"
                 />
@@ -324,8 +356,16 @@ export default function Lobby({
                 <button className="hover:text-blue-400 transition-colors">Mot de passe oublié ?</button>
               </div>
 
-              <button className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95">
-                Accéder au système
+              <button
+                onClick={handleLogin}
+                disabled={isLoading}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  "Accéder au système"
+                )}
               </button>
             </div>
           </div>
