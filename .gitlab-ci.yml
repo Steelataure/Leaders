@@ -1,15 +1,42 @@
-stages: [build, docker]
+# On utilise Docker pour pouvoir construire des images
+image: docker:latest
 
-maven_build:
-  stage: build
-  image: maven:3.9-eclipse-temurin-21
+# Le service magique pour que Docker fonctionne dans GitLab
+services:
+  - docker:dind
+
+
+stages:
+  - test    
+  - docker  
+
+test_backend:
+  stage: test
+  image: maven:3.8.5-openjdk-17
   script:
-    - mvn -DskipTests clean package
+    - echo "Vérification du Backend..."
+    - cd backend
+    - mvn -B clean package
+  artifacts:
+    paths:
+      - backend/target/*.jar
+    expire_in: 1 hour
 
-docker_build:
+test_frontend:
+  stage: test
+  image: node:18
+  script:
+    - echo "🎨 Vérification du Frontend..."
+    - cd frontend
+    - npm install
+    - npm run build
+
+docker_backend:
   stage: docker
-  image: docker:24
-  services:
-    - docker:24-dind
+  dependencies: [test_backend]
+  only:
+    - main
   script:
-    - docker build -t backend:latest .
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY    
+    - docker build -t $CI_REGISTRY_IMAGE/backend:latest ./backend
+    - docker push $CI_REGISTRY_IMAGE/backend:latest
