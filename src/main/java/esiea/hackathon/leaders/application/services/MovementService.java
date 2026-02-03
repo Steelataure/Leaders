@@ -1,6 +1,6 @@
 package esiea.hackathon.leaders.application.services;
 
-import esiea.hackathon.leaders.domain.model.Piece;
+import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -59,15 +59,15 @@ public class MovementService {
      * Déplace une pièce (avec validation)
      */
     @Transactional
-    public Piece movePiece(UUID pieceId, short toQ, short toR) {
+    public PieceEntity movePiece(UUID pieceId, short toQ, short toR) {
         // 1. Récupère la pièce
-        Piece piece = pieceRepository.findById(pieceId)
+        PieceEntity pieceEntity = pieceRepository.findById(pieceId)
             .orElseThrow(() -> new IllegalArgumentException("Piece not found: " + pieceId));
         
         // 2. Vérifie que le déplacement est adjacent
-        if (!areAdjacent(piece.getQ(), piece.getR(), toQ, toR)) {
+        if (!areAdjacent(pieceEntity.getQ(), pieceEntity.getR(), toQ, toR)) {
             throw new IllegalArgumentException(
-                "Cannot move from (" + piece.getQ() + "," + piece.getR() + ") to (" + toQ + "," + toR + "): not adjacent"
+                "Cannot move from (" + pieceEntity.getQ() + "," + pieceEntity.getR() + ") to (" + toQ + "," + toR + "): not adjacent"
             );
         }
         
@@ -77,32 +77,32 @@ public class MovementService {
         }
         
         // 4. Vérifie que la case de destination est vide
-        pieceRepository.findByGameIdAndPosition(piece.getGameId(), toQ, toR)
+        pieceRepository.findByGameIdAndPosition(pieceEntity.getGameId(), toQ, toR)
             .ifPresent(occupant -> {
                 throw new IllegalArgumentException("Cell (" + toQ + "," + toR + ") is already occupied");
             });
         
         // 5. Déplace la pièce
-        piece.setQ(toQ);
-        piece.setR(toR);
-        piece.setHasActedThisTurn(true);
+        pieceEntity.setQ(toQ);
+        pieceEntity.setR(toR);
+        pieceEntity.setHasActedThisTurn(true);
         
-        return pieceRepository.save(piece);
+        return pieceRepository.save(pieceEntity);
     }
     
     /**
      * Récupère les cases valides (adjacentes + vides) où une pièce peut se déplacer
      */
     public List<HexCoord> getValidMovesForPiece(UUID pieceId) {
-        Piece piece = pieceRepository.findById(pieceId)
+        PieceEntity pieceEntity = pieceRepository.findById(pieceId)
             .orElseThrow(() -> new IllegalArgumentException("Piece not found"));
         
-        List<HexCoord> adjacentCells = getAdjacentCells(piece.getQ(), piece.getR());
+        List<HexCoord> adjacentCells = getAdjacentCells(pieceEntity.getQ(), pieceEntity.getR());
         
         // Garde seulement les cases vides
         return adjacentCells.stream()
             .filter(coord -> pieceRepository.findByGameIdAndPosition(
-                piece.getGameId(), coord.q(), coord.r()
+                pieceEntity.getGameId(), coord.q(), coord.r()
             ).isEmpty())
             .toList();
     }

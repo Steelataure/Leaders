@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS game_player (
     UNIQUE (game_id, player_index)
 );
 
-CREATE TABLE IF NOT EXISTS piece (
+CREATE TABLE IF NOT EXISTS pieceEntity (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_id UUID NOT NULL REFERENCES game(id) ON DELETE CASCADE,
     character_id VARCHAR(30) NOT NULL REFERENCES ref_character(id),
