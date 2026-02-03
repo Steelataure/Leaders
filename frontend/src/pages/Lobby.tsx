@@ -18,6 +18,8 @@ export default function Lobby({
   onStartGame: (id: string) => void;
 }) {
   const [joinMode, setJoinMode] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
 
   // Gestion de l'input segmenté pour le code
@@ -47,6 +49,58 @@ export default function Lobby({
         <div className="absolute bottom-10 right-10 text-[10px] text-amber-500/40">
           COORDS: 48.8566° N, 2.3522° E
         </div>
+      </div>
+
+      {/* --- TOP RIGHT LOGIN MENU --- */}
+      <div className="absolute top-6 right-6 z-50">
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-blue-400 rounded-lg transition-all backdrop-blur-md"
+        >
+          <span className="text-sm font-bold uppercase tracking-wider">Connexion</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+            />
+          </svg>
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-blue-500/30 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="py-1">
+              <button
+                onClick={() => {
+                  setLoginOpen(true);
+                  setDropdownOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
+              >
+                Se connecter
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
+                onClick={() => console.log("Settings placeholder")}
+              >
+                Paramètres
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors"
+                onClick={() => console.log("About placeholder")}
+              >
+                A propos
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="relative z-10 w-full max-w-5xl">
@@ -207,6 +261,76 @@ export default function Lobby({
           </div>
         </footer>
       </div>
+
+      {/* --- LOGIN MODAL --- */}
+      {loginOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div
+            className="relative w-full max-w-md bg-[#0f172a] border border-blue-500/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLoginOpen(false)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
+              CONNEXION
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
+                  Identifiant
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
+                  placeholder="Pseudo ou Email"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
+                  Mot de passe
+                </label>
+                <input
+                  type="password"
+                  className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-2 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer hover:text-slate-300">
+                  <input type="checkbox" className="rounded bg-slate-800 border-slate-700" />
+                  Se souvenir de moi
+                </label>
+                <button className="hover:text-blue-400 transition-colors">Mot de passe oublié ?</button>
+              </div>
+
+              <button className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95">
+                Accéder au système
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
