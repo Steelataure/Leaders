@@ -1,7 +1,8 @@
-import Game from "./pages/Game";
+import Rules from "./pages/Rules.tsx";
+
 
 function App() {
-  return <Game />;
+  return <Rules />;
 }
 
 export default App;
