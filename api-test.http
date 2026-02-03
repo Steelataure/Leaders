@@ -1,0 +1,26 @@
+### 1. Inscription (Register)
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "joueur1@example.com",
+  "password": "password123",
+  "username": "JoueurOne"
+}
+
+### 2. Connexion (Login)
+# @name login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "joueur1@example.com",
+  "password": "password123"
+}
+
+### 3. Route Protégée (Exemple avec PieceController)
+# Assurez-vous d'avoir exécuté la requête de Login avant celle-ci
+@authToken = {{login.response.body.token}}
+
+GET http://localhost:8080/api/pieces?gameId=00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}
