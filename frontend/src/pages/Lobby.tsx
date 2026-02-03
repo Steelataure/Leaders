@@ -22,6 +22,7 @@ export default function Lobby({
   const [joinMode, setJoinMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
 
   // Login State
@@ -145,7 +146,10 @@ export default function Lobby({
               </button>
               <button
                 className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors"
-                onClick={() => console.log("About placeholder")}
+                onClick={() => {
+                  setAboutOpen(true);
+                  setDropdownOpen(false);
+                }}
               >
                 A propos
               </button>
@@ -395,6 +399,50 @@ export default function Lobby({
                   "Accéder au système"
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ABOUT MODAL --- */}
+      {aboutOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div
+            className="relative w-full max-w-lg bg-[#0f172a] border border-blue-500/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setAboutOpen(false)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+              A PROPOS
+            </h2>
+
+            <div className="space-y-6 text-slate-300 leading-relaxed text-sm">
+              <p>
+                Ce projet à été réalisé dans le cadre d'un Hackathon réalisé en
+                5ème année d'école d'Ingénieur au sein de l'ESIEA Ivry-sur-seine.
+                Tout droits réservés.
+              </p>
+              <p className="font-bold text-white">Merci aux contributeurs.</p>
             </div>
           </div>
         </div>
