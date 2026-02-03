@@ -22,5 +22,5 @@ Content-Type: application/json
 # Assurez-vous d'avoir exécuté la requête de Login avant celle-ci
 @authToken = {{login.response.body.token}}
 
-GET http://localhost:8080/api/pieces
+GET http://localhost:8080/api/pieces?gameId=00000000-0000-0000-0000-000000000000
 Authorization: Bearer {{authToken}}

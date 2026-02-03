@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS game_player (
     UNIQUE (game_id, player_index)
 );
 
-CREATE TABLE IF NOT EXISTS pieceEntity (
+CREATE TABLE IF NOT EXISTS piece (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_id UUID NOT NULL REFERENCES game(id) ON DELETE CASCADE,
     character_id VARCHAR(30) NOT NULL REFERENCES ref_character(id),
@@ -103,4 +103,13 @@ CREATE TABLE IF NOT EXISTS recruitment_card (
     visible_slot SMALLINT CHECK (visible_slot BETWEEN 1 AND 3),
     recruited_by_index SMALLINT CHECK (recruited_by_index IN (0, 1)),
     banned_by_index SMALLINT CHECK (banned_by_index IN (0, 1))
+);
+
+CREATE TABLE IF NOT EXISTS user_credentials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    username VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
