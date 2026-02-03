@@ -79,15 +79,32 @@ function Home() {
                     transition={{ duration: 1, ease: "easeOut" }}
                     className="mb-16 relative"
                 >
-                    <div className="absolute -inset-10 bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none" />
+                    {/* Glowing background aura */}
+                    <motion.div
+                        className="absolute -inset-16 bg-cyan-500/25 blur-[150px] rounded-full pointer-events-none"
+                        animate={{
+                            opacity: [0.25, 0.4, 0.25],
+                            scale: [1, 1.1, 1],
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    />
                     <motion.img
                         src="/logo.png"
                         alt="LEADERS"
-                        className="w-full max-w-3xl object-contain drop-shadow-[0_0_30px_rgba(0,255,255,0.3)]"
+                        className="w-full max-w-3xl object-contain"
                         animate={{
-                            filter: ["drop-shadow(0 0 30px rgba(0,255,255,0.3))", "drop-shadow(0 0 50px rgba(0,255,255,0.5))", "drop-shadow(0 0 30px rgba(0,255,255,0.3))"]
+                            y: [0, -8, 0],
+                            filter: [
+                                "drop-shadow(0 0 20px rgba(0,255,255,0.3)) drop-shadow(0 0 40px rgba(0,255,255,0.15))",
+                                "drop-shadow(0 0 35px rgba(0,255,255,0.5)) drop-shadow(0 0 60px rgba(0,255,255,0.25))",
+                                "drop-shadow(0 0 20px rgba(0,255,255,0.3)) drop-shadow(0 0 40px rgba(0,255,255,0.15))"
+                            ]
                         }}
-                        transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
+                        transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
                     />
                 </motion.div>
 
