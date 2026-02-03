@@ -8,6 +8,10 @@ import {
   areAdjacent,
 } from "../utils/hexCoords";
 
+import useSound from 'use-sound';
+import boardPlacementSfx from '../sounds/boardPlacement.mp3';
+import pawnSelectSfx from '../sounds/pawnSelect.mp3';
+
 // === TYPES ===
 interface Piece {
   id: string;
@@ -176,8 +180,13 @@ export default function HexBoard({
   const findPieceAtCell = (q: number, r: number) =>
     pieces.find((p) => p.q === q && p.r === r);
 
+  // Sons
+  const [playBoardPlacementSfx] = useSound(boardPlacementSfx);
+  const [playPawnSelectSfx] = useSound(pawnSelectSfx);
+
   // Calcul des mouvements valides
   const validMoves = useMemo(() => {
+    
     // On ne peut bouger qu'en phase ACTIONS et avec une pièce qui n'a pas encore agi
     if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTIONS")
       return new Set<string>();
@@ -197,14 +206,21 @@ export default function HexBoard({
 
   // Sélection d'une pièce
   const handlePieceSelect = (piece: Piece) => {
+
     // Interdit de sélectionner une pièce adverse ou si on est en phase recrutement
     if (piece.ownerIndex !== currentPlayer || phase !== "ACTIONS") return;
     setSelectedPiece(selectedPiece?.id === piece.id ? null : piece);
+    
+    // Si on vient de choisir la pièce
+    if (validMoves.size == 0){
+      playPawnSelectSfx();
+    }
   };
 
   // Clic sur une cellule (Déplacement)
   const handleCellClick = (cell: HexCell) => {
     if (selectedPiece && validMoves.has(`${cell.q},${cell.r}`)) {
+      playBoardPlacementSfx();
       onMove(selectedPiece.id, cell.q, cell.r);
       setSelectedPiece(null); // Reset sélection après mouvement
     }

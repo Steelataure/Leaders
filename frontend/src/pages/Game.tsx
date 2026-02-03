@@ -3,6 +3,10 @@ import HexBoard from "../components/HexBoard";
 import River, { type CharacterCard } from "../components/River";
 import VictoryScreen from "../components/VictoryScreen";
 
+import useSound from 'use-sound';
+import buttonClickSfx from '../sounds/buttonClick.mp3';
+import buttonHoverSfx from '../sounds/buttonHover.mp3';
+
 // === TYPES ===
 type GamePhase = "ACTIONS" | "RECRUITMENT";
 
@@ -143,6 +147,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
     } else {
       endTurn();
     }
+    playButtonClickSfx();
   }, [phase, endTurn]);
 
   // === LOGIC : Vérification auto de la phase ===
@@ -248,6 +253,10 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
     setVictory(null);
   };
 
+  // Sons
+  const [playButtonClickSfx] = useSound(buttonClickSfx);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
+
   // Affichage de l'écran de victoire si déclenché
   if (victory) {
     return (
@@ -275,6 +284,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
       <div className="flex items-center gap-6 mt-6 mb-2">
         <button
           onClick={handlePass}
+          onMouseEnter={() => playButtonHoverSfx()}
           className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all font-black uppercase tracking-tighter"
         >
           {phase === "ACTIONS"
