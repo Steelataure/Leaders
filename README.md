@@ -1,3 +1,22 @@
+Test de l'environnement Docker (Frontend Solo)
+
+Pour tester le rendu du frontend sans dépendre du backend ou de Nginx, nous utilisons un serveur léger directement dans Docker.
+
+### 1. Construction de l'image
+Assurez-vous d'être dans le dossier `frontend` :
+```
+docker build -t front-test-solo .
+```
+
+### 2. Lancement du conteneur
+Le serveur expose l'application sur le port 5173 :
+```
+docker run -it --rm -p 5173:5173 --name frontend-check front-test-solo
+```
+### 3. Accès local
+
+Une fois le conteneur lancé, l'application est disponible à l'adresse suivante : 👉 http://localhost:5173
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
