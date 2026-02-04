@@ -1,7 +1,7 @@
 import { Settings, Target, PlayCircle, Trophy, Crown, Users } from 'lucide-react';
 import CardCarousel from '../components/Caroussel';
 
-const Rules = () => {
+const Rules = ({ onBack }: { onBack: () => void }) => {
     return (
         <div className="min-h-screen bg-[#0A0A0A] text-cyan-50">
             {/* Header */}
@@ -30,6 +30,7 @@ const Rules = () => {
                 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-950
                 active:scale-95
               "
+                            onClick={onBack}
                         >
                             JOUER
                         </button>
