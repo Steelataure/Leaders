@@ -1,42 +1,38 @@
-# On utilise Docker pour pouvoir construire des images
-image: docker:latest
+image: docker:24.0.5
 
-# Le service magique pour que Docker fonctionne dans GitLab
 services:
-  - docker:dind
+  - docker:24.0.5-dind
 
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
 
 stages:
-  - test    
-  - docker  
+  - build
 
-test_backend:
-  stage: test
-  image: maven:3.8.5-openjdk-17
+# --- JOB FRONTEND ---
+build_frontend:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "frontend"
+      changes:
+        - frontend/**/* # Ne se lance que si on touche au dossier frontend
   script:
-    - echo "Vérification du Backend..."
-    - cd backend
-    - mvn -B clean package
-  artifacts:
-    paths:
-      - backend/target/*.jar
-    expire_in: 1 hour
-
-test_frontend:
-  stage: test
-  image: node:18
-  script:
-    - echo "Vérification du Frontend..."
+    - echo " Construction du Front..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - cd frontend
-    - npm install
-    - npm run build
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:latest .
+    - docker push $CI_REGISTRY_IMAGE/frontend:latest
 
-docker_backend:
-  stage: docker
-  dependencies: [test_backend]
-  only:
-    - main
+# --- JOB BACKEND ---
+build_backend:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "backend"
+      changes:
+        - backend/**/* # Ne se lance que si on touche au dossier backend
   script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY    
-    - docker build -t $CI_REGISTRY_IMAGE/backend:latest ./backend
+    - echo " Construction du Back..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - cd backend
+    - docker build -t $CI_REGISTRY_IMAGE/backend:latest .
     - docker push $CI_REGISTRY_IMAGE/backend:latest
