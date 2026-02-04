@@ -16,6 +16,11 @@ export const authService = {
         return response;
     },
 
+    async register(data: RegisterRequest): Promise<LoginResponse> {
+        const response = await apiClient.post<LoginResponse>('/auth/register', data);
+        return response;
+    },
+
     logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');

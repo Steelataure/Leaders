@@ -15,3 +15,9 @@ export interface LoginResponse {
     token: string;
     user?: User; // Si l'API retourne l'user directement
 }
+
+export interface RegisterRequest {
+    email: string;
+    username: string;
+    password: string;
+}

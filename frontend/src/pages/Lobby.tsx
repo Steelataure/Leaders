@@ -26,9 +26,12 @@ export default function Lobby({
   const [code, setCode] = useState(["", "", "", "", "", ""]);
 
   // Login State
+  // Login/Register State
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(""); // Nouveau state pour le register
+  const [isRegistering, setIsRegistering] = useState(false); // Toggle entre Login et Register
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,20 +40,41 @@ export default function Lobby({
     setUser(currentUser);
   }, []);
 
-  const handleLogin = async () => {
+  const handleAuth = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await authService.login({ email, password });
-      if (response.user) {
-        setUser(response.user);
+      if (isRegistering) {
+        // Mode Inscription
+        const response = await authService.register({ email, password, username });
+        if (response.user) {
+          setUser(response.user);
+          setLoginOpen(false);
+        } else {
+          // Si pas de user renvoyé mais ok, on switch sur le login pour qu'il se connecte
+          setIsRegistering(false);
+          setError("Compte créé ! Veuillez vous connecter.");
+          // Ou auto-login si le backend renvoyait le token aussi au register
+        }
+
       } else {
-        // Fallback/Mock si l'API ne renvoie pas l'user complet
-        setUser({ username: "Joueur", id: "0", email, roles: [] });
+        // Mode Connexion
+        const response = await authService.login({ email, password });
+        if (response.user) {
+          setUser(response.user);
+        } else {
+          // Fallback/Mock si l'API ne renvoie pas l'user complet
+          setUser({ username: "Joueur", id: "0", email, roles: [] });
+        }
+        setLoginOpen(false);
       }
-      setLoginOpen(false);
+
     } catch (err) {
-      setError("Échec de la connexion. Vérifiez vos identifiants.");
+      setError(
+        isRegistering
+          ? "Échec de l'inscription."
+          : "Échec de la connexion. Vérifiez vos identifiants."
+      );
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -346,7 +370,7 @@ export default function Lobby({
 
             <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
               <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
-              CONNEXION
+              {isRegistering ? "CRÉER UN COMPTE" : "CONNEXION"}
             </h2>
 
             <div className="space-y-4">
@@ -367,6 +391,21 @@ export default function Lobby({
                   placeholder="Pseudo ou Email"
                 />
               </div>
+
+              {isRegistering && (
+                <div>
+                  <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
+                    Nom d'utilisateur
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Votre pseudo en jeu"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
                   Mot de passe
@@ -389,16 +428,27 @@ export default function Lobby({
               </div>
 
               <button
-                onClick={handleLogin}
+                onClick={handleAuth}
                 disabled={isLoading}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
               >
                 {isLoading ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  "Accéder au système"
+                  isRegistering ? "S'inscrire" : "Accéder au système"
                 )}
               </button>
+
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setIsRegistering(!isRegistering)}
+                  className="text-slate-500 hover:text-white text-xs underline"
+                >
+                  {isRegistering
+                    ? "Déjà un compte ? Se connecter"
+                    : "Pas de compte ? Créer un compte"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
