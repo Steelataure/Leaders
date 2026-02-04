@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { authService } from "../services/auth.service";
 import type { User } from "../types/auth.types";
 
+import useSound from 'use-sound';
+import buttonClickSfx from '../sounds/buttonClick.mp3';
+
 // --- ANIMATIONS CSS (à garder dans le fichier ou index.css) ---
 const styles = `
   @keyframes scanline {
@@ -79,6 +82,9 @@ export default function Lobby({
       nextInput?.focus();
     }
   };
+
+  // Sons
+  const [playButtonClickSfx] = useSound(buttonClickSfx);
 
   return (
     <div className="min-h-screen w-full bg-[#020617] text-slate-200 flex flex-col items-center justify-center p-6 font-mono overflow-hidden">
@@ -212,7 +218,10 @@ export default function Lobby({
                 </p>
               </div>
               <button
-                onClick={() => onStartGame("create")}
+                onClick={() => {
+                  playButtonClickSfx();
+                  onStartGame("create");
+                }}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
               >
                 Initialiser le Serveur
