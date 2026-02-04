@@ -127,13 +127,13 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   }, [currentPlayer]);
 
   const handlePass = useCallback(() => {
-    playButtonClickSfx();
+    // On ne peut passer manuellement que pendant la phase d'actions (pour finir le tour plus tôt si voulu, bien que l'UI actuelle ne le permette pas explicitement via ce bouton)
+    // Le recrutement est obligatoire, donc on ne peut pas le passer.
     if (phase === "ACTIONS") {
+      playButtonClickSfx();
       setPhase("RECRUITMENT");
-    } else {
-      endTurn();
     }
-  }, [phase, endTurn, playButtonClickSfx]);
+  }, [phase, playButtonClickSfx]);
 
   const checkPhaseTransition = useCallback((currentPieces: Piece[]) => {
     const playerPieces = currentPieces.filter((p) => p.ownerIndex === currentPlayer);
@@ -321,17 +321,16 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
             </div>
 
             <button
-              onClick={handlePass}
-              onMouseEnter={() => playButtonHoverSfx()}
-              className={`relative w-full py-3 rounded-xl font-bold text-xs uppercase tracking-[0.15em] transition-all overflow-hidden
+              disabled
+              className={`relative w-full py-3 rounded-xl font-bold text-xs uppercase tracking-[0.15em] transition-all overflow-hidden cursor-default
                 ${phase === "RECRUITMENT"
-                  ? 'bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-[1.02]'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 hover:border-slate-500'
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-pulse'
+                  : 'bg-slate-800/50 text-slate-600 border border-slate-800'
                 }
               `}
             >
-              <div className="absolute inset-0 bg-white/20 translate-y-full hover:translate-y-0 transition-transform duration-300" />
-              <span className="relative z-10">{phase === "ACTIONS" ? "⌛ VERROUILLÉ" : "⚡ RECRUTER / PASSER"}</span>
+              <div className="absolute inset-0 bg-cyan-500/5 translate-y-full transition-transform duration-300" />
+              <span className="relative z-10">{phase === "RECRUITMENT" ? "⚠️ RECRUTEMENT REQUIS" : "🔒 RIVIÈRE VERROUILLÉE"}</span>
             </button>
           </div>
 
