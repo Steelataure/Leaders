@@ -1,9 +1,25 @@
-import { useState, useCallback } from "react";
-import HexBoard, { type Piece, type GamePhase } from "../components/HexBoard";
+import { useState, useCallback, useEffect } from "react";
+import HexBoard from "../components/HexBoard";
 import { type CharacterCard } from "../components/River";
 import VictoryScreen from "../components/VictoryScreen";
 
-// === CONSTANTS & MOCKS ===
+import useSound from 'use-sound';
+import buttonClickSfx from '../sounds/buttonClick.mp3';
+import buttonHoverSfx from '../sounds/buttonHover.mp3';
+
+// === TYPES ===
+export type GamePhase = "ACTIONS" | "RECRUITMENT";
+
+export interface Piece {
+  id: string;
+  characterId: string;
+  ownerIndex: number;
+  q: number;
+  r: number;
+  hasActed: boolean;
+}
+
+// === DONNÉES INITIALES (MOCKS) ===
 const INITIAL_PIECES: Piece[] = [
   { id: "p1", characterId: "LEADER", ownerIndex: 0, q: 0, r: 2, hasActed: false },
   { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 0, r: -2, hasActed: false },
@@ -16,6 +32,12 @@ const INITIAL_RIVER: CharacterCard[] = [
   { id: "c2", characterId: "RODEUR", name: "Rôdeuse", description: "Se déplace sur une case non-adjacente", type: "ACTIVE" },
   { id: "c3", characterId: "ILLUSIONISTE", name: "Illusionniste", description: "Échange de position avec un personnage", type: "ACTIVE" },
   { id: "c4", characterId: "EMP", name: "EMP Strike", description: "Inflige des dégâts de zone", type: "SPECIAL" },
+];
+
+const DECK_CARDS: CharacterCard[] = [
+  { id: "c5", characterId: "MANIPULATRICE", name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
+  { id: "c6", characterId: "TAVERNIER", name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
+  { id: "c7", characterId: "GARDE", name: "Garde Royal", description: "Protège le leader adjacent", type: "PASSIVE" }
 ];
 
 // === COMPOSANTS UI ===
@@ -60,14 +82,14 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   const [currentPlayer, setCurrentPlayer] = useState<0 | 1>(0);
   const [phase, setPhase] = useState<GamePhase>("ACTIONS");
   const [turnNumber, setTurnNumber] = useState(1);
-  const [deck, setDeck] = useState<CharacterCard[]>([
-    { id: "c5", characterId: "MANIPULATRICE", name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
-    { id: "c6", characterId: "TAVERNIER", name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
-    { id: "c7", characterId: "GARDE", name: "Garde Royal", description: "Protège le leader adjacent", type: "PASSIVE" }
-  ]);
+  const [deck, setDeck] = useState<CharacterCard[]>(DECK_CARDS);
   const [river, setRiver] = useState<CharacterCard[]>(INITIAL_RIVER);
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
+
+  // Sons
+  const [playButtonClickSfx] = useSound(buttonClickSfx);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
 
   // === LOGIC ===
   const endTurn = useCallback(() => {
@@ -80,88 +102,113 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   }, [currentPlayer]);
 
   const handlePass = useCallback(() => {
-    if (phase === "ACTIONS") setPhase("RECRUITMENT");
-    else endTurn();
-  }, [phase, endTurn]);
-
-  // Handle Recruitment
-  const handleRecruit = useCallback((cardId: string) => {
-    if (phase !== "RECRUITMENT") return;
-
-    // 1. Check limit (max 5 pieces/player mock)
-    const playerPieces = pieces.filter(p => p.ownerIndex === currentPlayer);
-    if (playerPieces.length >= 6) {
-      alert("Maximum d'unités atteint !");
-      return;
+    playButtonClickSfx();
+    if (phase === "ACTIONS") {
+      setPhase("RECRUITMENT");
+    } else {
+      endTurn();
     }
+  }, [phase, endTurn, playButtonClickSfx]);
 
-    // 2. Find Card
-    const card = river.find(c => c.id === cardId);
-    if (!card) return;
-
-    // 3. Find Free Spawn Spot (Official spawn points)
-    // P1 (Bottom): (-3,3), (-2,3), (-1,2), (-1,3)
-    // P2 (Top): (3,-3), (2,-3), (1,-2), (1,-3)
-    const spawnPoints = currentPlayer === 0
-      ? [{ q: -3, r: 3 }, { q: -2, r: 3 }, { q: -1, r: 2 }, { q: -1, r: 3 }] // Bottom
-      : [{ q: 3, r: -3 }, { q: 2, r: -3 }, { q: 1, r: -2 }, { q: 1, r: -3 }]; // Top
-
-    const freeSpot = spawnPoints.find(spot =>
-      !pieces.some(p => p.q === spot.q && p.r === spot.r)
-    );
-
-    if (!freeSpot) {
-      alert("Aucune case de recrutement libre ! Déplacez vos unités.");
-      return;
+  const checkPhaseTransition = useCallback((currentPieces: Piece[]) => {
+    const playerPieces = currentPieces.filter((p) => p.ownerIndex === currentPlayer);
+    if (playerPieces.every((p) => p.hasActed)) {
+      setTimeout(() => setPhase("RECRUITMENT"), 500);
     }
-
-    // 4. Create Piece
-    const newPiece: Piece = {
-      id: `u-${Date.now()}`,
-      characterId: card.characterId,
-      ownerIndex: currentPlayer,
-      q: freeSpot.q,
-      r: freeSpot.r,
-      hasActed: true // New recruits cannot act immediately (usually)
-    };
-
-    // 5. Update State
-    setPieces(prev => [...prev, newPiece]);
-
-    // Cycle River
-    const nextCard = deck[0];
-    const newDeck = deck.slice(1);
-    const newRiver = river.map(c => c.id === cardId ? nextCard || c : c); // Replace recruited card, or keep if no next card
-
-    // In strict rules, river slides. simplified here: replace slot.
-    setRiver(newRiver);
-    if (nextCard) setDeck(newDeck);
-
-    // End Turn
-    endTurn();
-
-  }, [phase, pieces, river, deck, currentPlayer, endTurn]);
-
-  const handleMove = useCallback((pieceId: string, toQ: number, toR: number) => {
-    setPieces((prev) => {
-      const updated = prev.map((p) =>
-        p.id === pieceId ? { ...p, q: toQ, r: toR, hasActed: true } : p
-      );
-      // Auto-transition logic
-      const playerPieces = updated.filter((p) => p.ownerIndex === currentPlayer);
-      if (playerPieces.every((p) => p.hasActed)) {
-        setTimeout(() => setPhase("RECRUITMENT"), 500);
-      }
-      return updated;
-    });
   }, [currentPlayer]);
+
+  const handleMove = useCallback(
+    (pieceId: string, toQ: number, toR: number) => {
+      setPieces((prev) => {
+        const updated = prev.map((p) =>
+          p.id === pieceId ? { ...p, q: toQ, r: toR, hasActed: true } : p,
+        );
+        checkPhaseTransition(updated);
+        return updated;
+      });
+    },
+    [checkPhaseTransition],
+  );
+
+  const handleRecruit = useCallback(
+    (cardId: string) => {
+      const playerPieceCount = pieces.filter(
+        (p) => p.ownerIndex === currentPlayer,
+      ).length;
+      if (playerPieceCount >= 6) { // Limit to 6 to be safe (mock limit)
+        console.log("Limite d'unités atteinte");
+        // alert("Maximum d'unités atteint !"); // Avoid alert for better UX
+        return;
+      }
+
+      if (phase !== "RECRUITMENT") return;
+
+      const card = river.find((c) => c.id === cardId);
+      if (!card) return;
+
+      // Définition simplifiée des cases de recrutement (Mock)
+      const recruitmentCells =
+        currentPlayer === 0
+          ? [{ q: -3, r: 3 }, { q: -2, r: 3 }, { q: -1, r: 2 }, { q: -1, r: 3 }]
+          : [{ q: 3, r: -3 }, { q: 2, r: -3 }, { q: 1, r: -2 }, { q: 1, r: -3 }];
+
+      const freeCell = recruitmentCells.find(
+        (cell) => !pieces.find((p) => p.q === cell.q && p.r === cell.r),
+      );
+
+      if (!freeCell) {
+        console.log("Zones de recrutement occupées");
+        endTurn();
+        return;
+      }
+
+      // Ajout de la nouvelle pièce sur le plateau
+      const newPiece: Piece = {
+        id: `recruited-${Date.now()}`,
+        characterId: card.characterId,
+        ownerIndex: currentPlayer,
+        q: freeCell.q,
+        r: freeCell.r,
+        hasActed: true, // Une unité recrutée ne peut pas agir le même tour
+      };
+
+      setPieces((prev) => [...prev, newPiece]);
+
+      // Remplacement de la carte dans la rivière par une carte du deck
+      const newDeck = [...deck];
+      const replacement = newDeck.shift();
+      if (replacement) {
+        setDeck(newDeck);
+        setRiver((prev) =>
+          prev.map((c) => (c.id === cardId ? replacement : c)),
+        );
+      } else {
+        // Deck empty logic? Just remove from river or keep empty slot
+        setRiver((prev) => prev.map(c => c.id === cardId ? { ...c, id: "empty", name: "Vide", type: "PASSIVE", description: "" } : c)); // Mock empty
+      }
+
+      playButtonClickSfx();
+      endTurn(); // Le recrutement finit le tour du joueur
+    },
+    [pieces, river, deck, currentPlayer, endTurn, phase, playButtonClickSfx],
+  );
+
+  const resetGame = () => {
+    setPieces(INITIAL_PIECES);
+    setCurrentPlayer(0);
+    setPhase("ACTIONS");
+    setTurnNumber(1);
+    setRiver(INITIAL_RIVER);
+    setDeck(DECK_CARDS);
+    setVictory(null);
+  };
 
   if (victory) {
     return (
       <VictoryScreen
         winner={victory.winner}
         victoryType={victory.type}
-        onPlayAgain={() => { /* reset */ }}
+        onPlayAgain={resetGame}
         onBackToLobby={onBackToLobby}
       />
     );
@@ -225,6 +272,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
       {/* Quit Button */}
       <button
         onClick={onBackToLobby}
+        onMouseEnter={() => playButtonHoverSfx()}
         className="absolute top-8 right-10 z-30 flex items-center gap-2 px-5 py-2.5 bg-rose-950/20 text-rose-500 border border-rose-500/30 rounded-lg hover:bg-rose-500 hover:text-white hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all uppercase text-[10px] font-bold tracking-[0.2em]"
       >
         <span>↪ QUITTER</span>
@@ -249,6 +297,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
             <button
               onClick={handlePass}
+              onMouseEnter={() => playButtonHoverSfx()}
               className={`relative w-full py-3 rounded-xl font-bold text-xs uppercase tracking-[0.15em] transition-all overflow-hidden
                 ${phase === "RECRUITMENT"
                   ? 'bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-[1.02]'
@@ -294,7 +343,10 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
                 turnNumber={turnNumber}
                 onMove={handleMove}
                 selectedPiece={selectedPiece}
-                onSelectPiece={setSelectedPiece}
+                onSelectPiece={(pc) => {
+                  setSelectedPiece(pc);
+                  playButtonHoverSfx();
+                }}
               />
             </div>
           </div>

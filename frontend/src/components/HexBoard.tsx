@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
   generateBoard,
   getHexagonPoints,
@@ -6,6 +6,11 @@ import {
   HEX_SIZE,
   areAdjacent,
 } from "../utils/hexCoords";
+
+// @ts-ignore
+import useSound from 'use-sound';
+import boardPlacementSfx from '../sounds/boardPlacement.mp3';
+import pawnSelectSfx from '../sounds/pawnSelect.mp3';
 
 // === TYPES ===
 export interface Piece {
@@ -125,13 +130,19 @@ export default function HexBoard({
 }: HexBoardProps) {
   const [hoveredCell, setHoveredCell] = useState<HexCell | null>(null);
 
+  // Sons
+  const [playBoardPlacementSfx] = useSound(boardPlacementSfx);
+  const [playPawnSelectSfx] = useSound(pawnSelectSfx);
+
   // Generate board centered
   const cells = useMemo(() => generateBoard(SVG_WIDTH / 2, SVG_HEIGHT / 2), []);
 
   const findPieceAtCell = (q: number, r: number) => pieces.find((p) => p.q === q && p.r === r);
 
   const validMoves = useMemo(() => {
-    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTIONS") return new Set<string>();
+    // On ne peut bouger qu'en phase ACTIONS et avec une pièce qui n'a pas encore agi
+    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTIONS")
+      return new Set<string>();
 
     const moves = new Set<string>();
     cells.forEach((cell) => {
@@ -143,19 +154,27 @@ export default function HexBoard({
     return moves;
   }, [selectedPiece, pieces, phase, cells]);
 
+  const handlePieceSelect = (piece: Piece) => {
+    // Interdit de sélectionner une pièce adverse ou si on est en phase recrutement
+    if (piece.ownerIndex !== currentPlayer || phase !== "ACTIONS") return;
+
+    // Si on sélectionne une nouvelle pièce (différente de null et différente de l'actuelle)
+    if (piece && selectedPiece?.id !== piece.id) {
+      playPawnSelectSfx();
+    }
+
+    onSelectPiece(selectedPiece?.id === piece.id ? null : piece);
+  };
+
   const handleCellClick = (cell: HexCell) => {
     if (selectedPiece && validMoves.has(`${cell.q},${cell.r}`)) {
+      playBoardPlacementSfx();
       onMove(selectedPiece.id, cell.q, cell.r);
       onSelectPiece(null);
     } else {
       // Deselect if clicking on empty cell not in valid moves
       onSelectPiece(null);
     }
-  };
-
-  const handlePieceSelect = (piece: Piece) => {
-    if (piece.ownerIndex !== currentPlayer || phase !== "ACTIONS") return;
-    onSelectPiece(selectedPiece?.id === piece.id ? null : piece);
   };
 
   return (

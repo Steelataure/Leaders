@@ -1,4 +1,9 @@
 import { useState, useEffect } from "react";
+import { authService } from "../services/auth.service";
+import type { User } from "../types/auth.types";
+
+import useSound from 'use-sound';
+import buttonClickSfx from '../sounds/buttonClick.mp3';
 
 // --- ANIMATIONS CSS (à garder dans le fichier ou index.css) ---
 const styles = `
@@ -18,7 +23,74 @@ export default function Lobby({
   onStartGame: (id: string) => void;
 }) {
   const [joinMode, setJoinMode] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [volume, setVolume] = useState(50);
+  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+
+  // Login/Register State
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(""); // Nouveau state pour le register
+  const [isRegistering, setIsRegistering] = useState(false); // Toggle entre Login et Register
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const currentUser = authService.getUser();
+    setUser(currentUser);
+  }, []);
+
+  const handleAuth = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (isRegistering) {
+        // Mode Inscription
+        const response = await authService.register({ email, password, username });
+        if (response.user) {
+          setUser(response.user);
+          setLoginOpen(false);
+        } else {
+          // Si pas de user renvoyé mais ok, on switch sur le login pour qu'il se connecte
+          setIsRegistering(false);
+          setError("Compte créé ! Veuillez vous connecter.");
+          // Ou auto-login si le backend renvoyait le token aussi au register
+        }
+
+      } else {
+        // Mode Connexion
+        const response = await authService.login({ email, password });
+        if (response.user) {
+          setUser(response.user);
+        } else {
+          // Fallback/Mock si l'API ne renvoie pas l'user complet
+          setUser({ username: "Joueur", id: "0", email, roles: [] });
+        }
+        setLoginOpen(false);
+      }
+
+    } catch (err) {
+      setError(
+        isRegistering
+          ? "Échec de l'inscription."
+          : "Échec de la connexion. Vérifiez vos identifiants."
+      );
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+    setDropdownOpen(false);
+  };
 
   // Gestion de l'input segmenté pour le code
   const handleCodeChange = (index: number, value: string) => {
@@ -34,6 +106,9 @@ export default function Lobby({
     }
   };
 
+  // Sons
+  const [playButtonClickSfx] = useSound(buttonClickSfx);
+
   return (
     <div className="min-h-screen w-full bg-[#020617] text-slate-200 flex flex-col items-center justify-center p-6 font-mono overflow-hidden">
       <style>{styles}</style>
@@ -47,6 +122,82 @@ export default function Lobby({
         <div className="absolute bottom-10 right-10 text-[10px] text-amber-500/40">
           COORDS: 48.8566° N, 2.3522° E
         </div>
+      </div>
+
+      {/* --- TOP RIGHT LOGIN MENU --- */}
+      <div className="absolute top-6 right-6 z-50">
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-blue-400 rounded-lg transition-all backdrop-blur-md"
+        >
+          <span className="text-sm font-bold uppercase tracking-wider">
+            {user ? user.username : "CONNEXION"}
+          </span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+            />
+          </svg>
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-blue-500/30 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="py-1">
+              {!user ? (
+                <button
+                  onClick={() => {
+                    setAboutOpen(false);
+                    setDropdownOpen(false);
+                    setLoginOpen(true);
+                    setSettingsOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
+                >
+                  Se connecter
+                </button>
+              ) : (
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 transition-colors border-b border-white/5"
+                >
+                  Déconnexion
+                </button>
+              )}
+              <button
+                className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
+                onClick={() => {
+                  console.log("Settings placeholder")
+                  setAboutOpen(false);
+                  setDropdownOpen(false);
+                  setLoginOpen(false);
+                  setSettingsOpen(true);
+                }}
+              >
+                Paramètres
+              </button>
+              <button
+                className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors"
+                onClick={() => {
+                  setAboutOpen(true);
+                  setDropdownOpen(false);
+                  setLoginOpen(false);
+                  setSettingsOpen(false);
+                }}
+              >
+                A propos
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="relative z-10 w-full max-w-5xl">
@@ -90,7 +241,10 @@ export default function Lobby({
                 </p>
               </div>
               <button
-                onClick={() => onStartGame("create")}
+                onClick={() => {
+                  playButtonClickSfx();
+                  onStartGame("create");
+                }}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
               >
                 Initialiser le Serveur
@@ -207,6 +361,230 @@ export default function Lobby({
           </div>
         </footer>
       </div>
+
+      {/* --- LOGIN MODAL --- */}
+      {loginOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div
+            className="relative w-full max-w-md bg-[#0f172a] border border-blue-500/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLoginOpen(false)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
+              {isRegistering ? "CRÉER UN COMPTE" : "CONNEXION"}
+            </h2>
+
+            <div className="space-y-4">
+              {error && (
+                <div className="text-red-500 text-xs font-bold text-center bg-red-500/10 p-2 rounded">
+                  {error}
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
+                  Identifiant
+                </label>
+                <input
+                  type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
+                  placeholder="Pseudo ou Email"
+                />
+              </div>
+              {isRegistering && (
+                <div>
+                  <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
+                    Nom d'utilisateur
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Votre pseudo en jeu"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
+                  Mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-2 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer hover:text-slate-300">
+                  <input type="checkbox" className="rounded bg-slate-800 border-slate-700" />
+                  Se souvenir de moi
+                </label>
+                <button className="hover:text-blue-400 transition-colors">Mot de passe oublié ?</button>
+              </div>
+
+              <button
+                onClick={handleAuth}
+                disabled={isLoading}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  isRegistering ? "S'inscrire" : "Accéder au système"
+                )}
+              </button>
+
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setIsRegistering(!isRegistering)}
+                  className="text-slate-500 hover:text-white text-xs underline"
+                >
+                  {isRegistering
+                    ? "Déjà un compte ? Se connecter"
+                    : "Pas de compte ? Créer un compte"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SETTINGS MODAL --- */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div
+            className="relative w-full max-w-lg bg-[#0f172a] border border-blue-500/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSettingsOpen(false)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+              PARAMÈTRES
+            </h2>
+
+            <div className="space-y-6 text-slate-300 leading-relaxed text-sm">
+              {/* Volume général */}
+              <div>
+                <label htmlFor="volume" className="text-white font-medium">
+                  Volume général
+                </label>
+                <input
+                  id="volume"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
+                  className="w-full accent-emerald-500 mt-2"
+                />
+                <p className="text-xs mt-1">Niveau actuel : {volume}%</p>
+              </div>
+
+              {/* Effets sonores */}
+              <div className="flex items-center justify-between">
+                <label htmlFor="sfx" className="text-white font-medium">Effets sonores (SFX)</label>
+                <input
+                  id="sfx"
+                  type="checkbox"
+                  checked={sfxEnabled}
+                  onChange={(e) => setSfxEnabled(e.target.checked)}
+                  className="accent-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* --- ABOUT MODAL --- */}
+      {aboutOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div
+            className="relative w-full max-w-lg bg-[#0f172a] border border-blue-500/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setAboutOpen(false)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+              A PROPOS
+            </h2>
+
+            <div className="space-y-6 text-slate-300 leading-relaxed text-sm">
+              <p>
+                Ce projet à été réalisé dans le cadre d'un Hackathon réalisé en
+                5ème année d'école d'Ingénieur au sein de l'ESIEA Ivry-sur-seine.
+                Tout droits réservés.
+              </p>
+              <p className="font-bold text-white">Merci aux contributeurs.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
