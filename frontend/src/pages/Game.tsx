@@ -198,8 +198,10 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
           <div className="flex items-center gap-4">
             <span className="text-2xl animate-spin-slow">💠</span>
-            <h1 className="text-3xl font-black italic tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_10px_rgba(0,245,255,0.5)]">
-              PHASE_{phase}
+            <h1
+              className="font-cyber text-5xl font-bold italic tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-100 to-cyan-300 drop-shadow-[0_0_10px_rgba(0,245,255,0.4)]"
+            >
+              {phase === 'RECRUITMENT' ? 'RENFORTS' : 'COMBAT'}
             </h1>
           </div>
 
@@ -214,7 +216,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
                 : 'border-rose-500 text-rose-400 bg-rose-950/30 shadow-rose-500/20'
               }
             `}>
-              J{currentPlayer + 1} ONLINE
+              JOUEUR {currentPlayer + 1} EN LIGNE
             </div>
           </div>
         </div>
@@ -225,7 +227,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
         onClick={onBackToLobby}
         className="absolute top-8 right-10 z-30 flex items-center gap-2 px-5 py-2.5 bg-rose-950/20 text-rose-500 border border-rose-500/30 rounded-lg hover:bg-rose-500 hover:text-white hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all uppercase text-[10px] font-bold tracking-[0.2em]"
       >
-        <span>↪ ABORT</span>
+        <span>↪ QUITTER</span>
       </button>
 
       {/* === MAIN LAYOUT === */}
@@ -240,7 +242,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
             <div className="relative flex items-center gap-4 mb-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(8,145,178,0.5)]">🌊</div>
               <div>
-                <h2 className="font-black text-xl text-white tracking-wide">RIVIÈRE</h2>
+                <h2 className="font-cyber font-bold text-xl text-white tracking-wide">RIVIÈRE</h2>
                 <p className="text-[10px] text-cyan-400 uppercase tracking-widest font-semibold">Renforts Tactiques</p>
               </div>
             </div>
@@ -255,7 +257,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
               `}
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full hover:translate-y-0 transition-transform duration-300" />
-              <span className="relative z-10">{phase === "ACTIONS" ? "⌛ LOCKED" : "⚡ RECRUIT / SKIP"}</span>
+              <span className="relative z-10">{phase === "ACTIONS" ? "⌛ VERROUILLÉ" : "⚡ RECRUTER / PASSER"}</span>
             </button>
           </div>
 
@@ -316,15 +318,15 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 mb-4 flex items-center justify-center text-4xl shadow-[0_0_25px_rgba(251,191,36,0.5)] animate-bounce">
                   {selectedPiece.characterId === 'LEADER' ? '👑' : '⚔️'}
                 </div>
-                <h3 className="text-2xl font-black text-amber-400 tracking-wider mb-2 drop-shadow-md">{selectedPiece.characterId}</h3>
+                <h3 className="font-cyber text-3xl font-bold text-amber-400 tracking-wider mb-2 drop-shadow-md">{selectedPiece.characterId}</h3>
 
                 <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent my-3" />
 
                 <div className="text-xs font-mono space-y-1.5 uppercase tracking-wide">
-                  <p className="text-slate-400">Coordinates: <span className="text-white font-bold ml-1">[{selectedPiece.q}, {selectedPiece.r}]</span></p>
+                  <p className="text-slate-400">COORD : <span className="text-white font-bold ml-1">[{selectedPiece.q}, {selectedPiece.r}]</span></p>
                   <div className={`inline-flex items-center gap-2 px-3 py-1 rounded border overflow-hidden relative ${selectedPiece.hasActed ? "border-rose-500/30 text-rose-400" : "border-emerald-500/30 text-emerald-400"}`}>
                     <div className={`w-2 h-2 rounded-full animate-pulse ${selectedPiece.hasActed ? "bg-rose-500" : "bg-emerald-500"}`} />
-                    {selectedPiece.hasActed ? "SYSTEM: DEPLETED" : "SYSTEM: READY"}
+                    {selectedPiece.hasActed ? "SYSTÈME : ÉPUISÉ" : "SYSTÈME : PRÊT"}
                   </div>
                 </div>
               </div>
@@ -333,8 +335,8 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
                 <div className="w-20 h-20 border border-dashed border-cyan-500/30 rounded-xl mb-6 flex items-center justify-center text-3xl text-cyan-500/30 animate-pulse">
                   ⌖
                 </div>
-                <p className="text-cyan-400 font-bold tracking-[0.3em] uppercase text-xs animate-pulse">Scanning Array</p>
-                <p className="text-slate-600 text-[10px] mt-2 uppercase tracking-widest">Awaiting Target Selection...</p>
+                <p className="font-cyber text-cyan-400 font-bold tracking-[0.3em] uppercase text-xs animate-pulse">ANALYSE MATRICE</p>
+                <p className="text-slate-600 text-[10px] mt-2 uppercase tracking-widest">ATTENTE SÉLECTION CIBLE...</p>
               </div>
             )}
           </div>
@@ -344,15 +346,23 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
       {/* Footer Status */}
       <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
-        <div className="flex justify-center items-center gap-8 opacity-40">
-          <span className="h-px w-24 bg-gradient-to-r from-transparent to-cyan-500" />
-          <p className="text-[10px] text-cyan-500 font-mono tracking-[0.5em] uppercase text-shadow-glow">Secure Connection Established</p>
-          <span className="h-px w-24 bg-gradient-to-l from-transparent to-cyan-500" />
+        <div className="flex justify-center items-center gap-6 opacity-60">
+          <span className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
+            <p className="font-cyber text-[10px] font-medium text-cyan-400 tracking-[0.4em] uppercase drop-shadow-[0_0_5px_rgba(0,245,255,0.8)]">
+              CONNEXION SÉCURISÉE ÉTABLIE
+            </p>
+            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
+          </div>
+          <span className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
         </div>
       </div>
 
       {/* Custom Styles Injection */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap');
+        
         @keyframes scan {
           0% { transform: translateY(-100%); }
           100% { transform: translateY(400%); }
@@ -362,6 +372,11 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.3); border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(6,182,212,0.6); }
         .text-shadow-glow { text-shadow: 0 0 10px rgba(6,182,212,0.5); }
+        
+        .font-cyber { 
+          font-family: 'Chakra Petch', sans-serif; 
+          font-feature-settings: "smcp", "c2sc"; /* Small Caps simulation */
+        }
       `}</style>
     </div>
   );
