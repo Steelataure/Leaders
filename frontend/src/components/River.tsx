@@ -1,5 +1,9 @@
 import { useState } from "react";
 
+import useSound from 'use-sound';
+import characterSelectSfx from '../sounds/characterSelect.mp3';
+import characterHoverSfx from '../sounds/characterHover.mp3';
+
 /**
  * Composant River - La rivière de cartes pour le recrutement
  * Affiche 3 cartes de personnages disponibles au recrutement
@@ -147,10 +151,21 @@ function Card({ card, isDisabled, isLeaving, isEntering, onClick }: CardProps) {
       ? "animate-card-enter"
       : "";
 
+  // Sons
+  const [playCharacterHoverSfx] = useSound(characterHoverSfx);
+
   return (
     <div
       onClick={() => !isDisabled && onClick()}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        setIsHovered(true);
+
+        if (!isDisabled){
+          console.log('Son du personnage en hover');
+          playCharacterHoverSfx();
+        }
+                
+      }}
       onMouseLeave={() => setIsHovered(false)}
       className={`
         relative group
@@ -341,9 +356,15 @@ export default function River({
 
   const isDisabled = phase !== "RECRUITMENT";
 
+  // Sons
+  const [playCharacterSelectSfx] = useSound(characterSelectSfx);
+
   // Gestion du clic sur une carte
   const handleCardClick = (cardId: string) => {
     if (isDisabled) return;
+
+    // Son de la carte choisie
+    playCharacterSelectSfx();
 
     // Animation de sortie
     setLeavingCardId(cardId);
@@ -357,6 +378,7 @@ export default function River({
       // (simulé ici - en vrai ce serait la nouvelle carte)
       setEnteringCardId(cardId);
       setTimeout(() => setEnteringCardId(null), 500);
+
     }, 300);
   };
 
