@@ -3,18 +3,38 @@ image: docker:24.0.5
 services:
   - docker:24.0.5-dind
 
-variables:
-  DOCKER_TLS_CERTDIR: "/certs"
-
 stages:
   - build
+  - test
+  - deploy
 
-build_frontend:
+build_image:
   stage: build
   script:
-    # Connexion automatique au registre GitLab de l'ESIEA
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    # Build de l'image en ciblant le dossier frontend
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    # Note le ./frontend à la fin car ton Dockerfile est dans ce dossier
     - docker build -t $CI_REGISTRY_IMAGE:latest ./frontend
-    # Envoi de l'image pour que esiea.cloud puisse la voir
     - docker push $CI_REGISTRY_IMAGE:latest
+
+test_image:
+  stage: test
+  script:
+    # On lance l'image sur le port 80 (exigence esiea.cloud)
+    - docker run -d --name test-app -p 80:80 $CI_REGISTRY_IMAGE:latest
+    - sleep 5
+    - apk add --no-cache curl
+    # On vérifie que le serveur répond bien "Serving!" ou un code 200 sur le port 80
+    - curl --retry 3 --retry-delay 5 http://docker:80
+
+deploy_image:
+  stage: deploy
+  script:
+    - apk add --no-cache curl
+    - |
+      curl -X POST https://esiea.cloud/api/deploy/restart \
+      -H "Authorization: Bearer $ESIEA_CLOUD_TOKEN" \
+      -H "Content-Type: application/json"
+  # On ne déploie que si on est sur la branche frontend ou main
+  only:
+    - frontend
+    - main

@@ -1,22 +1,27 @@
-# ---- Étape : Build et Run ----
-FROM node:20-alpine
+# ---- Étape 1 : Build ----
+FROM node:20-alpine AS build
 WORKDIR /app
 
-# Installation des dépendances
+# On installe les dépendances
 COPY package*.json ./
 RUN npm install
 
-# Copie du code source
+# On copie le reste du code et on build
 COPY . .
-
-# On build l'application
 RUN npx vite build
 
-# Installation du serveur statique
+# ---- Étape 2 : Production (Image légère) ----
+FROM node:20-alpine
+WORKDIR /app
+
+# On installe uniquement le serveur statique
 RUN npm install -g serve
 
-# On expose le port 80 (EXIGENCE ESIEA.CLOUD)
+# On récupère UNIQUEMENT le dossier buildé de l'étape précédente
+COPY --from=build /app/dist ./dist
+
+# EXIGENCE ESIEA.CLOUD : Port 80
 EXPOSE 80
 
-# Lancement sur le port 80
+# On lance le serveur sur le port 80
 CMD ["serve", "-s", "dist", "-l", "80"]
