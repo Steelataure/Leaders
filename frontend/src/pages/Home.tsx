@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 import { cn } from "../utils/cn";
-import { useNavigate } from "react-router-dom";
 
 const Rain = () => {
     const [drops, setDrops] = useState<{ id: number; left: number; delay: number; duration: number }[]>([]);
@@ -51,8 +50,11 @@ const GlitchText = ({ text, className }: { text: string; className?: string }) =
     );
 };
 
-function Home() {
-    const navigate = useNavigate();
+interface HomeProps {
+    onStart: () => void;
+}
+
+function Home({ onStart }: HomeProps) {
 
     return (
         <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans selection:bg-cyan-500/30 selection:text-cyan-100">
@@ -116,7 +118,7 @@ function Home() {
                     className="relative"
                 >
                     <button
-                        onClick={() => navigate('/game')}
+                        onClick={onStart}
                         className="
               group relative overflow-hidden
               px-20 py-6
