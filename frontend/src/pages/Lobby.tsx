@@ -22,16 +22,16 @@ export default function Lobby({
   const [joinMode, setJoinMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [volume, setVolume] = useState(50);
+  const [sfxEnabled, setSfxEnabled] = useState(true);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
 
   // Login State
-  // Login/Register State
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState(""); // Nouveau state pour le register
-  const [isRegistering, setIsRegistering] = useState(false); // Toggle entre Login et Register
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,41 +40,20 @@ export default function Lobby({
     setUser(currentUser);
   }, []);
 
-  const handleAuth = async () => {
+  const handleLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      if (isRegistering) {
-        // Mode Inscription
-        const response = await authService.register({ email, password, username });
-        if (response.user) {
-          setUser(response.user);
-          setLoginOpen(false);
-        } else {
-          // Si pas de user renvoyé mais ok, on switch sur le login pour qu'il se connecte
-          setIsRegistering(false);
-          setError("Compte créé ! Veuillez vous connecter.");
-          // Ou auto-login si le backend renvoyait le token aussi au register
-        }
-
+      const response = await authService.login({ email, password });
+      if (response.user) {
+        setUser(response.user);
       } else {
-        // Mode Connexion
-        const response = await authService.login({ email, password });
-        if (response.user) {
-          setUser(response.user);
-        } else {
-          // Fallback/Mock si l'API ne renvoie pas l'user complet
-          setUser({ username: "Joueur", id: "0", email, roles: [] });
-        }
-        setLoginOpen(false);
+        // Fallback/Mock si l'API ne renvoie pas l'user complet
+        setUser({ username: "Joueur", id: "0", email, roles: [] });
       }
-
+      setLoginOpen(false);
     } catch (err) {
-      setError(
-        isRegistering
-          ? "Échec de l'inscription."
-          : "Échec de la connexion. Vérifiez vos identifiants."
-      );
+      setError("Échec de la connexion. Vérifiez vos identifiants.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -147,8 +126,10 @@ export default function Lobby({
               {!user ? (
                 <button
                   onClick={() => {
-                    setLoginOpen(true);
+                    setAboutOpen(false);
                     setDropdownOpen(false);
+                    setLoginOpen(true);
+                    setSettingsOpen(false);
                   }}
                   className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
                 >
@@ -164,7 +145,13 @@ export default function Lobby({
               )}
               <button
                 className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
-                onClick={() => console.log("Settings placeholder")}
+                onClick={() => {
+                  console.log("Settings placeholder")
+                  setAboutOpen(false);
+                  setDropdownOpen(false);
+                  setLoginOpen(false);
+                  setSettingsOpen(true);
+                }}
               >
                 Paramètres
               </button>
@@ -173,6 +160,8 @@ export default function Lobby({
                 onClick={() => {
                   setAboutOpen(true);
                   setDropdownOpen(false);
+                  setLoginOpen(false);
+                  setSettingsOpen(false);
                 }}
               >
                 A propos
@@ -370,7 +359,7 @@ export default function Lobby({
 
             <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
               <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
-              {isRegistering ? "CRÉER UN COMPTE" : "CONNEXION"}
+              CONNEXION
             </h2>
 
             <div className="space-y-4">
@@ -391,21 +380,6 @@ export default function Lobby({
                   placeholder="Pseudo ou Email"
                 />
               </div>
-
-              {isRegistering && (
-                <div>
-                  <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
-                    Nom d'utilisateur
-                  </label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 rounded-lg px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600"
-                    placeholder="Votre pseudo en jeu"
-                  />
-                </div>
-              )}
               <div>
                 <label className="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
                   Mot de passe
@@ -428,31 +402,87 @@ export default function Lobby({
               </div>
 
               <button
-                onClick={handleAuth}
+                onClick={handleLogin}
                 disabled={isLoading}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
               >
                 {isLoading ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  isRegistering ? "S'inscrire" : "Accéder au système"
+                  "Accéder au système"
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="text-center mt-4">
-                <button
-                  onClick={() => setIsRegistering(!isRegistering)}
-                  className="text-slate-500 hover:text-white text-xs underline"
-                >
-                  {isRegistering
-                    ? "Déjà un compte ? Se connecter"
-                    : "Pas de compte ? Créer un compte"}
-                </button>
+      {/* --- SETTINGS MODAL --- */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div
+            className="relative w-full max-w-lg bg-[#0f172a] border border-blue-500/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSettingsOpen(false)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+              PARAMÈTRES
+            </h2>
+
+            <div className="space-y-6 text-slate-300 leading-relaxed text-sm">
+              {/* Volume général */}
+              <div>
+                <label htmlFor="volume" className="text-white font-medium">
+                  Volume général
+                </label>
+                <input
+                  id="volume"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
+                  className="w-full accent-emerald-500 mt-2"
+                />
+                <p className="text-xs mt-1">Niveau actuel : {volume}%</p>
+              </div>
+
+              {/* Effets sonores */}
+              <div className="flex items-center justify-between">
+                <label htmlFor="sfx" className="text-white font-medium">Effets sonores (SFX)</label>
+                <input
+                  id="sfx"
+                  type="checkbox"
+                  checked={sfxEnabled}
+                  onChange={(e) => setSfxEnabled(e.target.checked)}
+                  className="accent-emerald-500"
+                />
               </div>
             </div>
           </div>
         </div>
       )}
+
 
       {/* --- ABOUT MODAL --- */}
       {aboutOpen && (
