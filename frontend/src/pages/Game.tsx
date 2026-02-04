@@ -7,6 +7,13 @@ import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
 import buttonHoverSfx from '../sounds/buttonHover.mp3';
 
+import cogneurImg from '../utils/image/cogneur.png';
+import rodeuseImg from '../utils/image/rodeuse.png';
+import illusionisteImg from '../utils/image/illusioniste.png';
+import manipulatriceImg from '../utils/image/manipulatrice.png';
+import tavernierImg from '../utils/image/tavernier.png';
+import gardeImg from '../utils/image/garderoyal.png';
+
 // === TYPES ===
 export type GamePhase = "ACTIONS" | "RECRUITMENT";
 
@@ -31,7 +38,6 @@ const INITIAL_RIVER: CharacterCard[] = [
   { id: "c1", characterId: "COGNEUR", name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
   { id: "c2", characterId: "RODEUR", name: "Rôdeuse", description: "Se déplace sur une case non-adjacente", type: "ACTIVE" },
   { id: "c3", characterId: "ILLUSIONISTE", name: "Illusionniste", description: "Échange de position avec un personnage", type: "ACTIVE" },
-  { id: "c4", characterId: "EMP", name: "EMP Strike", description: "Inflige des dégâts de zone", type: "SPECIAL" },
 ];
 
 const DECK_CARDS: CharacterCard[] = [
@@ -39,6 +45,19 @@ const DECK_CARDS: CharacterCard[] = [
   { id: "c6", characterId: "TAVERNIER", name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
   { id: "c7", characterId: "GARDE", name: "Garde Royal", description: "Protège le leader adjacent", type: "PASSIVE" }
 ];
+
+// === MAPPING IMAGES ===
+const CHARACTER_IMAGES: Record<string, string> = {
+  COGNEUR: cogneurImg,
+  RODEUR: rodeuseImg,
+  ILLUSIONISTE: illusionisteImg,
+  MANIPULATRICE: manipulatriceImg,
+  TAVERNIER: tavernierImg,
+  GARDE: gardeImg,
+  ARCHER: rodeuseImg, // Placeholder
+  CAVALIER: gardeImg, // Placeholder
+  LEADER: gardeImg, // Placeholder
+};
 
 // === COMPOSANTS UI ===
 
@@ -63,11 +82,17 @@ function SidebarCard({ card, onClick, disabled }: { card: CharacterCard; onClick
 
       <div className="pl-3">
         <div className="flex justify-between items-start mb-1">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{icons[card.type]}</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 relative bg-slate-900/50">
+              {CHARACTER_IMAGES[card.characterId] ? (
+                <img src={CHARACTER_IMAGES[card.characterId]} alt={card.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xs">{icons[card.type]}</div>
+              )}
+            </div>
             <span className="text-white font-bold text-sm tracking-wide">{card.name}</span>
           </div>
-          <span className="text-cyan-400 font-bold text-xs">⚡ {cost}</span>
+          {/* Cost removed */}
         </div>
         <p className="text-slate-500 text-[10px] leading-relaxed group-hover:text-slate-400">
           {card.description}
@@ -367,8 +392,14 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
             {selectedPiece ? (
               <div className="relative z-10 p-8 h-full flex flex-col items-center justify-center text-center">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 mb-4 flex items-center justify-center text-4xl shadow-[0_0_25px_rgba(251,191,36,0.5)] animate-bounce">
-                  {selectedPiece.characterId === 'LEADER' ? '👑' : '⚔️'}
+                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-amber-500/50 mb-4 shadow-[0_0_25px_rgba(251,191,36,0.5)] relative bg-slate-900/80">
+                  {CHARACTER_IMAGES[selectedPiece.characterId] ? (
+                    <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-amber-400 to-orange-600">
+                      {selectedPiece.characterId === 'LEADER' ? '👑' : '⚔️'}
+                    </div>
+                  )}
                 </div>
                 <h3 className="font-cyber text-3xl font-bold text-amber-400 tracking-wider mb-2 drop-shadow-md">{selectedPiece.characterId}</h3>
 
