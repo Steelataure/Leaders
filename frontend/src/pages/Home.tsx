@@ -134,7 +134,7 @@ function Home() {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
                         <span className="flex items-center gap-3 drop-shadow-md">
                             <Play className="w-6 h-6 fill-current" />
-                            Jouer
+                            Commencer
                         </span>
 
                         {/* Tech accents */}
