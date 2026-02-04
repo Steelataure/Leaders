@@ -1,4 +1,4 @@
-package esiea.hackathon.leaders.application.dto;
+package esiea.hackathon.leaders.application.dto.response;
 
 import java.util.UUID;
 

@@ -1,7 +1,8 @@
 package esiea.hackathon.leaders.adapter.controller;
 
-import esiea.hackathon.leaders.application.dto.PieceResponseDto;
+import esiea.hackathon.leaders.application.dto.response.PieceResponseDto;
 import esiea.hackathon.leaders.application.services.MovementService;
+import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +38,7 @@ public class PieceController {
      * GET /api/pieces/{pieceId}/valid-moves
      */
     @GetMapping("/{pieceId}/valid-moves")
-    public ResponseEntity<List<MovementService.HexCoord>> getValidMoves(@PathVariable UUID pieceId) {
+    public ResponseEntity<List<HexCoord>> getValidMoves(@PathVariable UUID pieceId) {
         return ResponseEntity.ok(movementService.getValidMovesForPiece(pieceId));
     }
 

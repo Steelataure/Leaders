@@ -3,6 +3,7 @@ package esiea.hackathon.leaders.adapter.infrastructure.entity;
 import esiea.hackathon.leaders.domain.model.enums.GameMode;
 import esiea.hackathon.leaders.domain.model.enums.GamePhase;
 import esiea.hackathon.leaders.domain.model.enums.GameStatus;
+import esiea.hackathon.leaders.domain.model.enums.VictoryType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,13 +20,13 @@ public class GameJpaEntity {
     private UUID id;
 
     @Enumerated(EnumType.STRING)
-    private GameMode mode; // Ton Enum
+    private GameMode mode;
 
     @Enumerated(EnumType.STRING)
-    private GameStatus status; // Ton Enum
+    private GameStatus status;
 
     @Enumerated(EnumType.STRING)
-    private GamePhase phase; // Ton Enum
+    private GamePhase phase;
 
     @Column(name = "current_player_index")
     private int currentPlayerIndex;
@@ -33,17 +34,21 @@ public class GameJpaEntity {
     @Column(name = "turn_number")
     private int turnNumber;
 
-    // Relations OneToMany (La Game possède les joueurs et les pièces)
+    @Column(name = "banishment_count")
+    private int banishmentCount;
 
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude // Important pour éviter boucle infinie
-    private List<GamePlayerJpaEntity> players;
+    @Column(name = "winner_player_index")
+    private Integer winnerPlayerIndex;
 
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    private List<PieceJpaEntity> pieces;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "winner_victory_type")
+    private VictoryType winnerVictoryType;
 
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     @ToString.Exclude
     private List<RecruitmentCardJpaEntity> cards;
+
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<PieceJpaEntity> pieces;
 }

@@ -13,20 +13,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Repository
-@RequiredArgsConstructor // Génère le constructeur pour l'injection
+@RequiredArgsConstructor
 public class JpaPieceRepository implements PieceRepository {
 
     private final SpringPieceRepository springRepository;
 
     @Override
     public PieceEntity save(PieceEntity pieceDomain) {
-        // 1. Convertir Domaine -> Infra
         PieceJpaEntity infraEntity = PieceMapper.toEntity(pieceDomain);
 
-        // 2. Sauvegarder via Spring
         PieceJpaEntity saved = springRepository.save(infraEntity);
 
-        // 3. Convertir Infra -> Domaine
         return PieceMapper.toDomain(saved);
     }
 
@@ -59,7 +56,6 @@ public class JpaPieceRepository implements PieceRepository {
 
     @Override
     public long countByGameIdAndOwnerIndex(UUID gameId, Short ownerIndex) {
-        // Retourne directement un long, pas de conversion nécessaire
         return springRepository.countByGameIdAndOwnerIndex(gameId, ownerIndex);
     }
 

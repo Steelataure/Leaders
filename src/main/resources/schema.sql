@@ -1,4 +1,20 @@
--- NETTOYAGE DES ANCIENS TYPES (Crucial pour éviter ton erreur)
+-- ==================================================================================
+-- 0. NETTOYAGE COMPLET
+-- ==================================================================================
+DROP TABLE IF EXISTS ref_character_ability CASCADE;
+DROP TABLE IF EXISTS scenario_character CASCADE;
+DROP TABLE IF EXISTS recruitment_card CASCADE;
+DROP TABLE IF EXISTS piece CASCADE;
+DROP TABLE IF EXISTS game_player CASCADE;
+DROP TABLE IF EXISTS game CASCADE;
+DROP TABLE IF EXISTS ability CASCADE;
+DROP TABLE IF EXISTS ref_character CASCADE;
+DROP TABLE IF EXISTS ref_scenario CASCADE;
+DROP TABLE IF EXISTS spring_session_attributes CASCADE;
+DROP TABLE IF EXISTS spring_session CASCADE;
+DROP TABLE IF EXISTS user_credentials CASCADE;
+
+-- On supprime les anciens types ENUM s'ils existent encore, pour faire place nette
 DROP TYPE IF EXISTS ability_type CASCADE;
 DROP TYPE IF EXISTS game_status CASCADE;
 DROP TYPE IF EXISTS game_mode CASCADE;
@@ -7,7 +23,9 @@ DROP TYPE IF EXISTS victory_type CASCADE;
 DROP TYPE IF EXISTS card_state CASCADE;
 DROP TYPE IF EXISTS action_type CASCADE;
 
+-- ==================================================================================
 -- 1. TABLES TECHNIQUES
+-- ==================================================================================
 CREATE TABLE IF NOT EXISTS SPRING_SESSION (
     PRIMARY_ID CHAR(36) NOT NULL,
     SESSION_ID CHAR(36) NOT NULL,
@@ -17,7 +35,7 @@ CREATE TABLE IF NOT EXISTS SPRING_SESSION (
     EXPIRY_TIME BIGINT NOT NULL,
     PRINCIPAL_NAME VARCHAR(100),
     CONSTRAINT SPRING_SESSION_PK PRIMARY KEY (PRIMARY_ID)
-);
+    );
 
 CREATE TABLE IF NOT EXISTS SPRING_SESSION_ATTRIBUTES (
     SESSION_PRIMARY_ID CHAR(36) NOT NULL,
@@ -25,24 +43,27 @@ CREATE TABLE IF NOT EXISTS SPRING_SESSION_ATTRIBUTES (
     ATTRIBUTE_BYTES BYTEA NOT NULL,
     CONSTRAINT SPRING_SESSION_ATTRIBUTES_PK PRIMARY KEY (SESSION_PRIMARY_ID, ATTRIBUTE_NAME),
     CONSTRAINT SPRING_SESSION_ATTRIBUTES_FK FOREIGN KEY (SESSION_PRIMARY_ID) REFERENCES SPRING_SESSION(PRIMARY_ID) ON DELETE CASCADE
-);
+    );
 
--- 2. CRÉATION DES TYPES
-CREATE TYPE ability_type AS ENUM ('ACTIVE', 'PASSIVE', 'SPECIAL');
-CREATE TYPE game_status AS ENUM ('WAITING', 'IN_PROGRESS', 'FINISHED_CAPTURE', 'FINISHED_ENCIRCLE');
-CREATE TYPE game_mode AS ENUM ('CLASSIC', 'STRATEGIST');
-CREATE TYPE game_phase AS ENUM ('BANISHMENT', 'ACTION', 'RECRUITMENT');
-CREATE TYPE victory_type AS ENUM ('CAPTURE', 'ENCIRCLEMENT');
-CREATE TYPE card_state AS ENUM ('IN_DECK', 'VISIBLE', 'RECRUITED', 'BANNED');
-CREATE TYPE action_type AS ENUM ('MOVE', 'ABILITY', 'RECRUIT', 'BAN', 'PASS');
+CREATE TABLE IF NOT EXISTS user_credentials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    username VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+    );
 
--- 3. TABLES MÉTIER
+-- ==================================================================================
+-- 2. TABLES MÉTIER (Types ENUM remplacés par VARCHAR pour compatibilité JPA)
+-- ==================================================================================
+
 CREATE TABLE IF NOT EXISTS ability (
     id VARCHAR(30) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    ability_type ability_type NOT NULL,
+    ability_type VARCHAR(50) NOT NULL, -- Ex: 'ACTIVE', 'PASSIVE'
     description TEXT NOT NULL
-);
+    );
 
 CREATE TABLE IF NOT EXISTS ref_character (
     id VARCHAR(30) PRIMARY KEY,
@@ -50,27 +71,40 @@ CREATE TABLE IF NOT EXISTS ref_character (
     is_leader BOOLEAN DEFAULT FALSE,
     recruitment_slots INT DEFAULT 1,
     description TEXT
-);
+    );
 
 CREATE TABLE IF NOT EXISTS ref_character_ability (
     character_id VARCHAR(30) REFERENCES ref_character(id),
     ability_id VARCHAR(30) REFERENCES ability(id),
     PRIMARY KEY (character_id, ability_id)
-);
+    );
+
+CREATE TABLE IF NOT EXISTS ref_scenario (
+                                            id SMALLINT PRIMARY KEY,
+                                            name VARCHAR(100) NOT NULL,
+    description TEXT
+    );
+
+CREATE TABLE IF NOT EXISTS scenario_character (
+    scenario_id SMALLINT REFERENCES ref_scenario(id),
+    character_id VARCHAR(30) REFERENCES ref_character(id),
+    PRIMARY KEY (scenario_id, character_id)
+    );
 
 CREATE TABLE IF NOT EXISTS game (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    mode game_mode NOT NULL DEFAULT 'CLASSIC',
-    status game_status NOT NULL DEFAULT 'WAITING',
-    phase game_phase NOT NULL DEFAULT 'ACTION',
+    mode VARCHAR(50) NOT NULL DEFAULT 'CLASSIC',     -- Ex: 'CLASSIC', 'STRATEGIST'
+    status VARCHAR(50) NOT NULL DEFAULT 'WAITING',   -- Ex: 'IN_PROGRESS'
+    phase VARCHAR(50) NOT NULL DEFAULT 'ACTION',     -- Ex: 'RECRUITMENT'
     current_player_index SMALLINT NOT NULL DEFAULT 0,
     turn_number INT NOT NULL DEFAULT 1,
     winner_player_index SMALLINT,
-    winner_victory_type victory_type,
+    winner_victory_type VARCHAR(50),                 -- Ex: 'CAPTURE'
     banishment_count SMALLINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+    updated_at TIMESTAMP DEFAULT NOW(),
+    scenario_id SMALLINT REFERENCES ref_scenario(id)
+    );
 
 CREATE TABLE IF NOT EXISTS game_player (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,9 +114,9 @@ CREATE TABLE IF NOT EXISTS game_player (
     is_first_turn_completed BOOLEAN DEFAULT FALSE,
     pieces_count SMALLINT NOT NULL DEFAULT 0,
     UNIQUE (game_id, player_index)
-);
+    );
 
-CREATE TABLE IF NOT EXISTS pieceEntity (
+CREATE TABLE IF NOT EXISTS piece (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_id UUID NOT NULL REFERENCES game(id) ON DELETE CASCADE,
     character_id VARCHAR(30) NOT NULL REFERENCES ref_character(id),
@@ -92,15 +126,103 @@ CREATE TABLE IF NOT EXISTS pieceEntity (
     has_acted_this_turn BOOLEAN DEFAULT FALSE,
     CONSTRAINT valid_hex_coords CHECK (ABS(q) <= 3 AND ABS(r) <= 3 AND ABS(q + r) <= 3),
     UNIQUE (game_id, q, r)
-);
+    );
 
 CREATE TABLE IF NOT EXISTS recruitment_card (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_id UUID NOT NULL REFERENCES game(id) ON DELETE CASCADE,
     character_id VARCHAR(30) NOT NULL REFERENCES ref_character(id),
-    state card_state NOT NULL DEFAULT 'IN_DECK',
+    state VARCHAR(50) NOT NULL DEFAULT 'IN_DECK', -- Ex: 'VISIBLE'
     deck_order INT,
     visible_slot SMALLINT CHECK (visible_slot BETWEEN 1 AND 3),
     recruited_by_index SMALLINT CHECK (recruited_by_index IN (0, 1)),
     banned_by_index SMALLINT CHECK (banned_by_index IN (0, 1))
-);
+    );
+
+-- ==================================================================================
+-- 3. DONNÉES DE RÉFÉRENCE (IDs ANGLAIS pour Java)
+-- ==================================================================================
+
+-- A. PERSONNAGES
+INSERT INTO ref_character (id, name, is_leader, recruitment_slots, description) VALUES
+                                                                                    ('LEADER', 'Leader', TRUE, 0, 'Votre champion. S''il est capturé ou encerclé, vous perdez.'),
+                                                                                    ('ACROBAT', 'Acrobate', FALSE, 1, 'Saute par-dessus ses voisins.'),
+                                                                                    ('ARCHER', 'Archère', FALSE, 1, 'Capture à distance.'),
+                                                                                    ('ASSASSIN', 'Assassin', FALSE, 1, 'Capture le Leader seul.'),
+                                                                                    ('BRAWLER', 'Cogneur', FALSE, 1, 'Pousse les ennemis.'),
+                                                                                    ('CAVALRY', 'Cavalier', FALSE, 1, 'Charge de 2 cases.'),
+                                                                                    ('GRAPPLER', 'Lance-Grappin', FALSE, 1, 'Attire les ennemis.'),
+                                                                                    ('ILLUSIONIST', 'Illusionniste', FALSE, 1, 'Échange sa place.'),
+                                                                                    ('INNKEEPER', 'Tavernier', FALSE, 1, 'Aide les alliés.'),
+                                                                                    ('JAILER', 'Geôlier', FALSE, 1, 'Bloque les passifs.'),
+                                                                                    ('MANIPULATOR', 'Manipulatrice', FALSE, 1, 'Force le mouvement ennemi.'),
+                                                                                    ('NEMESIS', 'Némésis', FALSE, 1, 'Réagit au mouvement du Leader.'),
+                                                                                    ('OLD_BEAR', 'Vieil Ours', FALSE, 2, 'Vient avec l''Ourson (Duo).'),
+                                                                                    ('CUB', 'Ourson', FALSE, 0, 'Ne capture pas. Vient avec le Vieil Ours.'),
+                                                                                    ('PROTECTOR', 'Protecteur', FALSE, 1, 'Empêche les déplacements forcés.'),
+                                                                                    ('PROWLER', 'Rôdeuse', FALSE, 1, 'Se téléporte sur une case libre.'),
+                                                                                    ('ROYAL_GUARD', 'Garde Royal', FALSE, 1, 'Reste proche du Leader.'),
+                                                                                    ('VIZIER', 'Vizir', FALSE, 1, 'Donne du mouvement au Leader.')
+    ON CONFLICT (id) DO NOTHING;
+
+-- B. SCÉNARIOS
+INSERT INTO ref_scenario (id, name, description) VALUES
+                                                     (1, 'Acrobates et Cavaliers', 'Mobilité extrême avec sauts et charges'),
+                                                     (2, 'Illusionnistes', 'Manipulation et échanges de position'),
+                                                     (3, 'Gardiens', 'Contrôle et protection du terrain'),
+                                                     (4, 'Cogneurs', 'Déplacements forcés et contrôle agressif'),
+                                                     (5, 'Némésis', 'Réaction automatique aux mouvements ennemis'),
+                                                     (6, 'Rôdeurs', 'Déplacements stratégiques et support'),
+                                                     (7, 'Chasseurs', 'Capture à distance et élimination directe')
+    ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO scenario_character (scenario_id, character_id) VALUES
+                                                               (1, 'LEADER'), (1, 'ACROBAT'), (1, 'CAVALRY'),
+                                                               (2, 'LEADER'), (2, 'ILLUSIONIST'), (2, 'MANIPULATOR'),
+                                                               (3, 'LEADER'), (3, 'JAILER'), (3, 'PROTECTOR'),
+                                                               (4, 'LEADER'), (4, 'BRAWLER'), (4, 'GRAPPLER'),
+                                                               (5, 'LEADER'), (5, 'NEMESIS'),
+                                                               (6, 'LEADER'), (6, 'PROWLER'), (6, 'INNKEEPER'),
+                                                               (7, 'LEADER'), (7, 'ARCHER'), (7, 'ASSASSIN')
+    ON CONFLICT DO NOTHING;
+
+-- C. COMPÉTENCES
+INSERT INTO ability (id, name, ability_type, description) VALUES
+                                                              ('ACROBAT_JUMP', 'Saut Acrobatique', 'ACTIVE', 'Saute en ligne droite par-dessus un Personnage adjacent.'),
+                                                              ('CAVALRY_CHARGE', 'Charge', 'ACTIVE', 'Se déplace de deux cases en ligne droite.'),
+                                                              ('BRAWLER_PUSH', 'Bousculade', 'ACTIVE', 'Se déplace sur la case d''un ennemi adjacent et le pousse.'),
+                                                              ('ROYAL_GUARD_PROTECT', 'Protection Royale', 'ACTIVE', 'Se déplace sur une case adjacente au Leader.'),
+                                                              ('ILLUSIONIST_SWAP', 'Échange', 'ACTIVE', 'Échange de position avec un personnage visible et non-adjacent.'),
+                                                              ('GRAPPLE_HOOK', 'Grappin', 'ACTIVE', 'Se déplace jusqu''à une cible ou l''attire.'),
+                                                              ('MANIPULATOR_MOVE', 'Manipulation', 'ACTIVE', 'Déplace d''une case un ennemi visible.'),
+                                                              ('PROWLER_STEALTH', 'Furtivité', 'ACTIVE', 'Se déplace sur n''importe quelle case non-adjacente à un ennemi.'),
+                                                              ('INNKEEPER_ASSIST', 'Assistance', 'ACTIVE', 'Déplace d''une case un allié adjacent.'),
+                                                              ('ARCHER_RANGE', 'Tir à Distance', 'PASSIVE', 'Participe à la capture à une distance de 2 cases.'),
+                                                              ('ASSASSIN_SOLO', 'Assassinat', 'PASSIVE', 'Capture le Leader adverse même sans autre allié.'),
+                                                              ('JAILER_BLOCK', 'Blocage', 'PASSIVE', 'Les ennemis adjacents ne peuvent pas utiliser leur compétence active.'),
+                                                              ('PROTECTOR_SHIELD', 'Bouclier', 'PASSIVE', 'Empêche le déplacement forcé des alliés adjacents.'),
+                                                              ('VIZIER_BOOST', 'Conseil', 'PASSIVE', 'Le Leader peut se déplacer d''une case supplémentaire.'),
+                                                              ('BEAR_DUO', 'Duo', 'SPECIAL', 'Vieil Ours et Ourson sont recrutés ensemble.'),
+                                                              ('NEMESIS_REACT', 'Réaction', 'SPECIAL', 'Se déplace quand le Leader adverse bouge.')
+    ON CONFLICT (id) DO NOTHING;
+
+-- D. LIAISONS
+INSERT INTO ref_character_ability (character_id, ability_id) VALUES
+                                                                 ('ACROBAT', 'ACROBAT_JUMP'),
+                                                                 ('CAVALRY', 'CAVALRY_CHARGE'),
+                                                                 ('BRAWLER', 'BRAWLER_PUSH'),
+                                                                 ('ROYAL_GUARD', 'ROYAL_GUARD_PROTECT'),
+                                                                 ('ILLUSIONIST', 'ILLUSIONIST_SWAP'),
+                                                                 ('GRAPPLER', 'GRAPPLE_HOOK'),
+                                                                 ('MANIPULATOR', 'MANIPULATOR_MOVE'),
+                                                                 ('PROWLER', 'PROWLER_STEALTH'),
+                                                                 ('INNKEEPER', 'INNKEEPER_ASSIST'),
+                                                                 ('ARCHER', 'ARCHER_RANGE'),
+                                                                 ('ASSASSIN', 'ASSASSIN_SOLO'),
+                                                                 ('JAILER', 'JAILER_BLOCK'),
+                                                                 ('PROTECTOR', 'PROTECTOR_SHIELD'),
+                                                                 ('VIZIER', 'VIZIER_BOOST'),
+                                                                 ('OLD_BEAR', 'BEAR_DUO'),
+                                                                 ('CUB', 'BEAR_DUO'),
+                                                                 ('NEMESIS', 'NEMESIS_REACT')
+    ON CONFLICT DO NOTHING;
