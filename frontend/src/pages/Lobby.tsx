@@ -19,8 +19,10 @@ const styles = `
 
 export default function Lobby({
   onStartGame,
+  onOpenRules,
 }: {
   onStartGame: (id: string) => void;
+  onOpenRules: () => void;
 }) {
   const [joinMode, setJoinMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -124,6 +126,32 @@ export default function Lobby({
         </div>
       </div>
 
+      {/* --- TOP LEFT RULES BUTTON --- */}
+      <div className="absolute top-6 left-6 z-50">
+        <button
+          onClick={onOpenRules}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-blue-400 rounded-lg transition-all backdrop-blur-md"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
+            />
+          </svg>
+          <span className="text-sm font-bold uppercase tracking-wider">
+            Règles
+          </span>
+        </button>
+      </div>
+
       {/* --- TOP RIGHT LOGIN MENU --- */}
       <div className="absolute top-6 right-6 z-50">
         <button
@@ -172,6 +200,7 @@ export default function Lobby({
                   Déconnexion
                 </button>
               )}
+
               <button
                 className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
                 onClick={() => {
