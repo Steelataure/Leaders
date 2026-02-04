@@ -280,7 +280,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
           <div className="w-px h-10 bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
 
           <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest">
-            <span className="text-slate-500">CYCLE <span className="text-cyan-50 text-base ml-1">{turnNumber}</span></span>
+            <span className="text-slate-500">TOUR <span className="text-cyan-50 text-base ml-1">{turnNumber}</span></span>
             <div className={`
               px-6 py-2 rounded-full border shadow-[0_0_15px_inset] transition-all duration-300
               ${currentPlayer === 0
