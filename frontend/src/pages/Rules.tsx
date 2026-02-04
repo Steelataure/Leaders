@@ -10,7 +10,7 @@ const Rules = ({ onBack }: { onBack: () => void }) => {
                     {/* Left: Logo */}
                     <div className="flex items-center">
                         <img
-                            src="/src/utils/image/logo.png"
+                            src="/image/logo.png"
                             alt="Leaders Logo"
                             className="h-12 md:h-14"
                         />

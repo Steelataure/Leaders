@@ -7,12 +7,12 @@ import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
 import buttonHoverSfx from '../sounds/buttonHover.mp3';
 
-import cogneurImg from '../utils/image/cogneur.png';
-import rodeuseImg from '../utils/image/rodeuse.png';
-import illusionisteImg from '../utils/image/illusioniste.png';
-import manipulatriceImg from '../utils/image/manipulatrice.png';
-import tavernierImg from '../utils/image/tavernier.png';
-import gardeImg from '../utils/image/garderoyal.png';
+import cogneurImg from '/image/cogneur.png';
+import rodeuseImg from '/image/rodeuse.png';
+import illusionisteImg from '/image/illusioniste.png';
+import manipulatriceImg from '/image/manipulatrice.png';
+import tavernierImg from '/image/tavernier.png';
+import gardeImg from '/image/garderoyal.png';
 
 // === TYPES ===
 export type GamePhase = "ACTIONS" | "RECRUITMENT";

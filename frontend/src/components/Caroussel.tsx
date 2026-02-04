@@ -13,97 +13,97 @@ const cards: Card[] = [
         name: "Acrobate",
         type: "active",
         description: "Saute en ligne droite par-dessus un Personnage adjacent. Peut effectuer jusqu'à deux sauts consécutifs.",
-        image: "/src/utils/image/acrobate.png"
+        image: "/image/acrobate.png"
     },
     {
         name: "Cavalier",
         type: "active",
         description: "Se déplace de deux cases en ligne droite.",
-        image: "/src/utils/image/cavalier.png"
+        image: "/image/cavalier.png"
     },
     {
         name: "Cogneur",
         type: "active",
         description: "Se déplace sur la case d'un ennemi adjacent et le pousse sur l'une des trois cases opposées de votre choix.",
-        image: "/src/utils/image/cogneur.png"
+        image: "/image/cogneur.png"
     },
     {
         name: "Garde Royal",
         type: "active",
         description: "Se déplace, depuis n'importe quelle case, sur une case adjacente à votre Leader, puis peut ensuite se déplacer d'une case.",
-        image: "/src/utils/image/garderoyal.png"
+        image: "/image/garderoyal.png"
     },
     {
         name: "Illusioniste",
         type: "active",
         description: "Échange de position avec un Personnage visible en ligne droite et non-adjacent.",
-        image: "/src/utils/image/illusioniste.png"
+        image: "/image/illusioniste.png"
     },
     {
         name: "Lance-Grappin",
         type: "active",
         description: "Se déplace jusqu'à un Personnage visible en ligne droite ou l'attire jusqu'à lui.",
-        image: "/src/utils/image/lance-grappin.png"
+        image: "/image/lance-grappin.png"
     },
     {
         name: "Manipulatrice",
         type: "active",
         description: "Déplace d'une case un ennemi visible en ligne droite et non-adjacent.",
-        image: "/src/utils/image/manipulatrice.png"
+        image: "/image/manipulatrice.png"
     },
     {
         name: "Rôdeuse",
         type: "active",
         description: "Se déplace sur n'importe quelle case non-adjacente à un ennemi.",
-        image: "/src/utils/image/rodeuse.png"
+        image: "/image/rodeuse.png"
     },
     {
         name: "Tavernier",
         type: "active",
         description: "Déplace d'une case un allié adjacent.",
-        image: "/src/utils/image/tavernier.png"
+        image: "/image/tavernier.png"
     },
     {
         name: "Archère",
         type: "passive",
         description: "Participe à la capture du Leader adverse à une distance de deux cases en ligne droite. Il n'est pas nécessaire que le Leader adverse soit visible. Ne participe pas à la capture s'il lui est adjacent.",
-        image: "/src/utils/image/archere.png"
+        image: "/image/archere.png"
     },
     {
         name: "Assassin",
         type: "passive",
         description: "Capture le Leader adverse, même sans autre allié participant.",
-        image: "/src/utils/image/assassin.png"
+        image: "/image/assassin.png"
     },
     {
         name: "Geôlier",
         type: "passive",
         description: "Les ennemis adjacents ayant une compétence active ne peuvent pas l'utiliser.",
-        image: "/src/utils/image/geolier.png"
+        image: "/image/geolier.png"
     },
     {
         name: "Protecteur",
         type: "passive",
         description: "Les compétences des ennemis ne peuvent déplacer ni le Protecteur, ni ses alliés adjacents.",
-        image: "/src/utils/image/protecteur.png"
+        image: "/image/protecteur.png"
     },
     {
         name: "Vizir",
         type: "passive",
         description: "Votre Leader peut se déplacer d'une case supplémentaire lors de son action.",
-        image: "/src/utils/image/vizir.png"
+        image: "/image/vizir.png"
     },
     {
         name: "Vieil Ours et Ourson",
         type: "special",
         description: "Quand vous les recrutez, prenez les deux et placez-les chacun sur une case de Recrutement vide. Ces deux Personnages comptent comme un seul pendant la phase de Recrutement. L'Ourson ne participe pas à la Capture du Leader adverse.",
-        image: "/src/utils/image/vieilours&ourson.png"
+        image: "/image/vieilours&ourson.png"
     },
     {
         name: "Némésis",
         type: "special",
         description: "Ne peut pas faire d'actions pendant sa phase d'actions. À la fin d'une action qui déplace le Leader adverse, la Némésis DOIT se déplacer de deux cases.",
-        image: "/src/utils/image/nemesis.png"
+        image: "/image/nemesis.png"
     }
 ];
 
