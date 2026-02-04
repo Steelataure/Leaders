@@ -1,313 +1,317 @@
 import { useState, useCallback } from "react";
-import HexBoard from "../components/HexBoard";
-import River, { type CharacterCard } from "../components/River";
+import HexBoard, { type Piece, type GamePhase } from "../components/HexBoard";
+import { type CharacterCard } from "../components/River";
 import VictoryScreen from "../components/VictoryScreen";
 
-// === TYPES ===
-type GamePhase = "ACTIONS" | "RECRUITMENT";
-
-interface Piece {
-  id: string;
-  characterId: string;
-  ownerIndex: number;
-  q: number;
-  r: number;
-  hasActed: boolean;
-}
-
-// === DONNÉES INITIALES (MOCKS) ===
+// === CONSTANTS & MOCKS ===
 const INITIAL_PIECES: Piece[] = [
-  {
-    id: "p1",
-    characterId: "LEADER",
-    ownerIndex: 0,
-    q: 0,
-    r: 2,
-    hasActed: false,
-  },
-  {
-    id: "p2",
-    characterId: "LEADER",
-    ownerIndex: 1,
-    q: 0,
-    r: -2,
-    hasActed: false,
-  },
-  {
-    id: "p3",
-    characterId: "ARCHER",
-    ownerIndex: 0,
-    q: 1,
-    r: 1,
-    hasActed: false,
-  },
-  {
-    id: "p4",
-    characterId: "CAVALIER",
-    ownerIndex: 1,
-    q: -1,
-    r: -1,
-    hasActed: false,
-  },
+  { id: "p1", characterId: "LEADER", ownerIndex: 0, q: 0, r: 2, hasActed: false },
+  { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 0, r: -2, hasActed: false },
+  { id: "p3", characterId: "ARCHER", ownerIndex: 0, q: 1, r: 1, hasActed: false },
+  { id: "p4", characterId: "CAVALIER", ownerIndex: 1, q: -1, r: -1, hasActed: false },
 ];
 
 const INITIAL_RIVER: CharacterCard[] = [
-  {
-    id: "card-1",
-    characterId: "COGNEUR",
-    name: "Cogneur",
-    description: "Pousse un ennemi adjacent vers l'opposé",
-    type: "ACTIVE",
-  },
-  {
-    id: "card-2",
-    characterId: "RODEUR",
-    name: "Rôdeuse",
-    description: "Se déplace sur une case non-adjacente à un ennemi",
-    type: "ACTIVE",
-  },
-  {
-    id: "card-3",
-    characterId: "ILLUSIONISTE",
-    name: "Illusionniste",
-    description: "Échange de position avec un personnage visible",
-    type: "ACTIVE",
-  },
+  { id: "c1", characterId: "COGNEUR", name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
+  { id: "c2", characterId: "RODEUR", name: "Rôdeuse", description: "Se déplace sur une case non-adjacente", type: "ACTIVE" },
+  { id: "c3", characterId: "ILLUSIONISTE", name: "Illusionniste", description: "Échange de position avec un personnage", type: "ACTIVE" },
+  { id: "c4", characterId: "EMP", name: "EMP Strike", description: "Inflige des dégâts de zone", type: "SPECIAL" },
 ];
 
-const DECK_CARDS: CharacterCard[] = [
-  {
-    id: "card-4",
-    characterId: "MANIPULATRICE",
-    name: "Manipulatrice",
-    description: "Déplace un ennemi visible d'une case",
-    type: "ACTIVE",
-  },
-  {
-    id: "card-5",
-    characterId: "TAVERNIER",
-    name: "Tavernier",
-    description: "Déplace un allié adjacent d'une case",
-    type: "ACTIVE",
-  },
-  {
-    id: "card-6",
-    characterId: "GEOLIER",
-    name: "Geôlier",
-    description: "Les ennemis adjacents ne peuvent pas agir",
-    type: "PASSIVE",
-  },
-  {
-    id: "card-7",
-    characterId: "PROTECTEUR",
-    name: "Protecteur",
-    description: "Les ennemis ne peuvent pas déplacer ses alliés",
-    type: "PASSIVE",
-  },
-  {
-    id: "card-8",
-    characterId: "ASSASSIN",
-    name: "Assassin",
-    description: "Capture le Leader seul sans allié",
-    type: "PASSIVE",
-  },
-];
+// === COMPOSANTS UI ===
+
+// Carte de la rivière (Sidebar gauche)
+function SidebarCard({ card, onClick, disabled }: { card: CharacterCard; onClick: () => void; disabled: boolean }) {
+  const icons: Record<string, string> = { ACTIVE: "⚡", PASSIVE: "🛡️", SPECIAL: "✨" };
+  const cost = 3; // Mock cost
+
+  return (
+    <div
+      onClick={!disabled ? onClick : undefined}
+      className={`
+        group relative p-3 rounded-xl border transition-all duration-300
+        ${disabled
+          ? 'bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed'
+          : 'bg-slate-800/80 border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 hover:shadow-[0_0_15px_rgba(0,245,255,0.2)] cursor-pointer'
+        }
+      `}
+    >
+      {/* Barre latérale colorée */}
+      <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-r ${card.type === 'ACTIVE' ? 'bg-amber-400' : 'bg-purple-400'}`} />
+
+      <div className="pl-3">
+        <div className="flex justify-between items-start mb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{icons[card.type]}</span>
+            <span className="text-white font-bold text-sm tracking-wide">{card.name}</span>
+          </div>
+          <span className="text-cyan-400 font-bold text-xs">⚡ {cost}</span>
+        </div>
+        <p className="text-slate-500 text-[10px] leading-relaxed group-hover:text-slate-400">
+          {card.description}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
-  // === ÉTAT DU JEU ===
   const [pieces, setPieces] = useState<Piece[]>(INITIAL_PIECES);
   const [currentPlayer, setCurrentPlayer] = useState<0 | 1>(0);
   const [phase, setPhase] = useState<GamePhase>("ACTIONS");
   const [turnNumber, setTurnNumber] = useState(1);
+  const [deck, setDeck] = useState<CharacterCard[]>([
+    { id: "c5", characterId: "MANIPULATRICE", name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
+    { id: "c6", characterId: "TAVERNIER", name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
+    { id: "c7", characterId: "GARDE", name: "Garde Royal", description: "Protège le leader adjacent", type: "PASSIVE" }
+  ]);
   const [river, setRiver] = useState<CharacterCard[]>(INITIAL_RIVER);
-  const [deck, setDeck] = useState<CharacterCard[]>(DECK_CARDS);
-  const [victory, setVictory] = useState<{
-    winner: 0 | 1;
-    type: "CAPTURE" | "ENCIRCLEMENT";
-  } | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
+  const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
 
-  // === LOGIC : Fin de tour ===
+  // === LOGIC ===
   const endTurn = useCallback(() => {
     const nextPlayer = currentPlayer === 0 ? 1 : 0;
     setCurrentPlayer(nextPlayer);
     setPhase("ACTIONS");
     if (nextPlayer === 0) setTurnNumber((t) => t + 1);
-    // Reset de l'état "a déjà joué" pour le prochain joueur
     setPieces((prev) => prev.map((p) => ({ ...p, hasActed: false })));
+    setSelectedPiece(null);
   }, [currentPlayer]);
 
-  // === LOGIC : Passer son tour (Action ou Recrutement) ===
   const handlePass = useCallback(() => {
-    if (phase === "ACTIONS") {
-      setPhase("RECRUITMENT");
-    } else {
-      endTurn();
-    }
+    if (phase === "ACTIONS") setPhase("RECRUITMENT");
+    else endTurn();
   }, [phase, endTurn]);
 
-  // === LOGIC : Vérification auto de la phase ===
-  const checkPhaseTransition = useCallback(
-    (updatedPieces: Piece[]) => {
-      const playerPieces = updatedPieces.filter(
-        (p) => p.ownerIndex === currentPlayer,
+  // Handle Recruitment
+  const handleRecruit = useCallback((cardId: string) => {
+    if (phase !== "RECRUITMENT") return;
+
+    // 1. Check limit (max 5 pieces/player mock)
+    const playerPieces = pieces.filter(p => p.ownerIndex === currentPlayer);
+    if (playerPieces.length >= 6) {
+      alert("Maximum d'unités atteint !");
+      return;
+    }
+
+    // 2. Find Card
+    const card = river.find(c => c.id === cardId);
+    if (!card) return;
+
+    // 3. Find Free Spawn Spot (Official spawn points)
+    // P1 (Bottom): (-3,3), (-2,3), (-1,2), (-1,3)
+    // P2 (Top): (3,-3), (2,-3), (1,-2), (1,-3)
+    const spawnPoints = currentPlayer === 0
+      ? [{ q: -3, r: 3 }, { q: -2, r: 3 }, { q: -1, r: 2 }, { q: -1, r: 3 }] // Bottom
+      : [{ q: 3, r: -3 }, { q: 2, r: -3 }, { q: 1, r: -2 }, { q: 1, r: -3 }]; // Top
+
+    const freeSpot = spawnPoints.find(spot =>
+      !pieces.some(p => p.q === spot.q && p.r === spot.r)
+    );
+
+    if (!freeSpot) {
+      alert("Aucune case de recrutement libre ! Déplacez vos unités.");
+      return;
+    }
+
+    // 4. Create Piece
+    const newPiece: Piece = {
+      id: `u-${Date.now()}`,
+      characterId: card.characterId,
+      ownerIndex: currentPlayer,
+      q: freeSpot.q,
+      r: freeSpot.r,
+      hasActed: true // New recruits cannot act immediately (usually)
+    };
+
+    // 5. Update State
+    setPieces(prev => [...prev, newPiece]);
+
+    // Cycle River
+    const nextCard = deck[0];
+    const newDeck = deck.slice(1);
+    const newRiver = river.map(c => c.id === cardId ? nextCard || c : c); // Replace recruited card, or keep if no next card
+
+    // In strict rules, river slides. simplified here: replace slot.
+    setRiver(newRiver);
+    if (nextCard) setDeck(newDeck);
+
+    // End Turn
+    endTurn();
+
+  }, [phase, pieces, river, deck, currentPlayer, endTurn]);
+
+  const handleMove = useCallback((pieceId: string, toQ: number, toR: number) => {
+    setPieces((prev) => {
+      const updated = prev.map((p) =>
+        p.id === pieceId ? { ...p, q: toQ, r: toR, hasActed: true } : p
       );
-      const allPlayed = playerPieces.every((p) => p.hasActed);
-      if (allPlayed) {
-        setPhase("RECRUITMENT");
+      // Auto-transition logic
+      const playerPieces = updated.filter((p) => p.ownerIndex === currentPlayer);
+      if (playerPieces.every((p) => p.hasActed)) {
+        setTimeout(() => setPhase("RECRUITMENT"), 500);
       }
-    },
-    [currentPlayer],
-  );
+      return updated;
+    });
+  }, [currentPlayer]);
 
-  // === LOGIC : Déplacement d'une pièce ===
-  const handleMove = useCallback(
-    (pieceId: string, toQ: number, toR: number) => {
-      setPieces((prev) => {
-        const updated = prev.map((p) =>
-          p.id === pieceId ? { ...p, q: toQ, r: toR, hasActed: true } : p,
-        );
-        checkPhaseTransition(updated);
-        return updated;
-      });
-    },
-    [checkPhaseTransition],
-  );
-
-  // === LOGIC : Recrutement ===
-  const handleRecruit = useCallback(
-    (cardId: string) => {
-      const playerPieceCount = pieces.filter(
-        (p) => p.ownerIndex === currentPlayer,
-      ).length;
-      if (playerPieceCount >= 5) {
-        console.log("Limite de 5 pièces atteinte");
-        endTurn();
-        return;
-      }
-
-      const card = river.find((c) => c.id === cardId);
-      if (!card) return;
-
-      // Définition simplifiée des cases de recrutement (Mock)
-      const recruitmentCells =
-        currentPlayer === 0
-          ? [
-              { q: -3, r: 2 },
-              { q: -2, r: 3 },
-              { q: -3, r: 3 },
-            ]
-          : [
-              { q: 3, r: -2 },
-              { q: 2, r: -3 },
-              { q: 3, r: -3 },
-            ];
-
-      const freeCell = recruitmentCells.find(
-        (cell) => !pieces.find((p) => p.q === cell.q && p.r === cell.r),
-      );
-
-      if (!freeCell) {
-        console.log("Zones de recrutement occupées");
-        endTurn();
-        return;
-      }
-
-      // Ajout de la nouvelle pièce sur le plateau
-      const newPiece: Piece = {
-        id: `recruited-${Date.now()}`,
-        characterId: card.characterId,
-        ownerIndex: currentPlayer,
-        q: freeCell.q,
-        r: freeCell.r,
-        hasActed: true, // Une unité recrutée ne peut pas agir le même tour
-      };
-
-      setPieces((prev) => [...prev, newPiece]);
-
-      // Remplacement de la carte dans la rivière par une carte du deck
-      const newDeck = [...deck];
-      const replacement = newDeck.shift();
-      setDeck(newDeck);
-      setRiver((prev) =>
-        prev.map((c) => (c.id === cardId && replacement ? replacement : c)),
-      );
-
-      endTurn(); // Le recrutement finit le tour du joueur
-    },
-    [pieces, river, deck, currentPlayer, endTurn],
-  );
-
-  // === RESET GAME ===
-  const resetGame = () => {
-    setPieces(INITIAL_PIECES);
-    setCurrentPlayer(0);
-    setPhase("ACTIONS");
-    setTurnNumber(1);
-    setRiver(INITIAL_RIVER);
-    setDeck(DECK_CARDS);
-    setVictory(null);
-  };
-
-  // Affichage de l'écran de victoire si déclenché
   if (victory) {
     return (
       <VictoryScreen
         winner={victory.winner}
         victoryType={victory.type}
-        onPlayAgain={resetGame}
+        onPlayAgain={() => { /* reset */ }}
         onBackToLobby={onBackToLobby}
       />
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-8 overflow-hidden">
-      {/* 1. Plateau de jeu principal */}
-      <HexBoard
-        pieces={pieces}
-        currentPlayer={currentPlayer}
-        phase={phase}
-        turnNumber={turnNumber}
-        onMove={handleMove}
+    <div className="h-screen w-screen bg-[#05101a] text-white font-mono flex overflow-hidden relative">
+      {/* Background Grid */}
+      <div
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{
+          backgroundImage: `linear-gradient(#00f5ff 1px, transparent 1px), linear-gradient(90deg, #00f5ff 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }}
       />
 
-      {/* 2. Barre d'actions tactiques et Debug */}
-      <div className="flex items-center gap-6 mt-6 mb-2">
-        <button
-          onClick={handlePass}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all font-black uppercase tracking-tighter"
-        >
-          {phase === "ACTIONS"
-            ? "⏭️ Passer les actions"
-            : "⏭️ Passer le recrutement"}
-        </button>
+      {/* Corner Brackets */}
+      <div className="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-cyan-500/30 rounded-tl-xl pointer-events-none" />
+      <div className="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-cyan-500/30 rounded-tr-xl pointer-events-none" />
+      <div className="absolute bottom-4 left-4 w-16 h-16 border-b-4 border-l-4 border-cyan-500/30 rounded-bl-xl pointer-events-none" />
+      <div className="absolute bottom-4 right-4 w-16 h-16 border-b-4 border-r-4 border-cyan-500/30 rounded-br-xl pointer-events-none" />
 
-        {/* Console de Debug - Indispensable pour les tests de capture */}
-        <div className="flex gap-2 p-2 bg-slate-900/50 rounded-2xl border border-white/5">
-          <button
-            onClick={() => setVictory({ winner: 0, type: "CAPTURE" })}
-            className="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded-lg border border-red-900/30 transition-all text-[10px] font-bold uppercase"
-          >
-            Win P1 (Cap)
-          </button>
-          <button
-            onClick={() => setVictory({ winner: 1, type: "ENCIRCLEMENT" })}
-            className="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded-lg border border-red-900/30 transition-all text-[10px] font-bold uppercase"
-          >
-            Win P2 (Enc)
-          </button>
+      {/* === HEADER === */}
+      <div className="absolute top-0 left-0 right-0 h-20 z-20 flex items-center justify-center pointer-events-none">
+        <div className="flex items-center gap-8 bg-slate-900/80 backdrop-blur-md px-12 py-3 rounded-b-3xl border-x border-b border-cyan-500/30 shadow-[0_0_30px_rgba(0,245,255,0.1)] pointer-events-auto">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl text-yellow-400">⚔️</span>
+            <h1 className="text-2xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 filter drop-shadow-[0_0_10px_rgba(0,245,255,0.5)]">
+              PHASE_{phase}
+            </h1>
+          </div>
+
+          <div className="w-px h-8 bg-slate-700" />
+
+          <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-wider">
+            <span className="text-slate-400">TOUR <span className="text-white text-base">{turnNumber}</span></span>
+            <div className={`px-4 py-1.5 rounded-full border ${currentPlayer === 0 ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10' : 'border-red-500 text-red-400 bg-red-500/10'}`}>
+              J{currentPlayer + 1} EN LIGNE
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 3. La Rivière (Recrutement) */}
-      <div className="w-full max-w-5xl mt-6">
-        <River cards={river} phase={phase} onRecruit={handleRecruit} />
-      </div>
+      {/* Quit Button (Top Right) */}
+      <button
+        onClick={onBackToLobby}
+        className="absolute top-6 right-8 z-30 flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50 rounded hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all uppercase text-xs font-bold tracking-widest"
+      >
+        <span>↪ Quitter</span>
+      </button>
 
-      {/* Fond décoratif (Cyber-Ambient) */}
-      <div className="fixed inset-0 pointer-events-none opacity-20 z-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-[120px]" />
+      {/* === MAIN LAYOUT (3 COLUMNS) === */}
+      <div className="flex-1 flex items-center justify-between px-8 pt-20 pb-8 w-full z-10">
+
+        {/* LEFT: RIVIÈRE */}
+        <div className="w-72 h-full flex flex-col gap-4">
+          {/* River Header */}
+          <div className="bg-slate-900/60 backdrop-blur-md p-4 rounded-2xl border border-cyan-500/20">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center text-xl">🌊</div>
+              <div>
+                <h2 className="font-bold text-cyan-50">Rivière</h2>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Terminez vos actions</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handlePass}
+              className={`w-full py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest transition-all
+                ${phase === "RECRUITMENT"
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-lg shadow-cyan-500/25 animate-pulse'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 hover:border-slate-500'
+                }
+              `}
+            >
+              {phase === "ACTIONS" ? "⌛ Phase Actions" : "⚡ Recruter / Passer"}
+            </button>
+          </div>
+
+          {/* Cards List */}
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+            {river.map((card) => (
+              <SidebarCard
+                key={card.id}
+                card={card}
+                onClick={() => handleRecruit(card.id)}
+                disabled={phase !== "RECRUITMENT"}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* CENTER: HEXBOARD */}
+        <div className="flex-1 flex items-center justify-center relative">
+          {/* Decorative frame around board */}
+          <div className="relative p-10">
+            <div className="absolute inset-0 border border-slate-700/50 rounded-[3rem]" />
+
+            {/* Board Render */}
+            <div className="scale-90 xl:scale-100 transition-transform duration-500">
+              <HexBoard
+                pieces={pieces}
+                currentPlayer={currentPlayer}
+                phase={phase}
+                turnNumber={turnNumber}
+                onMove={handleMove}
+                selectedPiece={selectedPiece}
+                onSelectPiece={setSelectedPiece}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: SCANNER */}
+        <div className="w-72 h-64">
+          <div className={`
+             h-full w-full rounded-2xl border-2 border-dashed transition-all duration-300 relative overflow-hidden group
+             ${selectedPiece ? 'border-amber-500/50 bg-amber-500/5' : 'border-cyan-500/30 bg-cyan-900/5'}
+           `}>
+            {/* Corner Accents */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-current rounded-tl-lg" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-current rounded-tr-lg" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-current rounded-bl-lg" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-current rounded-br-lg" />
+
+            {selectedPiece ? (
+              <div className="p-6 h-full flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-300">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 mb-4 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(251,191,36,0.3)]">
+                  {selectedPiece.characterId === 'LEADER' ? '👑' : '⚔️'}
+                </div>
+                <h3 className="text-xl font-black text-amber-400 tracking-wider mb-2">{selectedPiece.characterId}</h3>
+                <div className="text-xs text-slate-400 font-mono space-y-1">
+                  <p>POS: Q{selectedPiece.q} / R{selectedPiece.r}</p>
+                  <p className={selectedPiece.hasActed ? "text-red-400" : "text-green-400"}>
+                    STATUS: {selectedPiece.hasActed ? "ÉPUISÉ" : "PRÊT"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-cyan-500/40">
+                <div className="w-16 h-16 border-2 border-dashed border-current rounded-lg mb-4 flex items-center justify-center text-2xl animate-pulse">
+                  Target
+                </div>
+                <p className="font-bold tracking-[0.2em] uppercase text-xs">Scanner en</p>
+                <p className="font-bold tracking-[0.2em] uppercase text-xs">attente...</p>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
