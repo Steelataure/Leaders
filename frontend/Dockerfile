@@ -15,9 +15,8 @@ RUN npx vite build
 # Installation du serveur statique
 RUN npm install -g serve
 
-# On expose le port 5173
-EXPOSE 5173
+# On expose le port 80 (EXIGENCE ESIEA.CLOUD)
+EXPOSE 80
 
-# Lancement du serveur sur le port 5173
-# Le flag -s permet de gérer le Single Page Application (React)
-CMD ["serve", "-s", "dist", "-l", "5173"]
+# Lancement sur le port 80
+CMD ["serve", "-s", "dist", "-l", "80"]

@@ -6,15 +6,15 @@ services:
 variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
+stages:
+  - build
+
 build_frontend:
   stage: build
   script:
-    - echo "🚀 Construction de l'image Docker Frontend..."
-
-    - docker login -u $DOCKER_HUB_USER -p $DOCKER_HUB_PASSWORD
-    
-    - cd frontend
-    
-    - docker build -t image-frontend .
-    
-    - echo "✅ Image terminée !"
+    # Connexion automatique au registre GitLab de l'ESIEA
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    # Build de l'image en ciblant le dossier frontend
+    - docker build -t $CI_REGISTRY_IMAGE:latest ./frontend
+    # Envoi de l'image pour que esiea.cloud puisse la voir
+    - docker push $CI_REGISTRY_IMAGE:latest
