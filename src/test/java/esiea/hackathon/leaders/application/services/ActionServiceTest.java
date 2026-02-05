@@ -2,9 +2,14 @@ package esiea.hackathon.leaders.application.services;
 
 import esiea.hackathon.leaders.application.strategies.ActionAbilityStrategy;
 import esiea.hackathon.leaders.application.strategies.action.ActionFactory;
+import esiea.hackathon.leaders.application.strategies.passive.JailerBlockStrategy;
+import esiea.hackathon.leaders.application.strategies.passive.PassiveFactory;
+import esiea.hackathon.leaders.application.strategies.passive.ProtectorShieldStrategy;
 import esiea.hackathon.leaders.domain.model.AbilityEntity;
+import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,26 +41,40 @@ class ActionServiceTest {
     private RefCharacterRepository refCharacterRepository;
     @Mock
     private ActionFactory actionFactory;
+
+    // --- NOUVEAUX MOCKS NÉCESSAIRES ---
+    @Mock
+    private GameRepository gameRepository;
+    @Mock
+    private PassiveFactory passiveFactory;
+
     @Mock
     private ActionAbilityStrategy strategy;
 
     private PieceEntity piece;
+    private GameEntity game;
     private final UUID gameId = UUID.randomUUID();
     private final UUID pieceId = UUID.randomUUID();
     private RefCharacterEntity character;
 
     @BeforeEach
     void setUp() {
-        // Initialisation d'une pièce standard au centre (0,0) pour les tests
+        // Initialisation d'une pièce standard
         piece = PieceEntity.builder()
                 .id(pieceId)
                 .gameId(gameId)
                 .q((short) 0)
                 .r((short) 0)
+                .ownerIndex((short) 0) // J'appartiens au joueur 0
                 .characterId("BRAWLER")
                 .hasActedThisTurn(false)
-                .build()
-        ;
+                .build();
+
+        // Initialisation du Jeu (pour la validation du tour)
+        game = GameEntity.builder()
+                .id(gameId)
+                .currentPlayerIndex(0) // C'est le tour du joueur 0
+                .build();
 
         character = mock(RefCharacterEntity.class);
     }
@@ -64,26 +83,25 @@ class ActionServiceTest {
     @DisplayName("La compétence est exécuté avec succès")
     void useAbility_Success() {
         String abilityId = "BRAWLER_PUSH";
-        // La Pièce existe sur le plateau
-        when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
-        // Récupère toutes les pièces
-        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece));
-        // Le personnage existe
-        when(refCharacterRepository.findById("BRAWLER")).thenReturn(Optional.of(character));
 
-        // Création d'une Compétence
+        // 1. Mocks Repositories
+        when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game)); // FIX NPE
+        when(refCharacterRepository.findById("BRAWLER")).thenReturn(Optional.of(character));
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece));
+
+        // 2. Mocks Character & Ability
         AbilityEntity ability = mock(AbilityEntity.class);
-        // Cette compétence à pour id celle défini
         when(ability.getId()).thenReturn(abilityId);
-        // BRAWLER possède une compétence
         when(character.getAbilities()).thenReturn(Set.of(ability));
-        // Retour de la stratégie
+
+        // 3. Mock Strategy Factory
         when(actionFactory.getStrategy(abilityId)).thenReturn(strategy);
 
-        // Utilisation de la compétence par la pièce
+        // 4. Execution
         actionService.useAbility(pieceId, null, abilityId, null);
 
-        // Vérification de la compétence
+        // 5. Verification
         verify(strategy).execute(eq(piece), isNull(), isNull(), anyList());
         verify(pieceRepository).save(piece);
         assertTrue(piece.getHasActedThisTurn());
@@ -92,6 +110,7 @@ class ActionServiceTest {
     @Test
     @DisplayName("Geôlier ennemi est adjacent, aucune compétence n’est utilisable")
     void useAbility_ImpossibleJailer() {
+        // Mock du Jailer Ennemi
         PieceEntity jailer = PieceEntity.builder()
                 .id(UUID.randomUUID())
                 .gameId(gameId)
@@ -100,22 +119,38 @@ class ActionServiceTest {
                 .ownerIndex((short) 1)
                 .characterId("JAILER")
                 .hasActedThisTurn(false)
-                .build()
-        ;
-        // La piece veut utiliser la capacité
-        when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+                .build();
 
-        // Une erreur de type IllegalStateException doit se declencher
+        // Mocks de base
+        when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game)); // FIX NPE
+        when(refCharacterRepository.findById("BRAWLER")).thenReturn(Optional.of(character));
+
+        // Mock Ability check (pour passer la validation avant d'arriver au Jailer)
+        String abilityId = "BRAWLER_PUSH";
+        AbilityEntity ability = mock(AbilityEntity.class);
+        when(ability.getId()).thenReturn(abilityId);
+        when(character.getAbilities()).thenReturn(Set.of(ability));
+
+        // Mock FindAll (Moi + Jailer)
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece, jailer));
+
+        // MOCK PASSIVE FACTORY pour le Jailer
+        JailerBlockStrategy jailerStrategy = mock(JailerBlockStrategy.class);
+        when(passiveFactory.getStrategy(eq("JAILER_BLOCK"), any())).thenReturn(jailerStrategy);
+        // On dit que le geolier bloque effectivement
+        when(jailerStrategy.isBlocking(any(), any())).thenReturn(true);
+
+        // Assertion
         assertThrows(IllegalStateException.class, () ->
-                actionService.useAbility(pieceId, null, "BRAWLER_PUSH", null)
+                actionService.useAbility(pieceId, null, abilityId, null)
         );
     }
 
-
     @Test
-    @DisplayName("Protector ennemi est adjacent, ne peuvent déplacer ni le protecteur, ni ses alliés adjacents")
+    @DisplayName("Protector ennemi est adjacent, impossible de cibler le protégé")
     void useAbility_ImpossibleProtector() {
-        // Target
+        // Target (Ennemi)
         PieceEntity target = PieceEntity.builder()
                 .id(UUID.randomUUID())
                 .gameId(gameId)
@@ -123,9 +158,9 @@ class ActionServiceTest {
                 .r((short) 0)
                 .ownerIndex((short) 1)
                 .hasActedThisTurn(false)
-                .build()
-        ;
-        // Protector avec placement adjacent
+                .build();
+
+        // Protector (Ami de la cible)
         PieceEntity protector = PieceEntity.builder()
                 .id(UUID.randomUUID())
                 .gameId(gameId)
@@ -133,20 +168,30 @@ class ActionServiceTest {
                 .r((short) -1)
                 .ownerIndex((short) 1)
                 .characterId("PROTECTOR")
-                .build()
-        ;
+                .build();
 
-        // La piece veut utiliser la capacité
+        // Mocks de base
         when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(pieceRepository.findById(target.getId())).thenReturn(Optional.of(target));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        when(refCharacterRepository.findById("BRAWLER")).thenReturn(Optional.of(character));
 
-        // Une erreur de type IllegalStateException doit se declencher
+        // Mock Ability check
+        String abilityId = "BRAWLER_PUSH";
+        AbilityEntity ability = mock(AbilityEntity.class);
+        when(ability.getId()).thenReturn(abilityId);
+        when(character.getAbilities()).thenReturn(Set.of(ability));
+
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece, target, protector));
+        when(passiveFactory.getStrategy(eq("JAILER_BLOCK"), any())).thenReturn(null);
+
+        ProtectorShieldStrategy protectorStrategy = mock(ProtectorShieldStrategy.class);
+        when(passiveFactory.getStrategy(eq("PROTECTOR_SHIELD"), any())).thenReturn(protectorStrategy);
+        when(protectorStrategy.isProtecting(any(), any())).thenReturn(true);
+
+        // Assertion
         assertThrows(IllegalStateException.class, () ->
-                actionService.useAbility(pieceId, target.getId(), "BRAWLER_PUSH", null)
+                actionService.useAbility(pieceId, target.getId(), abilityId, null)
         );
-
-
-
     }
-
-
 }

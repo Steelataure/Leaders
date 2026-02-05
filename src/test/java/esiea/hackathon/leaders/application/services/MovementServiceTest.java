@@ -1,7 +1,14 @@
 package esiea.hackathon.leaders.application.services;
 
+import esiea.hackathon.leaders.application.strategies.action.NemesisBehavior;
+import esiea.hackathon.leaders.application.strategies.movement.MoveStrategyFactory;
+import esiea.hackathon.leaders.domain.model.GameEntity;
+import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
+import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
+import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,64 +32,61 @@ class MovementServiceTest {
 
     @Mock
     private PieceRepository pieceRepository;
+    @Mock
+    private RefCharacterRepository characterRepository;
+    @Mock
+    private GameRepository gameRepository;
+
 
     @InjectMocks
     private MovementService movementService;
 
     private PieceEntity piece;
+    private GameEntity game;
+    private RefCharacterEntity character;
     private final UUID gameId = UUID.randomUUID();
     private final UUID pieceId = UUID.randomUUID();
+    private final String characterId = "SOLDIER";
 
     @BeforeEach
     void setUp() {
-        // Initialisation d'une pièce standard au centre (0,0) pour les tests
         piece = PieceEntity.builder()
                 .id(pieceId)
                 .gameId(gameId)
+                .characterId(characterId)
+                .ownerIndex((short) 0)
                 .q((short) 0)
                 .r((short) 0)
                 .hasActedThisTurn(false)
                 .build();
+
+        game = GameEntity.builder()
+                .id(gameId)
+                .currentPlayerIndex(0)
+                .build();
+
+        character = new RefCharacterEntity();
+        character.setId(characterId);
     }
 
     @Test
     @DisplayName("Devrait détecter l'adjacence correctement")
     void areAdjacent() {
-        // Voisins directs de (0,0)
-        assertTrue(movementService.areAdjacent((short)0, (short)0, (short)1, (short)0), "0,0 et 1,0 sont voisins");
-        assertTrue(movementService.areAdjacent((short)0, (short)0, (short)0, (short)-1), "0,0 et 0,-1 sont voisins");
-
-        // Cas non adjacents
-        assertFalse(movementService.areAdjacent((short)0, (short)0, (short)2, (short)0), "Distance 2 n'est pas adjacente");
-        assertFalse(movementService.areAdjacent((short)0, (short)0, (short)1, (short)1), "1,1 n'est pas voisin de 0,0 en hexagone");
-    }
-
-    @Test
-    @DisplayName("Devrait valider les coordonnées dans le rayon du plateau (rayon 3)")
-    void isValidHexCoord() {
-        // Centre
-        assertTrue(movementService.isValidHexCoord((short) 0, (short) 0), "Le centre est valide");
-
-        // Bords
-        assertTrue(movementService.isValidHexCoord((short) 3, (short) 0), "Le bord (3,0) est valide");
-        assertTrue(movementService.isValidHexCoord((short) -3, (short) 3), "Le coin (-3,3) est valide");
-        assertTrue(movementService.isValidHexCoord((short) 0, (short) -3), "Le bord (0,-3) est valide");
-
-        // Hors limites
-        assertFalse(movementService.isValidHexCoord((short) 4, (short) 0), "4,0 est hors limite");
-        assertFalse(movementService.isValidHexCoord((short) 3, (short) 3), "3,3 est hors limite (q+r=6)");
-        assertFalse(movementService.isValidHexCoord((short) -4, (short) 1), "-4,1 est hors limite");
+        List<HexCoord> adjacent = movementService.getAdjacentCells((short)0, (short)0);
+        assertTrue(adjacent.contains(new HexCoord((short)1, (short)0)));
+        assertTrue(adjacent.contains(new HexCoord((short)0, (short)-1)));
+        assertFalse(adjacent.contains(new HexCoord((short)2, (short)0)));
     }
 
 
     @Test
     @DisplayName("Devrait retourner les 6 voisins pour une case centrale")
     void getAdjacentCells() {
-        List<MovementService.HexCoord> neighbors = movementService.getAdjacentCells((short) 0, (short) 0);
+        List<HexCoord> neighbors = movementService.getAdjacentCells((short) 0, (short) 0);
 
         assertEquals(6, neighbors.size());
-        assertTrue(neighbors.contains(new MovementService.HexCoord((short) 1, (short) 0)));
-        assertTrue(neighbors.contains(new MovementService.HexCoord((short) -1, (short) 0)));
+        assertTrue(neighbors.contains(new HexCoord((short) 1, (short) 0)));
+        assertTrue(neighbors.contains(new HexCoord((short) -1, (short) 0)));
     }
 
     // --- 2. TESTS DU DÉPLACEMENT (Logique Métier) ---
@@ -94,7 +99,10 @@ class MovementServiceTest {
         short targetR = 0;
 
         when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
-        when(pieceRepository.findByGameIdAndPosition(gameId, targetQ, targetR)).thenReturn(Optional.empty());
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        when(characterRepository.findById(characterId)).thenReturn(Optional.of(character));
+        when(pieceRepository.findByGameId(gameId)).thenReturn(Collections.singletonList(piece));
+
         when(pieceRepository.save(any(PieceEntity.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // WHEN
@@ -121,15 +129,40 @@ class MovementServiceTest {
     }
 
     @Test
-    @DisplayName("Move: Erreur - Déplacement non adjacent")
+    @DisplayName("Move: Erreur - Mauvais tour de joueur")
+    void movePiece_WrongTurn() {
+        // GIVEN
+        game.setCurrentPlayerIndex(1);
+
+        when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+
+        // WHEN
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                movementService.movePiece(pieceId, (short)1, (short)0)
+        );
+
+        // THEN
+        assertTrue(exception.getMessage().contains("Ce n'est pas votre tour")
+                || exception.getMessage().contains("Action refusée"));
+
+        verify(pieceRepository, never()).save(piece);
+    }
+
+
+    @Test
+    @DisplayName("Move: Erreur - Déplacement non adjacent (et non permis par stratégies)")
     void movePiece_NotAdjacent() {
         when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        when(characterRepository.findById(characterId)).thenReturn(Optional.of(character));
+        when(pieceRepository.findByGameId(gameId)).thenReturn(Collections.singletonList(piece));
 
         // On essaie de sauter une case (0,0 -> 2,0)
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 movementService.movePiece(pieceId, (short)2, (short)0)
         );
-        assertTrue(exception.getMessage().contains("not adjacent"));
+        assertTrue(exception.getMessage().contains("Illegal move"));
     }
 
     @Test
@@ -139,15 +172,23 @@ class MovementServiceTest {
         short targetR = 0;
 
         when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        when(characterRepository.findById(characterId)).thenReturn(Optional.of(character));
+
         // La case est occupée par une autre pièce
-        PieceEntity obstacle = PieceEntity.builder().id(UUID.randomUUID()).build();
-        when(pieceRepository.findByGameIdAndPosition(gameId, targetQ, targetR))
-                .thenReturn(Optional.of(obstacle));
+        PieceEntity obstacle = PieceEntity.builder()
+                .id(UUID.randomUUID())
+                .gameId(gameId)
+                .q(targetQ)
+                .r(targetR)
+                .build();
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece, obstacle));
+
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 movementService.movePiece(pieceId, targetQ, targetR)
         );
-        assertTrue(exception.getMessage().contains("occupied"));
+        assertTrue(exception.getMessage().contains("Illegal move"));
     }
 
     @Test
@@ -159,7 +200,7 @@ class MovementServiceTest {
                 () -> movementService.movePiece(pieceId, (short) 10, (short) 10)
         );
 
-        assertEquals("Invalid hex coordinates", exception.getMessage());
+        assertEquals("Invalid hex coordinates: (10,10)", exception.getMessage());
     }
 
 
@@ -170,31 +211,27 @@ class MovementServiceTest {
     void getValidMovesForPiece() {
         // GIVEN
         when(pieceRepository.findById(pieceId)).thenReturn(Optional.of(piece));
+        when(characterRepository.findById(characterId)).thenReturn(Optional.of(character));
 
-        // Simulation :
-        // Le voisin (1,0) est OCCUPÉ
-        // Le voisin (-1,0) est VIDE
-        // Les autres sont VIDES par défaut (mock retourne empty)
+        PieceEntity obstacle = PieceEntity.builder()
+                .id(UUID.randomUUID())
+                .gameId(gameId)
+                .q((short)1)
+                .r((short)0)
+                .build();
 
-        when(pieceRepository.findByGameIdAndPosition(eq(gameId), eq((short)1), eq((short)0)))
-                .thenReturn(Optional.of(new PieceEntity())); // Occupé
-
-        when(pieceRepository.findByGameIdAndPosition(eq(gameId), eq((short)-1), eq((short)0)))
-                .thenReturn(Optional.empty()); // Vide
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece, obstacle));
 
         // WHEN
-        List<MovementService.HexCoord> validMoves = movementService.getValidMovesForPiece(pieceId);
+        List<HexCoord> validMoves = movementService.getValidMovesForPiece(pieceId);
 
         // THEN
-        // (0,0) a 6 voisins théoriques.
-        // (1,0) est occupé -> retiré.
-        // Il devrait en rester 5 (si on considère qu'on est au centre du plateau)
         assertEquals(5, validMoves.size());
 
         // Vérifie que la case occupée n'est PAS dans la liste
-        assertFalse(validMoves.contains(new MovementService.HexCoord((short)1, (short)0)));
+        assertFalse(validMoves.contains(new HexCoord((short)1, (short)0)));
 
-        // Vérifie qu'une case vide EST dans la liste
-        assertTrue(validMoves.contains(new MovementService.HexCoord((short)-1, (short)0)));
+        // Vérifie qu'une case vide EST dans la liste (ex: -1, 0)
+        assertTrue(validMoves.contains(new HexCoord((short)-1, (short)0)));
     }
 }

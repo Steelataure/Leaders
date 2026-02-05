@@ -27,7 +27,7 @@ public class ActionService {
     private final RefCharacterRepository characterRepository;
     private final ActionFactory actionFactory;
     private final PassiveFactory passiveFactory;
-    private final GameRepository gameRepository; // 1. Dépendance nécessaire
+    private final GameRepository gameRepository;
 
     @Transactional
     public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination) {
