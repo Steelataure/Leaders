@@ -69,9 +69,9 @@ export default function Lobby({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { volume, setVolume, sfxEnabled, setSfxEnabled } = useAudio();
-  const soundConfig = {
-    volume: (volume / 100),
+  const { volume, setVolume, sfxVolume, setSfxVolume, sfxEnabled, setSfxEnabled } = useAudio();
+  const soundConfigSfx = {
+    volume: (sfxVolume / 100),
     soundEnabled: sfxEnabled
   };
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -141,8 +141,8 @@ export default function Lobby({
     }
   };
 
-  const [playButtonClickSfx] = useSound(buttonClickSfx, soundConfig);
-  const [playButtonHoverSfx] = useSound(buttonHoverSfx, soundConfig);
+  const [playButtonClickSfx] = useSound(buttonClickSfx, soundConfigSfx);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx, soundConfigSfx);
 
   const closeAllModals = () => {
     setLoginOpen(false);
@@ -423,22 +423,53 @@ export default function Lobby({
       )}
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 p-4" onClick={() => setSettingsOpen(false)}>
           <div className="relative w-full max-w-lg bg-slate-900 border border-emerald-500/40 rounded-2xl p-8 shadow-[0_0_40px_rgba(16,185,129,0.15)]" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setSettingsOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">✕</button>
+            <button onClick={() => setSettingsOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">✕</button>
+
             <h2 className="text-2xl font-orbitron font-bold text-white mb-8 flex items-center gap-3">
               <span className="w-1 h-8 bg-emerald-500"></span>
               PARAMÈTRES SYSTÈME
             </h2>
+
             <div className="space-y-8 font-rajdhani text-lg">
+              {/* Volume Principal */}
               <div>
-                <label className="text-emerald-400 font-bold tracking-widest text-sm uppercase block mb-3">Volume Audio</label>
-                <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(e.target.value)} className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer" />
+                <label className="text-emerald-400 font-bold tracking-widest text-sm uppercase block mb-3">Volume Musique</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
+                  className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                />
                 <div className="text-right text-slate-400 text-sm mt-1">{volume}%</div>
               </div>
-              <div className="flex items-center justify-between p-4 bg-slate-950 rounded border border-white/5">
-                <span className="text-slate-200">Effets Sonores (SFX)</span>
-                <input type="checkbox" checked={sfxEnabled} onChange={(e) => setSfxEnabled(e.target.checked)} className="w-5 h-5 accent-emerald-500" />
+
+              {/* Volume SFX */}
+              <div className="p-4 bg-slate-950 rounded border border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-200">Effets Sonores (SFX)</span>
+                  <input
+                    type="checkbox"
+                    checked={sfxEnabled}
+                    onChange={(e) => setSfxEnabled(e.target.checked)}
+                    className="w-5 h-5 accent-emerald-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className={`transition-all duration-300 ${sfxEnabled ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={sfxVolume}
+                    onChange={(e) => setSfxVolume(e.target.value)}
+                    className="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <div className="text-right text-slate-500 text-xs mt-1">{sfxVolume}%</div>
+                </div>
               </div>
             </div>
           </div>

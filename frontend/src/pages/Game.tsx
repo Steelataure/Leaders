@@ -119,15 +119,15 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
 
   // Sons
-  const { volume, sfxEnabled } = useAudio();
-  const soundConfig = {
-    volume: (volume / 100),
+  const { volume, sfxVolume, sfxEnabled } = useAudio();
+  const soundConfigSfx = {
+    volume: (sfxVolume / 100),
     soundEnabled: sfxEnabled
   };
-  const [playButtonClickSfx] = useSound(buttonClickSfx, soundConfig);
-  const [playButtonHoverSfx] = useSound(buttonHoverSfx, soundConfig);
-  const [playCharacterHoverSfx] = useSound(characterHoverSfx, soundConfig);
-  const [playCharacterSelectSfx] = useSound(characterSelectSfx, soundConfig);
+  const [playButtonClickSfx] = useSound(buttonClickSfx, soundConfigSfx);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx, soundConfigSfx);
+  const [playCharacterHoverSfx] = useSound(characterHoverSfx, soundConfigSfx);
+  const [playCharacterSelectSfx] = useSound(characterSelectSfx, soundConfigSfx);
   const [playBgMusic, { stop: stopBgMusic }] = useSound(backgroundMusic, {
     volume: (volume / 100),
     loop: true,
@@ -136,7 +136,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
   useEffect(() => {
     playBgMusic();
-    return () => stopBgMusic(); 
+    return () => stopBgMusic();
   }, [playBgMusic, stopBgMusic]);
 
   // === LOGIC ===
