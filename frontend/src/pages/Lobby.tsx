@@ -80,6 +80,7 @@ export default function Lobby({
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const currentUser = authService.getUser();
@@ -89,16 +90,14 @@ export default function Lobby({
   const handleAuth = async () => {
     setIsLoading(true);
     setError(null);
+    setSuccessMsg(null);
     try {
       if (isRegistering) {
-        const response = await authService.register({ email, password, username });
-        if (response.user) {
-          setUser(response.user);
-          setLoginOpen(false);
-        } else {
-          setIsRegistering(false);
-          setError("Compte créé ! Veuillez vous connecter.");
-        }
+        await authService.register({ email, password, username });
+        // Succès de l'inscription : on bascule vers le login
+        setIsRegistering(false);
+        setSuccessMsg("Compte créé avec succès ! Veuillez vous connecter.");
+        // On garde la modale ouverte pour qu'il puisse se connecter
       } else {
         const response = await authService.login({ email, password });
         if (response.user) {
@@ -144,6 +143,8 @@ export default function Lobby({
     setSettingsOpen(false);
     setAboutOpen(false);
     setDropdownOpen(false);
+    setSuccessMsg(null);
+    setError(null);
   };
 
   return (
@@ -214,7 +215,7 @@ export default function Lobby({
               <div className="py-1 font-rajdhani font-semibold">
                 {!user ? (
                   <button
-                    onClick={() => { closeAllModals(); setLoginOpen(true); }}
+                    onClick={() => { closeAllModals(); setSuccessMsg(null); setError(null); setLoginOpen(true); }}
                     className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20 hover:text-cyan-400 border-b border-white/5"
                   >
                     CONNEXION
@@ -374,6 +375,7 @@ export default function Lobby({
             </h2>
 
             <div className="space-y-5 font-rajdhani">
+              {successMsg && <div className="text-emerald-400 text-sm font-bold text-center bg-emerald-900/20 p-2 rounded border border-emerald-500/20">{successMsg}</div>}
               {error && <div className="text-red-400 text-sm font-bold text-center bg-red-900/20 p-2 rounded border border-red-500/20">{error}</div>}
               <div>
                 <label className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2">Identifiant</label>
