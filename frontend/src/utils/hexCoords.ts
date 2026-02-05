@@ -10,8 +10,8 @@ export const HEX_SIZE = 44;
 // Types de cellules sur le plateau
 export const CellType = {
   EMPTY: "EMPTY",
-  LEADER_SPAWN_P1: "LEADER_SPAWN_P1", // Case départ Leader Joueur 1 (gauche)
-  LEADER_SPAWN_P2: "LEADER_SPAWN_P2", // Case départ Leader Joueur 2 (droite)
+  LEADER_SPAWN_P1: "LEADER_SPAWN_P1", // Case départ Leader Joueur 1 (bas)
+  LEADER_SPAWN_P2: "LEADER_SPAWN_P2", // Case départ Leader Joueur 2 (haut)
   RECRUITMENT_P1: "RECRUITMENT_P1", // Cases recrutement Joueur 1
   RECRUITMENT_P2: "RECRUITMENT_P2", // Cases recrutement Joueur 2
   CENTER: "CENTER", // Case centrale
@@ -30,32 +30,32 @@ export interface HexCell {
 
 /**
  * Détermine le type d'une cellule selon ses coordonnées
- * Basé sur le plateau officiel de Leaders (flat-top, orientation horizontale)
+ * Basé sur le plateau officiel de Leaders (flat-top, Joueur 1 en bas, Joueur 2 en haut)
  */
 function getCellType(q: number, r: number): CellType {
   // Case centrale
   if (q === 0 && r === 0) return CellType.CENTER;
 
-  // Cases de départ des Leaders (côtés gauche/droite du plateau)
-  if (q === -3 && r === 0) return CellType.LEADER_SPAWN_P1; // Joueur 1 à gauche
-  if (q === 3 && r === 0) return CellType.LEADER_SPAWN_P2;  // Joueur 2 à droite
+  // Cases de départ des Leaders (haut/bas du plateau)
+  if (q === 0 && r === 3) return CellType.LEADER_SPAWN_P1;  // Joueur 1 (bleu) en bas
+  if (q === 0 && r === -3) return CellType.LEADER_SPAWN_P2; // Joueur 2 (rouge) en haut
 
-  // Cases de recrutement Joueur 1 (côté gauche)
+  // Cases de recrutement Joueur 1 (partie basse)
   const recruitP1 = [
-    { q: -3, r: 1 },
-    { q: -3, r: 2 },
-    { q: -2, r: 2 },
-    { q: -3, r: 3 },
+    { q: -1, r: 3 },
+    { q: -2, r: 3 },
+    { q: 1, r: 2 },
+    { q: 2, r: 1 },
   ];
   if (recruitP1.some((c) => c.q === q && c.r === r))
     return CellType.RECRUITMENT_P1;
 
-  // Cases de recrutement Joueur 2 (côté droit)
+  // Cases de recrutement Joueur 2 (partie haute)
   const recruitP2 = [
-    { q: 3, r: -1 },
-    { q: 3, r: -2 },
-    { q: 2, r: -2 },
-    { q: 3, r: -3 },
+    { q: 1, r: -3 },
+    { q: 2, r: -3 },
+    { q: -1, r: -2 },
+    { q: -2, r: -1 },
   ];
   if (recruitP2.some((c) => c.q === q && c.r === r))
     return CellType.RECRUITMENT_P2;

@@ -179,18 +179,54 @@ export default function HexBoard({
 
   return (
     <svg width={SVG_WIDTH} height={SVG_HEIGHT} className="drop-shadow-2xl overflow-visible">
+      {/* Defs pour les effets de brillance */}
+      <defs>
+        <filter id="glow-player1" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="glow-player2" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
       {/* Hexagons */}
       {cells.map((cell) => {
         const isValid = validMoves.has(`${cell.q},${cell.r}`);
         const isHovered = hoveredCell?.q === cell.q && hoveredCell?.r === cell.r;
 
+        // Vérifier si cette cellule contient une pièce du joueur actif
+        const pieceOnCell = findPieceAtCell(cell.q, cell.r);
+        const isCurrentPlayerPiece = pieceOnCell && pieceOnCell.ownerIndex === currentPlayer;
+        const canAct = isCurrentPlayerPiece && !pieceOnCell.hasActed && phase === "ACTIONS";
+
+        // Couleurs de surbrillance selon le joueur
+        const playerHighlightColor = currentPlayer === 0 ? COLORS.player1 : COLORS.player2;
+        const playerHighlightFill = currentPlayer === 0 ? "rgba(0, 245, 255, 0.1)" : "rgba(239, 68, 68, 0.1)";
+
         return (
           <polygon
             key={`${cell.q}-${cell.r}`}
             points={getHexagonPoints(cell.x, cell.y, HEX_SIZE * 0.93)}
-            fill={isValid ? "rgba(0, 245, 255, 0.15)" : isHovered ? COLORS.cellHover : COLORS.cellFill}
-            stroke={isValid ? COLORS.validMove : isHovered ? "#00f5ff" : COLORS.cellStroke}
-            strokeWidth={isValid ? 2 : 1}
+            fill={
+              isValid ? "rgba(0, 245, 255, 0.15)" :
+                canAct ? playerHighlightFill :
+                  isHovered ? COLORS.cellHover : COLORS.cellFill
+            }
+            stroke={
+              isValid ? COLORS.validMove :
+                canAct ? playerHighlightColor :
+                  isHovered ? "#00f5ff" : COLORS.cellStroke
+            }
+            strokeWidth={isValid ? 2 : canAct ? 2.5 : 1}
+            filter={canAct ? `url(#glow-player${currentPlayer + 1})` : undefined}
             onMouseEnter={() => setHoveredCell(cell)}
             onMouseLeave={() => setHoveredCell(null)}
             onClick={() => handleCellClick(cell)}

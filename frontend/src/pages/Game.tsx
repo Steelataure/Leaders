@@ -28,10 +28,10 @@ export interface Piece {
 
 // === DONNÉES INITIALES (MOCKS) ===
 const INITIAL_PIECES: Piece[] = [
-  { id: "p1", characterId: "LEADER", ownerIndex: 0, q: -3, r: 0, hasActed: false },
-  { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 3, r: 0, hasActed: false },
-  { id: "p3", characterId: "ARCHER", ownerIndex: 0, q: -2, r: 1, hasActed: false },
-  { id: "p4", characterId: "CAVALIER", ownerIndex: 1, q: 2, r: -1, hasActed: false },
+  { id: "p1", characterId: "LEADER", ownerIndex: 0, q: 0, r: 3, hasActed: false },  // Joueur 1 (bleu) en bas
+  { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 0, r: -3, hasActed: false }, // Joueur 2 (rouge) en haut
+  { id: "p3", characterId: "ARCHER", ownerIndex: 0, q: 1, r: 2, hasActed: false },
+  { id: "p4", characterId: "CAVALIER", ownerIndex: 1, q: -1, r: -2, hasActed: false },
 ];
 
 const INITIAL_RIVER: CharacterCard[] = [
@@ -172,11 +172,11 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
       if (!card) return;
 
       // Définition simplifiée des cases de recrutement (Mock)
-      // Plateau flat-top : Joueur 1 à gauche, Joueur 2 à droite
+      // Plateau flat-top : Joueur 1 en bas, Joueur 2 en haut
       const recruitmentCells =
         currentPlayer === 0
-          ? [{ q: -3, r: 1 }, { q: -3, r: 2 }, { q: -2, r: 2 }, { q: -3, r: 3 }]
-          : [{ q: 3, r: -1 }, { q: 3, r: -2 }, { q: 2, r: -2 }, { q: 3, r: -3 }];
+          ? [{ q: -1, r: 3 }, { q: -2, r: 3 }, { q: 1, r: 2 }, { q: 2, r: 1 }]  // Joueur 1 (bleu) en bas
+          : [{ q: 1, r: -3 }, { q: 2, r: -3 }, { q: -1, r: -2 }, { q: -2, r: -1 }]; // Joueur 2 (rouge) en haut
 
       const freeCell = recruitmentCells.find(
         (cell) => !pieces.find((p) => p.q === cell.q && p.r === cell.r),
