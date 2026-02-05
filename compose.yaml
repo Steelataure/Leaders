@@ -4,19 +4,17 @@ services:
     container_name: leaders_db
     restart: always
     environment:
-      # Ces variables créent la base et l'utilisateur au premier lancement
       POSTGRES_DB: leaders_db
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password123
     ports:
       - "5432:5432"
     volumes:
-      # Ce volume permet de ne pas perdre tes données si tu supprimes le conteneur
       - postgres_data:/var/lib/postgresql/data
 
   backend:
     build:
-      context: .
+      context: ./backend  # On précise le dossier du backend
       dockerfile: Dockerfile
     container_name: leaders_backend
     restart: always
@@ -29,5 +27,17 @@ services:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       - database
+
+  frontend:
+    build:
+      context: ./frontend # On précise le dossier du frontend
+      dockerfile: Dockerfile
+    container_name: leaders_frontend
+    ports:
+      - "8081:80"  # Ton PC (8081) -> Docker (80 interne)
+    depends_on:
+      - backend
+    restart: always
+
 volumes:
   postgres_data:
