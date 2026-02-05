@@ -265,8 +265,8 @@ export default function Lobby({
                   CRÉER UNE PARTIE
                 </h2>
                 <p className="text-slate-400 text-sm leading-relaxed mb-8">
-                  Générez un environnement de combat sécurisé et attendez qu'un
-                  opposant se connecte à votre fréquence.
+                  Lancez une nouvelle partie et invitez un ami à vous rejoindre
+                  avec le code de la salle.
                 </p>
               </div>
               <button
@@ -276,7 +276,7 @@ export default function Lobby({
                 }}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
               >
-                Initialiser le Serveur
+                Lancer une Partie
               </button>
             </div>
           </div>
@@ -288,14 +288,14 @@ export default function Lobby({
             >
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-white italic">
-                  REJOINDRE
+                  REJOINDRE UNE PARTIE
                 </h2>
                 {!joinMode ? (
                   <button
                     onClick={() => setJoinMode(true)}
                     className="px-6 py-2 border border-blue-500/50 text-blue-400 hover:bg-blue-500 hover:text-white rounded-full text-xs font-bold transition-all uppercase tracking-widest"
                   >
-                    Activer le Terminal
+                    Entrer un Code
                   </button>
                 ) : (
                   <button
@@ -335,7 +335,7 @@ export default function Lobby({
               ) : (
                 <div className="animate-in fade-in zoom-in duration-300">
                   <p className="text-blue-500 text-[10px] mb-4 uppercase tracking-[0.2em] font-bold">
-                    Input Authentication Code :
+                    Entrez le code de la partie :
                   </p>
                   <div className="flex gap-2 mb-8">
                     {code.map((char, i) => (
@@ -354,7 +354,7 @@ export default function Lobby({
                     onClick={() => onStartGame(code.join(""))}
                     className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-blue-400 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
                   >
-                    Établir la Connexion
+                    Rejoindre la Partie
                   </button>
                 </div>
               )}
