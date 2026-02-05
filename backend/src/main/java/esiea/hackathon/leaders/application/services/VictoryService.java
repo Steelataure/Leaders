@@ -8,6 +8,8 @@ import esiea.hackathon.leaders.domain.model.VictoryCheckResult;
 import esiea.hackathon.leaders.domain.model.enums.VictoryType;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +19,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VictoryService {
 
+    private static final Logger LOGGER = LogManager.getLogger(VictoryService.class);
+
     private final PieceRepository pieceRepository;
     private final PassiveFactory passiveFactory;
 
@@ -25,12 +29,16 @@ public class VictoryService {
      * Retourne un objet de résultat (Value Object) au lieu de lever une exception.
      */
     public VictoryCheckResult checkVictory(UUID gameId) {
+        LOGGER.info("Vérification de la victoire pour la partie : {}", gameId);
+        
         List<PieceEntity> allPieces = pieceRepository.findByGameId(gameId);
 
         // Récupérer les Leaders
         List<PieceEntity> leaders = allPieces.stream()
                 .filter(p -> "LEADER".equals(p.getCharacterId()))
                 .toList();
+
+        LOGGER.debug("Nombre de leaders trouvés : {}", leaders.size());
 
         for (PieceEntity leader : leaders) {
             // Le gagnant est l'adversaire du leader qui subit la défaite.
@@ -39,16 +47,19 @@ public class VictoryService {
 
             // 1. Condition de Capture (Prise en tenaille ou Assassin)
             if (isCaptured(leader, allPieces)) {
+                LOGGER.info("Victoire par CAPTURE détectée pour le joueur {}", winnerIndex);
                 return VictoryCheckResult.victory(winnerIndex, VictoryType.CAPTURE);
             }
 
             // 2. Condition d'Encerclement (Bloqué de tous les côtés)
             if (isEncircled(leader, allPieces)) {
+                LOGGER.info("Victoire par ENCERCLEMENT détectée pour le joueur {}", winnerIndex);
                 return VictoryCheckResult.victory(winnerIndex, VictoryType.ENCIRCLEMENT);
             }
         }
 
         // Aucune condition de victoire détectée
+        LOGGER.debug("Aucune condition de victoire pour le moment.");
         return VictoryCheckResult.noVictory();
     }
 
@@ -77,6 +88,7 @@ public class VictoryService {
                 // Si c'est un Assassin, il vaut 2 points (Capture immédiate)
                 if ("ASSASSIN".equals(enemy.getCharacterId()) && assassinStrat != null
                         && assassinStrat.canCaptureLeaderAlone(enemy, leader)) {
+                    LOGGER.debug("L'Assassin menace directement le leader (2 points)");
                     capturePoints += 2;
                 } else {
                     // Toute autre unité vaut 1 point
@@ -87,13 +99,19 @@ public class VictoryService {
             // Si pas adjacent, on vérifie si l'Archer peut tirer de loin (Distance 2)
             else if ("ARCHER".equals(enemy.getCharacterId()) && archerStrat != null) {
                 if (archerStrat.canHelpCapture(enemy, leader)) {
+                    LOGGER.debug("L'Archer participe à la capture à distance (1 point)");
                     capturePoints++;
                 }
             }
         }
 
         // VICTOIRE SI : Au moins 2 points d'attaque cumulés
-        return capturePoints >= 2;
+        if (capturePoints >= 2) {
+            LOGGER.info("Le leader du joueur {} est capturé avec {} points d'attaque", leader.getOwnerIndex(), capturePoints);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -107,20 +125,23 @@ public class VictoryService {
             short q = (short) (leader.getQ() + dir[0]);
             short r = (short) (leader.getR() + dir[1]);
 
-            // Bloqué si hors plateau (Mur)
             if (!isValidHexCoord(q, r)) {
                 blockedSides++;
                 continue;
             }
 
-            // Bloqué si case occupée par n'importe qui
             boolean occupied = allPieces.stream().anyMatch(p -> p.getQ() == q && p.getR() == r);
             if (occupied) {
                 blockedSides++;
             }
         }
 
-        return blockedSides == 6;
+        if (blockedSides == 6) {
+            LOGGER.info("Le leader du joueur {} est totalement encerclé !", leader.getOwnerIndex());
+            return true;
+        }
+        
+        return false;
     }
 
     // --- Helpers ---

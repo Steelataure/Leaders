@@ -3,6 +3,8 @@ package esiea.hackathon.leaders.application.strategies.movement;
 import esiea.hackathon.leaders.application.strategies.MoveAbilityStrategy;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -12,6 +14,8 @@ import java.util.List;
 @Component
 public class LeaderBoostStrategy implements MoveAbilityStrategy {
 
+    private static final Logger LOGGER = LogManager.getLogger(LeaderBoostStrategy.class);
+
     @Override
     public String getAbilityId() {
         return "VIZIER_BOOST";
@@ -19,8 +23,12 @@ public class LeaderBoostStrategy implements MoveAbilityStrategy {
 
     @Override
     public List<HexCoord> getExtraMoves(PieceEntity piece, List<PieceEntity> allPieces) {
+        LOGGER.info("Calcul des mouvements bonus pour la pièce : {} (Propriétaire : {})", 
+                piece.getCharacterId(), piece.getOwnerIndex());
+
         // 1. Sécurité : Cette logique ne s'applique qu'au LEADER
         if (!"LEADER".equals(piece.getCharacterId())) {
+            LOGGER.debug("La pièce n'est pas un LEADER, aucune action requise.");
             return Collections.emptyList();
         }
 
@@ -30,8 +38,11 @@ public class LeaderBoostStrategy implements MoveAbilityStrategy {
                         && p.getOwnerIndex().equals(piece.getOwnerIndex()));
 
         if (!hasVizierAlly) {
+            LOGGER.warn("Aucun VIZIR allié trouvé pour le LEADER {}. Boost annulé.", piece.getOwnerIndex());
             return Collections.emptyList();
         }
+
+        LOGGER.info("VIZIR allié détecté. Calcul de l'anneau de distance 2...");
 
         // 3. Calculer les cases à distance 2 (Bonus)
         // (Les cases à distance 1 sont déjà gérées par le mouvement standard)
@@ -53,6 +64,8 @@ public class LeaderBoostStrategy implements MoveAbilityStrategy {
                 }
             }
         }
+
+        LOGGER.info("Boost terminé : {} cases bonus trouvées.", moves.size());
         return moves;
     }
 
