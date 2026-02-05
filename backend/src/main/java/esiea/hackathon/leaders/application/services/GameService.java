@@ -55,7 +55,7 @@ public class GameService {
         } else {
             // --- CAS NORMAL (Le jeu continue) ---
 
-            short oldPlayer = game.getCurrentPlayerIndex();
+            short oldPlayer = (short) game.getCurrentPlayerIndex();
             // A. Changer de joueur (Alternance 0 / 1)
             short nextPlayer = (short) ((oldPlayer + 1) % 2);
             game.setCurrentPlayerIndex(nextPlayer);
