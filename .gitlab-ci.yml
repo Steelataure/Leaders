@@ -11,48 +11,46 @@ stages:
   - test
   - deploy
 
-# --- JOB FRONTEND ---
-build_frontend:
+# --- BUILD FRONTEND (image déployée sur esiea.cloud) ---
+build_frontend_latest:
   stage: build
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "frontend"
       changes:
-        - frontend/**/* # Ne se lance que si on touche au dossier frontend
+        - frontend/**/*
   script:
-    - echo " Construction du Front..."
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo "Construction du Front (latest)..."
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - cd frontend
-    - docker build -t $CI_REGISTRY_IMAGE/frontend:latest .
-    - docker push $CI_REGISTRY_IMAGE/frontend:latest
+    - docker build -t "$CI_REGISTRY_IMAGE:latest" .
+    - docker push "$CI_REGISTRY_IMAGE:latest"
 
-# --- JOB BACKEND ---
+# --- BUILD BACKEND (optionnel : tag séparé) ---
 build_backend:
   stage: build
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "backend"
       changes:
-        - backend/**/* # Ne se lance que si on touche au dossier backend
+        - backend/**/*
   script:
-    - echo " Construction du Back..."
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo "Construction du Back..."
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - cd backend
-    - docker build -t $CI_REGISTRY_IMAGE/backend:latest .
-    - docker push $CI_REGISTRY_IMAGE/backend:latest
+    - docker build -t "$CI_REGISTRY_IMAGE:backend-latest" .
+    - docker push "$CI_REGISTRY_IMAGE:backend-latest"
 
-# --- JOB TEST ---
+# --- TEST : l'image latest répond sur le port 80 ---
 test_image:
   stage: test
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "frontend"
   script:
-    # On lance l'image sur le port 80 (exigence esiea.cloud)
-    - docker run -d --name test-app -p 80:80 $CI_REGISTRY_IMAGE/frontend:latest
+    - docker run -d --name test-app -p 80:80 "$CI_REGISTRY_IMAGE:latest"
     - sleep 5
     - apk add --no-cache curl
-    # On vérifie que le serveur répond bien sur le port 80
-    - curl --retry 3 --retry-delay 5 http://docker:80
+    - curl --fail --retry 3 --retry-delay 2 http://docker:80
 
-# --- JOB DEPLOY ---
+# --- DEPLOY : restart via API esiea.cloud ---
 deploy_image:
   stage: deploy
   rules:
