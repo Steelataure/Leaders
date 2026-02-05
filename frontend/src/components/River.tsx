@@ -154,9 +154,9 @@ function Card({ card, isDisabled, isLeaving, isEntering, onClick }: CardProps) {
       : "";
 
   // Sons
-  const { volume, sfxEnabled } = useAudio();
-  const soundConfig = {
-    volume: (volume / 100),
+  const { volume, sfxVolume, sfxEnabled } = useAudio();
+  const soundConfigSfx = {
+    volume: (sfxVolume / 100),
     soundEnabled: sfxEnabled
   };
   const [playCharacterHoverSfx] = useSound(characterHoverSfx, soundConfig);
