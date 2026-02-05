@@ -5,9 +5,11 @@ import esiea.hackathon.leaders.application.strategies.action.ActionFactory;
 import esiea.hackathon.leaders.application.strategies.passive.JailerBlockStrategy;
 import esiea.hackathon.leaders.application.strategies.passive.PassiveFactory;
 import esiea.hackathon.leaders.application.strategies.passive.ProtectorShieldStrategy;
+import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +25,9 @@ public class ActionService {
 
     private final PieceRepository pieceRepository;
     private final RefCharacterRepository characterRepository;
-    private final ActionFactory actionFactory;   // Pour les actions actives
-    private final PassiveFactory passiveFactory; // AJOUT : Pour les passifs défensifs
+    private final ActionFactory actionFactory;
+    private final PassiveFactory passiveFactory;
+    private final GameRepository gameRepository; // 1. Dépendance nécessaire
 
     @Transactional
     public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination) {
@@ -32,11 +35,20 @@ public class ActionService {
         PieceEntity source = pieceRepository.findById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Source piece not found"));
 
+        // 2. Chargement du Jeu
+        GameEntity game = gameRepository.findById(source.getGameId())
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        // 3. 🛑 SÉCURITÉ : Vérification du tour
+        if (source.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
+            throw new IllegalStateException("Action refusée : Ce n'est pas votre tour !");
+        }
+
         if (source.getHasActedThisTurn()) {
             throw new IllegalArgumentException("Piece has already acted this turn");
         }
 
-        // Vérification de la compétence
+        // Vérification que le perso possède bien la compétence
         RefCharacterEntity character = characterRepository.findById(source.getCharacterId())
                 .orElseThrow(() -> new IllegalStateException("Character definition not found"));
 
@@ -47,7 +59,7 @@ public class ActionService {
             throw new IllegalArgumentException("This piece does not have the ability: " + abilityId);
         }
 
-        // 2. Chargement de la cible
+        // Chargement de la cible (optionnel selon l'action)
         PieceEntity target = null;
         if (targetId != null) {
             target = pieceRepository.findById(targetId)
@@ -56,21 +68,18 @@ public class ActionService {
 
         List<PieceEntity> allPieces = pieceRepository.findByGameId(source.getGameId());
 
-        // 3. --- VÉRIFICATION DES PASSIFS VIA FACTORY ---
-
-        // A. Geôlier
+        // --- Vérification des PASSIFS défensifs (Geôlier, Protecteur) ---
         if (isBlockedByJailer(source, allPieces)) {
             throw new IllegalStateException("Action blocked! An enemy Jailer is adjacent.");
         }
 
-        // B. Protecteur (Seulement si on cible un ennemi)
         if (target != null && !target.getOwnerIndex().equals(source.getOwnerIndex())) {
             if (isTargetProtected(target, allPieces)) {
                 throw new IllegalStateException("Action blocked! The target is protected by a Shield.");
             }
         }
 
-        // 4. Exécution de la Stratégie
+        // Exécution de la Stratégie via Factory
         ActionAbilityStrategy strategy = actionFactory.getStrategy(abilityId);
         if (strategy == null) {
             throw new IllegalArgumentException("No implementation found for ability: " + abilityId);
@@ -78,7 +87,7 @@ public class ActionService {
 
         strategy.execute(source, target, destination, allPieces);
 
-        // 5. Finalisation
+        // Validation de l'action
         source.setHasActedThisTurn(true);
         pieceRepository.save(source);
 
@@ -87,27 +96,25 @@ public class ActionService {
         }
     }
 
-    // --- Helpers utilisant la PassiveFactory ---
+    // --- Helpers Passifs ---
 
     private boolean isBlockedByJailer(PieceEntity me, List<PieceEntity> allPieces) {
-        // Récupération dynamique de la stratégie
         JailerBlockStrategy strategy = passiveFactory.getStrategy("JAILER_BLOCK", JailerBlockStrategy.class);
-        if (strategy == null) return false; // Sécurité si la stratégie n'existe pas encore
+        if (strategy == null) return false;
 
         return allPieces.stream()
                 .filter(p -> "JAILER".equals(p.getCharacterId()))
                 .filter(p -> !p.getOwnerIndex().equals(me.getOwnerIndex())) // Ennemi
-                .anyMatch(jailer -> strategy.isBlocking(jailer, me)); // Délégation logique
+                .anyMatch(jailer -> strategy.isBlocking(jailer, me));
     }
 
     private boolean isTargetProtected(PieceEntity target, List<PieceEntity> allPieces) {
-        // Récupération dynamique de la stratégie
         ProtectorShieldStrategy strategy = passiveFactory.getStrategy("PROTECTOR_SHIELD", ProtectorShieldStrategy.class);
         if (strategy == null) return false;
 
         return allPieces.stream()
                 .filter(p -> "PROTECTOR".equals(p.getCharacterId()))
                 .filter(p -> p.getOwnerIndex().equals(target.getOwnerIndex())) // Allié de la cible
-                .anyMatch(protector -> strategy.isProtecting(protector, target)); // Délégation logique
+                .anyMatch(protector -> strategy.isProtecting(protector, target));
     }
 }

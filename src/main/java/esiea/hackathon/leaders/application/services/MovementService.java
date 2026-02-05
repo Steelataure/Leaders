@@ -3,9 +3,11 @@ package esiea.hackathon.leaders.application.services;
 import esiea.hackathon.leaders.application.strategies.MoveAbilityStrategy;
 import esiea.hackathon.leaders.application.strategies.action.NemesisBehavior;
 import esiea.hackathon.leaders.application.strategies.movement.MoveStrategyFactory;
+import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,87 +25,85 @@ public class MovementService {
     private final PieceRepository pieceRepository;
     private final RefCharacterRepository characterRepository;
     private final MoveStrategyFactory strategyFactory;
-
-    // --- 1. AJOUT : Injection du comportement de la Némésis ---
     private final NemesisBehavior nemesisBehavior;
+    private final GameRepository gameRepository; // 1. Dépendance nécessaire
 
-    /**
-     * Déplace une pièce.
-     * Cette méthode orchestre tout : elle vérifie si le coup demandé fait partie
-     * de la liste des coups légaux calculés par le moteur de règles.
-     */
     @Transactional
     public PieceEntity movePiece(UUID pieceId, short toQ, short toR) {
-        // 1. Validation technique de la coordonnée (Est-ce dans le plateau ?)
+        // Validation basique des coordonnées
         HexCoord target = new HexCoord(toQ, toR);
         if (!target.isValid()) {
             throw new IllegalArgumentException("Invalid hex coordinates: (" + toQ + "," + toR + ")");
         }
 
-        // 2. Récupère la pièce en base
+        // Chargement de la pièce
         PieceEntity pieceEntity = pieceRepository.findById(pieceId)
                 .orElseThrow(() -> new IllegalArgumentException("Piece not found: " + pieceId));
 
-        // 3. RECUPERATION DE TOUS LES MOUVEMENTS VALIDES
+        // 2. Chargement du Jeu
+        GameEntity game = gameRepository.findById(pieceEntity.getGameId())
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        // 3. 🛑 SÉCURITÉ : Vérification du tour
+        // On compare l'index du propriétaire de la pièce avec l'index du joueur courant
+        if (pieceEntity.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
+            throw new IllegalStateException("Action refusée : Ce n'est pas votre tour !");
+        }
+
+        // 4. Vérification si la pièce a déjà agi
+        if (pieceEntity.getHasActedThisTurn()) {
+            throw new IllegalArgumentException("This piece has already acted this turn.");
+        }
+
+        // 5. Calcul des mouvements légaux
         List<HexCoord> legalMoves = getValidMovesForPiece(pieceId);
 
-        // 4. Vérification de légalité
         if (!legalMoves.contains(target)) {
             throw new IllegalArgumentException(
                     "Illegal move from (" + pieceEntity.getQ() + "," + pieceEntity.getR() + ") to (" + toQ + "," + toR + ")"
             );
         }
 
-        // 5. Application du déplacement
+        // 6. Application du déplacement
         pieceEntity.setQ(toQ);
         pieceEntity.setR(toR);
         pieceEntity.setHasActedThisTurn(true);
 
         PieceEntity savedPiece = pieceRepository.save(pieceEntity);
 
-        // --- 2. AJOUT : Déclenchement de la Némésis après sauvegarde ---
+        // 7. Trigger Némésis (si un Leader a bougé)
         triggerNemesisIfLeaderMoved(savedPiece, savedPiece.getGameId());
 
         return savedPiece;
     }
 
-    /**
-     * Calcule la liste exhaustive des cases où la pièce peut aller.
-     * Combine : Mouvements Standards + Mouvements de Compétences (Stratégies)
-     */
     public List<HexCoord> getValidMovesForPiece(UUID pieceId) {
-        // 1. Chargement des données nécessaires
         PieceEntity piece = pieceRepository.findById(pieceId)
                 .orElseThrow(() -> new IllegalArgumentException("Piece not found"));
 
         RefCharacterEntity character = characterRepository.findById(piece.getCharacterId())
                 .orElseThrow(() -> new IllegalStateException("Character definition not found"));
 
-        // On charge tout le plateau pour la détection d'obstacles et les interactions
         List<PieceEntity> allPieces = pieceRepository.findByGameId(piece.getGameId());
-
         List<HexCoord> validMoves = new ArrayList<>();
 
-        // --- REGLE SPECIALE 1 : La Némésis n'a pas de mouvement standard ---
-        // Elle ne bouge qu'en réaction (géré hors de ce service) ou via une action spéciale.
+        // Règle : La Némésis ne bouge pas normalement
         if (!"NEMESIS".equals(character.getId())) {
             validMoves.addAll(getStandardMoves(piece, allPieces));
         }
 
-        // --- REGLE SPECIALE 2 : Le Leader profite du Boost Vizir ---
+        // Règle : Bonus du Vizir pour le Leader
         if ("LEADER".equals(character.getId())) {
             MoveAbilityStrategy leaderStrat = strategyFactory.getStrategy("VIZIER_BOOST");
             if (leaderStrat != null) {
-                // La stratégie "LeaderBoostStrategy" vérifiera elle-même si un Vizir est vivant
                 validMoves.addAll(leaderStrat.getExtraMoves(piece, allPieces));
             }
         }
 
-        // 3. Ajouter les Mouvements Spéciaux via la Factory
+        // Règle : Compétences de mouvement spéciales (Acrobate, etc.)
         if (character.getAbilities() != null) {
             for (var ability : character.getAbilities()) {
                 MoveAbilityStrategy strategy = strategyFactory.getStrategy(ability.getId());
-
                 if (strategy != null) {
                     validMoves.addAll(strategy.getExtraMoves(piece, allPieces));
                 }
@@ -113,50 +113,32 @@ public class MovementService {
         return validMoves;
     }
 
-    // --- Helpers Privés ---
+    // --- Helpers ---
 
-    /**
-     * Vérifie si c'était un Leader et déclenche la Némésis ennemie si présente.
-     */
     private void triggerNemesisIfLeaderMoved(PieceEntity movedPiece, UUID gameId) {
-        // Uniquement si c'est un LEADER qui bouge
-        if (!"LEADER".equals(movedPiece.getCharacterId())) {
-            return;
-        }
+        if (!"LEADER".equals(movedPiece.getCharacterId())) return;
 
-        // On récupère l'état actuel du plateau
         List<PieceEntity> allPieces = pieceRepository.findByGameId(gameId);
 
-        // On cherche une Némésis appartenant à l'ADVERSAIRE
+        // La Némésis réagit au mouvement du Leader ennemi
         allPieces.stream()
                 .filter(p -> "NEMESIS".equals(p.getCharacterId()))
-                .filter(p -> !p.getOwnerIndex().equals(movedPiece.getOwnerIndex()))
+                .filter(p -> !p.getOwnerIndex().equals(movedPiece.getOwnerIndex())) // Némésis Ennemie
                 .findFirst()
                 .ifPresent(nemesis -> {
-                    // On demande à l'IA de calculer le déplacement
                     nemesisBehavior.react(nemesis, movedPiece, allPieces);
-
-                    // On sauvegarde le mouvement automatique de la Némésis
                     pieceRepository.save(nemesis);
                 });
     }
 
-    /**
-     * Calcule les mouvements de base (1 case adjacente et vide).
-     */
     private List<HexCoord> getStandardMoves(PieceEntity piece, List<PieceEntity> allPieces) {
         return getAdjacentCells(piece.getQ(), piece.getR()).stream()
-                // Filtre : la case cible doit être VIDE
                 .filter(coord -> isCellEmpty(coord.q(), coord.r(), allPieces))
                 .toList();
     }
 
-    /**
-     * Génère les 6 voisins théoriques autour d'une coordonnée.
-     */
     public List<HexCoord> getAdjacentCells(short q, short r) {
         List<HexCoord> adjacent = new ArrayList<>();
-        // Les 6 directions axiales
         adjacent.add(new HexCoord((short)(q + 1), r));
         adjacent.add(new HexCoord((short)(q - 1), r));
         adjacent.add(new HexCoord(q, (short)(r + 1)));
@@ -170,15 +152,7 @@ public class MovementService {
                 .toList();
     }
 
-    /**
-     * Vérifie si une case est libre en mémoire (évite les requêtes SQL en boucle)
-     */
     private boolean isCellEmpty(short q, short r, List<PieceEntity> allPieces) {
         return allPieces.stream().noneMatch(p -> p.getQ() == q && p.getR() == r);
-    }
-
-    // Méthode utilitaire exposée si besoin pour d'autres services
-    public boolean isValidHexCoord(short q, short r) {
-        return new HexCoord(q, r).isValid();
     }
 }
