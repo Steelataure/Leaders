@@ -63,4 +63,15 @@ public class JpaPieceRepository implements PieceRepository {
     public void delete(UUID id) {
         springRepository.deleteById(id);
     }
+
+    @Override
+    public List<PieceEntity> saveAll(List<PieceEntity> pieces) {
+        List<PieceJpaEntity> entities = pieces.stream()
+                .map(PieceMapper::toEntity)
+                .collect(Collectors.toList());
+
+        return springRepository.saveAll(entities).stream()
+                .map(PieceMapper::toDomain)
+                .collect(Collectors.toList());
+    }
 }

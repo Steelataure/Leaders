@@ -6,9 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "piece", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"game_id", "q", "r"})
-})
+@Table(name = "piece")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

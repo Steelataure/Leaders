@@ -1,6 +1,7 @@
 package esiea.hackathon.leaders.application.services;
 
 import esiea.hackathon.leaders.application.strategies.MoveAbilityStrategy;
+import esiea.hackathon.leaders.application.strategies.action.NemesisBehavior;
 import esiea.hackathon.leaders.application.strategies.movement.MoveStrategyFactory;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
@@ -22,6 +23,9 @@ public class MovementService {
     private final PieceRepository pieceRepository;
     private final RefCharacterRepository characterRepository;
     private final MoveStrategyFactory strategyFactory;
+
+    // --- 1. AJOUT : Injection du comportement de la Némésis ---
+    private final NemesisBehavior nemesisBehavior;
 
     /**
      * Déplace une pièce.
@@ -55,7 +59,12 @@ public class MovementService {
         pieceEntity.setR(toR);
         pieceEntity.setHasActedThisTurn(true);
 
-        return pieceRepository.save(pieceEntity);
+        PieceEntity savedPiece = pieceRepository.save(pieceEntity);
+
+        // --- 2. AJOUT : Déclenchement de la Némésis après sauvegarde ---
+        triggerNemesisIfLeaderMoved(savedPiece, savedPiece.getGameId());
+
+        return savedPiece;
     }
 
     /**
@@ -105,6 +114,32 @@ public class MovementService {
     }
 
     // --- Helpers Privés ---
+
+    /**
+     * Vérifie si c'était un Leader et déclenche la Némésis ennemie si présente.
+     */
+    private void triggerNemesisIfLeaderMoved(PieceEntity movedPiece, UUID gameId) {
+        // Uniquement si c'est un LEADER qui bouge
+        if (!"LEADER".equals(movedPiece.getCharacterId())) {
+            return;
+        }
+
+        // On récupère l'état actuel du plateau
+        List<PieceEntity> allPieces = pieceRepository.findByGameId(gameId);
+
+        // On cherche une Némésis appartenant à l'ADVERSAIRE
+        allPieces.stream()
+                .filter(p -> "NEMESIS".equals(p.getCharacterId()))
+                .filter(p -> !p.getOwnerIndex().equals(movedPiece.getOwnerIndex()))
+                .findFirst()
+                .ifPresent(nemesis -> {
+                    // On demande à l'IA de calculer le déplacement
+                    nemesisBehavior.react(nemesis, movedPiece, allPieces);
+
+                    // On sauvegarde le mouvement automatique de la Némésis
+                    pieceRepository.save(nemesis);
+                });
+    }
 
     /**
      * Calcule les mouvements de base (1 case adjacente et vide).

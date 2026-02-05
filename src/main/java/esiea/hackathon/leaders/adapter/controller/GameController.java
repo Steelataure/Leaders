@@ -1,5 +1,6 @@
 package esiea.hackathon.leaders.adapter.controller;
 
+import esiea.hackathon.leaders.application.dto.request.CreateGameRequestDto;
 import esiea.hackathon.leaders.application.dto.response.GameStateDto;
 import esiea.hackathon.leaders.application.services.GameQueryService;
 import esiea.hackathon.leaders.application.services.GameService;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -20,23 +22,28 @@ public class GameController {
     private final GameService gameService;
     private final GameQueryService gameQueryService;
 
-    // 1. Créer une nouvelle partie
     @PostMapping
-    public ResponseEntity<UUID> createGame() {
-        UUID gameId = setupService.createGame();
+    public ResponseEntity<UUID> createGame(@RequestBody(required = false) CreateGameRequestDto request) {
+        List<String> forcedDeck = (request != null) ? request.forcedDeck() : null;
+        UUID gameId = setupService.createGame(forcedDeck);
         return ResponseEntity.ok(gameId);
     }
 
-    // 2. Récupérer l'état du jeu (Polling par le front)
     @GetMapping("/{gameId}")
     public ResponseEntity<GameStateDto> getGameState(@PathVariable UUID gameId) {
         return ResponseEntity.ok(gameQueryService.getGameState(gameId));
     }
 
-    // 3. Finir le tour
+    // --- C'EST ICI LA CORRECTION ---
     @PostMapping("/{gameId}/end-turn")
-    public ResponseEntity<Void> endTurn(@PathVariable UUID gameId) {
+    public ResponseEntity<GameStateDto> endTurn(@PathVariable UUID gameId) {
+        // 1. On effectue l'action (qui modifie la base de données)
         gameService.endTurn(gameId);
-        return ResponseEntity.ok().build();
+
+        // 2. On récupère l'état à jour via ton QueryService (qui gère déjà le mapping manuel)
+        GameStateDto updatedGameState = gameQueryService.getGameState(gameId);
+
+        // 3. On renvoie le DTO (Status 200 OK avec Body)
+        return ResponseEntity.ok(updatedGameState);
     }
 }

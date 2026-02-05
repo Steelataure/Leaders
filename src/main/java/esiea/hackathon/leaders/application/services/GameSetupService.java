@@ -31,53 +31,65 @@ public class GameSetupService {
     private final PieceRepository pieceRepository;
 
     @Transactional
-    public UUID createGame() {
-        // 1. Créer l'entité Jeu en forçant TOUTES les valeurs
-        // Cela empêche Hibernate d'envoyer des NULL qui violent les contraintes SQL
+    public UUID createGame(List<String> forcedDeck) { // <-- Changement de signature
+        // 1. Création de l'entité (inchangé)
         GameEntity game = GameEntity.builder()
                 .mode(GameMode.CLASSIC)
                 .phase(GamePhase.ACTION)
                 .status(GameStatus.WAITING)
-                .currentPlayerIndex(0) // int
-                .turnNumber(1)         // int
-                .banishmentCount(0)    // int
-                // On ne met PAS d'ID ici, on laisse le Repository le gérer lors du save
+                .currentPlayerIndex(0)
+                .turnNumber(1)
+                .banishmentCount(0)
                 .build();
 
-        // 2. Sauvegarder pour obtenir l'instance gérée par JPA (avec son ID)
         GameEntity savedGame = gameRepository.save(game);
 
-        // 3. Initialiser le reste avec l'objet sauvegardé
-        initializeDeck(savedGame);
+        // 2. On passe la liste (qui peut être null) à l'initialisation
+        initializeDeck(savedGame, forcedDeck);
         placeLeaders(savedGame.getId());
 
         return savedGame.getId();
     }
 
-    private void initializeDeck(GameEntity game) {
-        // Liste des IDs en ANGLAIS (correspondant exactement à ton fichier schema.sql)
-        List<String> deckCharacterIds = List.of(
+    private void initializeDeck(GameEntity game, List<String> forcedDeck) {
+        // A. Liste complète de tous les personnages du jeu
+        List<String> allCharacters = new ArrayList<>(List.of(
                 "ACROBAT", "ARCHER", "ASSASSIN", "BRAWLER", "CAVALRY",
                 "GRAPPLER", "ILLUSIONIST", "INNKEEPER", "JAILER",
                 "MANIPULATOR", "NEMESIS", "OLD_BEAR", "PROTECTOR",
                 "PROWLER", "ROYAL_GUARD", "VIZIER"
-        );
+        ));
 
-        // Mélange aléatoire
-        List<String> shuffledIds = new ArrayList<>(deckCharacterIds);
-        Collections.shuffle(shuffledIds);
+        List<String> finalDeckOrder = new ArrayList<>();
 
+        // B. Si un ordre forcé est fourni, on le traite
+        if (forcedDeck != null && !forcedDeck.isEmpty()) {
+            // On ajoute les cartes forcées en premier
+            finalDeckOrder.addAll(forcedDeck);
+
+            // On les retire de la liste principale pour ne pas avoir de doublons
+            // (La méthode removeAll gère l'égalité des Strings)
+            allCharacters.removeAll(forcedDeck);
+        }
+
+        // C. On mélange ce qu'il reste (le hasard reste présent pour la fin du paquet)
+        Collections.shuffle(allCharacters);
+
+        // D. On complète le deck avec le reste mélangé
+        finalDeckOrder.addAll(allCharacters);
+
+        // --- Création des entités (Inchangé) ---
         int order = 1;
-        for (String charId : shuffledIds) {
+        for (String charId : finalDeckOrder) {
             RefCharacterEntity character = characterRepository.findById(charId)
                     .orElseThrow(() -> new RuntimeException("Character not found inside DB: " + charId));
 
-            // Les 3 premières cartes vont dans la rivière (VISIBLE), les autres dans la pioche
+            // Les 3 premières sont visibles
             CardState state = (order <= 3) ? CardState.VISIBLE : CardState.IN_DECK;
             Integer slot = (order <= 3) ? order : null;
 
             RecruitmentCardEntity card = RecruitmentCardEntity.builder()
-                    .game(game) // On lie à la partie créée
+                    .game(game)
                     .character(character)
                     .state(state)
                     .visibleSlot(slot)

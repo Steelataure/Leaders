@@ -2,6 +2,9 @@ package esiea.hackathon.leaders.application.services;
 
 import esiea.hackathon.leaders.application.strategies.ActionAbilityStrategy;
 import esiea.hackathon.leaders.application.strategies.action.ActionFactory;
+import esiea.hackathon.leaders.application.strategies.passive.JailerBlockStrategy;
+import esiea.hackathon.leaders.application.strategies.passive.PassiveFactory;
+import esiea.hackathon.leaders.application.strategies.passive.ProtectorShieldStrategy;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
@@ -20,18 +23,12 @@ public class ActionService {
 
     private final PieceRepository pieceRepository;
     private final RefCharacterRepository characterRepository;
-    private final ActionFactory actionFactory; // Ton usine à stratégies d'action
+    private final ActionFactory actionFactory;   // Pour les actions actives
+    private final PassiveFactory passiveFactory; // AJOUT : Pour les passifs défensifs
 
-    /**
-     * Exécute une compétence active (Bousculade, Grappin, Échange, etc.).
-     * @param sourceId ID de la pièce qui lance l'action
-     * @param targetId ID de la cible (peut être null selon le pouvoir)
-     * @param abilityId ID de la compétence (ex: "BRAWLER_PUSH")
-     * @param destination Case cible optionnelle (pour Manipulatrice/Tavernier)
-     */
     @Transactional
     public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination) {
-        // 1. Chargement de la source et du contexte
+        // 1. Chargement de la source
         PieceEntity source = pieceRepository.findById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Source piece not found"));
 
@@ -39,7 +36,7 @@ public class ActionService {
             throw new IllegalArgumentException("Piece has already acted this turn");
         }
 
-        // Vérifie que le personnage possède bien cette compétence
+        // Vérification de la compétence
         RefCharacterEntity character = characterRepository.findById(source.getCharacterId())
                 .orElseThrow(() -> new IllegalStateException("Character definition not found"));
 
@@ -50,27 +47,23 @@ public class ActionService {
             throw new IllegalArgumentException("This piece does not have the ability: " + abilityId);
         }
 
-        // 2. Chargement de la cible et du plateau
+        // 2. Chargement de la cible
         PieceEntity target = null;
         if (targetId != null) {
             target = pieceRepository.findById(targetId)
                     .orElseThrow(() -> new IllegalArgumentException("Target piece not found"));
         }
 
-        // On charge tout le plateau pour vérifier les obstacles et les passifs
         List<PieceEntity> allPieces = pieceRepository.findByGameId(source.getGameId());
 
-        // 3. --- VÉRIFICATION DES PASSIFS DÉFENSIFS (Règles Globales) ---
+        // 3. --- VÉRIFICATION DES PASSIFS VIA FACTORY ---
 
-        // A. Règle du Geôlier (JAILER_BLOCK) :
-        // "Les ennemis adjacents ne peuvent pas utiliser leur compétence active."
+        // A. Geôlier
         if (isBlockedByJailer(source, allPieces)) {
             throw new IllegalStateException("Action blocked! An enemy Jailer is adjacent.");
         }
 
-        // B. Règle du Protecteur (PROTECTOR_SHIELD) :
-        // "Les compétences ennemies ne peuvent déplacer ni le protecteur, ni ses alliés adjacents."
-        // Cette règle ne s'applique que si on cible un ennemi.
+        // B. Protecteur (Seulement si on cible un ennemi)
         if (target != null && !target.getOwnerIndex().equals(source.getOwnerIndex())) {
             if (isTargetProtected(target, allPieces)) {
                 throw new IllegalStateException("Action blocked! The target is protected by a Shield.");
@@ -83,7 +76,6 @@ public class ActionService {
             throw new IllegalArgumentException("No implementation found for ability: " + abilityId);
         }
 
-        // La stratégie effectue les modifications de coordonnées (setQ, setR)
         strategy.execute(source, target, destination, allPieces);
 
         // 5. Finalisation
@@ -95,48 +87,27 @@ public class ActionService {
         }
     }
 
-    // --- Helpers pour les Passifs ---
+    // --- Helpers utilisant la PassiveFactory ---
 
-    /**
-     * Vérifie si la pièce source est adjacente à un Geôlier ennemi.
-     */
     private boolean isBlockedByJailer(PieceEntity me, List<PieceEntity> allPieces) {
+        // Récupération dynamique de la stratégie
+        JailerBlockStrategy strategy = passiveFactory.getStrategy("JAILER_BLOCK", JailerBlockStrategy.class);
+        if (strategy == null) return false; // Sécurité si la stratégie n'existe pas encore
+
         return allPieces.stream()
-                // C'est un Geôlier
                 .filter(p -> "JAILER".equals(p.getCharacterId()))
-                // C'est un ennemi
-                .filter(p -> !p.getOwnerIndex().equals(me.getOwnerIndex()))
-                // Il est adjacent
-                .anyMatch(jailer -> areAdjacent(me, jailer));
+                .filter(p -> !p.getOwnerIndex().equals(me.getOwnerIndex())) // Ennemi
+                .anyMatch(jailer -> strategy.isBlocking(jailer, me)); // Délégation logique
     }
 
-    /**
-     * Vérifie si la cible est protégée (Soit elle est Protecteur, soit elle est à côté d'un Protecteur allié).
-     */
     private boolean isTargetProtected(PieceEntity target, List<PieceEntity> allPieces) {
-        // Cas 1 : La cible EST un Protecteur
-        if ("PROTECTOR".equals(target.getCharacterId())) {
-            return true;
-        }
+        // Récupération dynamique de la stratégie
+        ProtectorShieldStrategy strategy = passiveFactory.getStrategy("PROTECTOR_SHIELD", ProtectorShieldStrategy.class);
+        if (strategy == null) return false;
 
-        // Cas 2 : La cible est adjacente à un Protecteur allié
         return allPieces.stream()
                 .filter(p -> "PROTECTOR".equals(p.getCharacterId()))
                 .filter(p -> p.getOwnerIndex().equals(target.getOwnerIndex())) // Allié de la cible
-                .anyMatch(protector -> areAdjacent(target, protector));
-    }
-
-    // --- Helpers Mathématiques ---
-
-    /**
-     * Vérifie l'adjacence (Distance Hexagonale == 1)
-     */
-    private boolean areAdjacent(PieceEntity p1, PieceEntity p2) {
-        int dq = Math.abs(p1.getQ() - p2.getQ());
-        int dr = Math.abs(p1.getR() - p2.getR());
-        int ds = Math.abs((p1.getQ() + p1.getR()) - (p2.getQ() + p2.getR()));
-
-        // Distance = (diff_q + diff_r + diff_s) / 2
-        return (dq + dr + ds) / 2 == 1;
+                .anyMatch(protector -> strategy.isProtecting(protector, target)); // Délégation logique
     }
 }

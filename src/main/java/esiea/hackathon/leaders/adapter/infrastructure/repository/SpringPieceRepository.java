@@ -11,8 +11,6 @@ import java.util.UUID;
 @Repository
 public interface SpringPieceRepository extends JpaRepository<PieceJpaEntity, UUID> {
 
-    // Attention : Dans PieceJpaEntity, c'est 'game.id', mais Spring comprend souvent 'findByGameId'
-    // Si ça plante, utilise findByGame_Id (avec underscore)
     List<PieceJpaEntity> findByGameId(UUID gameId);
 
     List<PieceJpaEntity> findByGameIdAndOwnerIndex(UUID gameId, Short ownerIndex);

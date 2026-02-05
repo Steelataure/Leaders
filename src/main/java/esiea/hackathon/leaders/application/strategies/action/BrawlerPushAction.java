@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Component
+@Component("brawlerPushAction")
 public class BrawlerPushAction implements ActionAbilityStrategy {
 
     @Override
@@ -18,39 +18,54 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
     @Override
     public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
         if (target == null) throw new IllegalArgumentException("Target is required for Brawler Push");
+        if (dest == null) throw new IllegalArgumentException("Destination is required (where to push?)");
 
-        // 1. Calcul du vecteur de direction (Source -> Cible)
-        int dq = target.getQ() - source.getQ();
-        int dr = target.getR() - source.getR();
-
-        // Vérification adjacence (le vecteur doit être de longueur 1)
-        int dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
-        if (dist != 1) {
-            throw new IllegalArgumentException("Target must be adjacent for Push");
+        // 1. Vérifier que la Cible est adjacente au Cogneur
+        if (getDistance(source, target) != 1) {
+            throw new IllegalArgumentException("Target must be adjacent to Brawler");
         }
 
-        // 2. Calcul de la case d'atterrissage (Derrière la cible)
-        // On applique le même vecteur à partir de la cible
-        short pushQ = (short) (target.getQ() + dq);
-        short pushR = (short) (target.getR() + dr);
-        HexCoord landingSpot = new HexCoord(pushQ, pushR);
+        // 2. Vérifier que la Destination est adjacente à la Cible (poussée d'une case)
+        if (getDistance(target, dest.q(), dest.r()) != 1) {
+            throw new IllegalArgumentException("Destination must be adjacent to the target");
+        }
 
-        // 3. Validations
-        if (!landingSpot.isValid()) {
+        // 3. Vérifier la direction "Opposée" (La règle des 3 cases arrières)
+        // Sur un hexagone, si on pousse "devant" ou "sur les côtés", la distance Source->Dest est de 1.
+        // Si on pousse "derrière" (les 3 cases opposées), la distance Source->Dest est de 2.
+        if (getDistance(source, dest.q(), dest.r()) != 2) {
+            throw new IllegalArgumentException("Must push target away (to one of the 3 opposite cells)");
+        }
+
+        // 4. Validations standards (Case vide et valide)
+        if (!dest.isValid()) {
             throw new IllegalArgumentException("Cannot push target off the board");
         }
-        if (isOccupied(pushQ, pushR, allPieces)) {
-            throw new IllegalArgumentException("Cannot push: landing cell is occupied");
+        if (isOccupied(dest.q(), dest.r(), allPieces)) {
+            throw new IllegalArgumentException("Cannot push: destination cell is occupied");
         }
 
-        // 4. Application du mouvement
-        // La Source avance sur la case de la Cible
+        // 5. APPLICATION DU MOUVEMENT
+
+        // A. Le Cogneur prend la place de la victime
         source.setQ(target.getQ());
         source.setR(target.getR());
 
-        // La Cible recule sur la case d'atterrissage
-        target.setQ(pushQ);
-        target.setR(pushR);
+        // B. La Victime est propulsée sur la destination choisie
+        target.setQ(dest.q());
+        target.setR(dest.r());
+    }
+
+    // --- Helpers ---
+
+    private int getDistance(PieceEntity p1, PieceEntity p2) {
+        return getDistance(p1, p2.getQ(), p2.getR());
+    }
+
+    private int getDistance(PieceEntity p1, int q2, int r2) {
+        return (Math.abs(p1.getQ() - q2)
+                + Math.abs(p1.getR() - r2)
+                + Math.abs((p1.getQ() + p1.getR()) - (q2 + r2))) / 2;
     }
 
     private boolean isOccupied(short q, short r, List<PieceEntity> pieces) {

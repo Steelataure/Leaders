@@ -124,8 +124,7 @@ CREATE TABLE IF NOT EXISTS piece (
     q SMALLINT NOT NULL,
     r SMALLINT NOT NULL,
     has_acted_this_turn BOOLEAN DEFAULT FALSE,
-    CONSTRAINT valid_hex_coords CHECK (ABS(q) <= 3 AND ABS(r) <= 3 AND ABS(q + r) <= 3),
-    UNIQUE (game_id, q, r)
+    CONSTRAINT valid_hex_coords CHECK (ABS(q) <= 3 AND ABS(r) <= 3 AND ABS(q + r) <= 3)
     );
 
 CREATE TABLE IF NOT EXISTS recruitment_card (

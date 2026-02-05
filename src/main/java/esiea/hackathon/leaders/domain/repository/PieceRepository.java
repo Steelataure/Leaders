@@ -21,4 +21,6 @@ public interface PieceRepository {
     long countByGameIdAndOwnerIndex(UUID gameId, Short ownerIndex);
 
     void delete(UUID id);
+
+    List<PieceEntity> saveAll(List<PieceEntity> pieces);
 }
