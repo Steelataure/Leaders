@@ -4,6 +4,7 @@ import type { User } from "../types/auth.types";
 
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
+import buttonHoverSfx from '../sounds/buttonHover.mp3';
 
 // --- ANIMATIONS CSS (à garder dans le fichier ou index.css) ---
 const styles = `
@@ -110,6 +111,7 @@ export default function Lobby({
 
   // Sons
   const [playButtonClickSfx] = useSound(buttonClickSfx);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
 
   return (
     <div className="min-h-screen w-full bg-[#020617] text-slate-200 flex flex-col items-center justify-center p-6 font-mono overflow-hidden">
@@ -130,6 +132,7 @@ export default function Lobby({
       <div className="absolute top-6 left-6 z-50">
         <button
           onClick={onOpenRules}
+          onMouseEnter={() => playButtonHoverSfx()}
           className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-blue-400 rounded-lg transition-all backdrop-blur-md"
         >
           <svg
@@ -155,7 +158,11 @@ export default function Lobby({
       {/* --- TOP RIGHT LOGIN MENU --- */}
       <div className="absolute top-6 right-6 z-50">
         <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
+          onClick={() => {
+            playButtonClickSfx();
+            setDropdownOpen(!dropdownOpen);
+          }}
+          onMouseEnter={() => playButtonHoverSfx()}
           className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 border border-blue-500/30 hover:bg-blue-600 hover:text-white text-blue-400 rounded-lg transition-all backdrop-blur-md"
         >
           <span className="text-sm font-bold uppercase tracking-wider">
@@ -188,6 +195,7 @@ export default function Lobby({
                     setLoginOpen(true);
                     setSettingsOpen(false);
                   }}
+                  onMouseEnter={() => playButtonHoverSfx()}
                   className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition-colors border-b border-white/5"
                 >
                   Se connecter
@@ -210,6 +218,7 @@ export default function Lobby({
                   setLoginOpen(false);
                   setSettingsOpen(true);
                 }}
+                onMouseEnter={() => playButtonHoverSfx()}
               >
                 Paramètres
               </button>
@@ -221,6 +230,7 @@ export default function Lobby({
                   setLoginOpen(false);
                   setSettingsOpen(false);
                 }}
+                onMouseEnter={() => playButtonHoverSfx()}
               >
                 A propos
               </button>
@@ -274,6 +284,7 @@ export default function Lobby({
                   playButtonClickSfx();
                   onStartGame("create");
                 }}
+                onMouseEnter={() => playButtonHoverSfx()}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
               >
                 Initialiser le Serveur
@@ -478,6 +489,7 @@ export default function Lobby({
 
               <button
                 onClick={handleAuth}
+                onMouseEnter={() => playButtonHoverSfx()}
                 disabled={isLoading}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
               >

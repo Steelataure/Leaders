@@ -30,10 +30,10 @@ export interface Piece {
 
 // === DONNÉES INITIALES (MOCKS) ===
 const INITIAL_PIECES: Piece[] = [
-  { id: "p1", characterId: "LEADER", ownerIndex: 0, q: 0, r: 2, hasActed: false },
-  { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 0, r: -2, hasActed: false },
-  { id: "p3", characterId: "ARCHER", ownerIndex: 0, q: 1, r: 1, hasActed: false },
-  { id: "p4", characterId: "CAVALIER", ownerIndex: 1, q: -1, r: -1, hasActed: false },
+  { id: "p1", characterId: "LEADER", ownerIndex: 0, q: 0, r: 3, hasActed: false },  // Joueur 1 (bleu) en bas
+  { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 0, r: -3, hasActed: false }, // Joueur 2 (rouge) en haut
+  { id: "p3", characterId: "ARCHER", ownerIndex: 0, q: 1, r: 2, hasActed: false },
+  { id: "p4", characterId: "CAVALIER", ownerIndex: 1, q: -1, r: -2, hasActed: false },
 ];
 
 const INITIAL_RIVER: CharacterCard[] = [
@@ -352,7 +352,11 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
                   handleRecruit(card.id);
                   playCharacterSelectSfx();
                 }}
-                onMouseEnter={playCharacterHoverSfx}
+                onMouseEnter={() => {
+                  if (phase == "RECRUITMENT") {
+                    playCharacterHoverSfx();
+                  }
+                }}
                 disabled={phase !== "RECRUITMENT"}
               />
             ))}
