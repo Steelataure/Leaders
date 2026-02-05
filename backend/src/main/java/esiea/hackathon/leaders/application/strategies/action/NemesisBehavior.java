@@ -2,16 +2,22 @@ package esiea.hackathon.leaders.application.strategies.action;
 
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import org.springframework.stereotype.Component;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
 @Component
 public class NemesisBehavior {
 
+    private static final Logger LOGGER = LogManager.getLogger(NemesisBehavior.class);
+
     // Vitesse de la Némésis : 2 cases
     private static final int SPEED = 2;
 
     public void react(PieceEntity nemesis, PieceEntity enemyLeader, List<PieceEntity> allPieces) {
+        LOGGER.info("Début de la réaction de la Némésis. Cible : Leader en ({}, {})", enemyLeader.getQ(), enemyLeader.getR());
+
         // On effectue 2 pas successifs
         for (int i = 0; i < SPEED; i++) {
             PieceEntity nextStep = findBestStep(nemesis, enemyLeader, allPieces);
@@ -20,16 +26,20 @@ public class NemesisBehavior {
             if (nextStep != null) {
                 // On vérifie qu'on ne marche pas SUR le Leader (on s'arrête juste avant)
                 if (nextStep.getQ() == enemyLeader.getQ() && nextStep.getR() == enemyLeader.getR()) {
+                    LOGGER.debug("Némésis au contact du Leader. Arrêt du mouvement.");
                     break; // On est au contact, on arrête de bouger
                 }
 
                 // Application du mouvement
                 nemesis.setQ(nextStep.getQ());
                 nemesis.setR(nextStep.getR());
+                LOGGER.debug("Pas {} : Némésis se déplace en ({}, {})", i + 1, nextStep.getQ(), nextStep.getR());
             } else {
+                LOGGER.warn("Némésis bloquée : aucun mouvement possible vers la cible.");
                 break; // Bloquée
             }
         }
+        LOGGER.info("Fin du mouvement de la Némésis. Position finale : ({}, {})", nemesis.getQ(), nemesis.getR());
     }
 
     private PieceEntity findBestStep(PieceEntity current, PieceEntity target, List<PieceEntity> obstacles) {
