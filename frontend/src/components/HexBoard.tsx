@@ -12,6 +12,8 @@ import useSound from 'use-sound';
 import boardPlacementSfx from '../sounds/boardPlacement.mp3';
 import pawnSelectSfx from '../sounds/pawnSelect.mp3';
 
+import { useAudio } from "../context/AudioContext";
+
 // === TYPES ===
 export interface Piece {
   id: string;
@@ -170,8 +172,13 @@ export default function HexBoard({
   const [hoveredCell, setHoveredCell] = useState<HexCell | null>(null);
 
   // Sons
-  const [playBoardPlacementSfx] = useSound(boardPlacementSfx);
-  const [playPawnSelectSfx] = useSound(pawnSelectSfx);
+    const { volume, sfxEnabled } = useAudio();
+  const soundConfig = {
+    volume: (volume / 100),
+    soundEnabled: sfxEnabled
+  };
+  const [playBoardPlacementSfx] = useSound(boardPlacementSfx, soundConfig);
+  const [playPawnSelectSfx] = useSound(pawnSelectSfx, soundConfig);
 
   // Generate board centered
   const cells = useMemo(() => generateBoard(SVG_WIDTH / 2, SVG_HEIGHT / 2), []);
