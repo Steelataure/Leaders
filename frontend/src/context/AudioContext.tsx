@@ -14,12 +14,12 @@ const AudioContext = createContext<AudioContextType | undefined>(undefined);
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialisation du volume principal
   const [volume, setVolumeState] = useState(() => {
-    return Number(localStorage.getItem('app-volume')) ?? 25;
+    return Number(localStorage.getItem('app-volume')) ?? 3;
   });
 
   // Initialisation du volume des effets sonores (SFX)
   const [sfxVolume, setSfxVolumeState] = useState(() => {
-    return Number(localStorage.getItem('app-sfx-volume')) ?? 50;
+    return Number(localStorage.getItem('app-sfx-volume')) ?? 5;
   });
 
   const [sfxEnabled, setSfxEnabled] = useState(true);
