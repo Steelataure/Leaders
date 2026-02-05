@@ -12,7 +12,7 @@ const AudioContext = createContext<AudioContextType | undefined>(undefined);
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // On initialise avec localStorage pour que le volume reste le même après un rafraîchissement
   const [volume, setVolumeState] = useState(() => {
-    return Number(localStorage.getItem('app-volume')) || 50;
+    return Number(localStorage.getItem('app-volume')) || 25;
   });
   const [sfxEnabled, setSfxEnabled] = useState(true);
 
