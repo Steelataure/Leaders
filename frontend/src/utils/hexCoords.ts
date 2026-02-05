@@ -1,6 +1,6 @@
 /**
  * Utilitaires pour les coordonnées hexagonales - Version améliorée
- * Système de coordonnées axiales (q, r) pour hexagones pointy-top
+ * Système de coordonnées axiales (q, r) pour hexagones flat-top
  * Jeu "Leaders" - Hackathon ESIEA
  */
 
@@ -30,20 +30,20 @@ export interface HexCell {
 
 /**
  * Détermine le type d'une cellule selon ses coordonnées
- * Basé sur le plateau officiel de Leaders
+ * Basé sur le plateau officiel de Leaders (flat-top, Joueur 1 en bas, Joueur 2 en haut)
  */
 function getCellType(q: number, r: number): CellType {
   // Case centrale
   if (q === 0 && r === 0) return CellType.CENTER;
 
-  // Cases de départ des Leaders (pointes du plateau)
-  if (q === 0 && r === 3) return CellType.LEADER_SPAWN_P1;
-  if (q === 0 && r === -3) return CellType.LEADER_SPAWN_P2;
+  // Cases de départ des Leaders (haut/bas du plateau)
+  if (q === 0 && r === 3) return CellType.LEADER_SPAWN_P1;  // Joueur 1 (bleu) en bas
+  if (q === 0 && r === -3) return CellType.LEADER_SPAWN_P2; // Joueur 2 (rouge) en haut
 
   // Cases de recrutement Joueur 1 (partie basse)
   const recruitP1 = [
-    { q: -2, r: 3 },
     { q: -1, r: 3 },
+    { q: -2, r: 3 },
     { q: 1, r: 2 },
     { q: 2, r: 1 },
   ];
@@ -52,8 +52,8 @@ function getCellType(q: number, r: number): CellType {
 
   // Cases de recrutement Joueur 2 (partie haute)
   const recruitP2 = [
-    { q: 2, r: -3 },
     { q: 1, r: -3 },
+    { q: 2, r: -3 },
     { q: -1, r: -2 },
     { q: -2, r: -1 },
   ];
@@ -65,7 +65,7 @@ function getCellType(q: number, r: number): CellType {
 
 /**
  * Convertit les coordonnées axiales (q, r) en pixels (x, y)
- * Formule pour hexagone pointy-top
+ * Formule pour hexagone flat-top (rotation 90° par rapport à pointy-top)
  */
 export function axialToPixel(
   q: number,
@@ -73,8 +73,9 @@ export function axialToPixel(
   centerX: number = 0,
   centerY: number = 0,
 ): { x: number; y: number } {
-  const x = HEX_SIZE * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * r) + centerX;
-  const y = HEX_SIZE * ((3 / 2) * r) + centerY;
+  // Flat-top : x dépend de q, y dépend de q et r
+  const x = HEX_SIZE * ((3 / 2) * q) + centerX;
+  const y = HEX_SIZE * ((Math.sqrt(3) / 2) * q + Math.sqrt(3) * r) + centerY;
   return { x, y };
 }
 
@@ -103,7 +104,7 @@ export function generateBoard(
 }
 
 /**
- * Génère les points SVG pour un hexagone pointy-top
+ * Génère les points SVG pour un hexagone flat-top
  */
 export function getHexagonPoints(
   cx: number,
@@ -113,7 +114,7 @@ export function getHexagonPoints(
   const points: string[] = [];
 
   for (let i = 0; i < 6; i++) {
-    const angleDeg = 60 * i - 90; // Pointy-top : commence à -90°
+    const angleDeg = 60 * i; // Flat-top : commence à 0°
     const angleRad = (Math.PI / 180) * angleDeg;
     const x = cx + size * Math.cos(angleRad);
     const y = cy + size * Math.sin(angleRad);

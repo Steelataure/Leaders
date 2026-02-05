@@ -53,6 +53,27 @@ const SVG_HEIGHT = 600;
 
 // === SOUS-COMPOSANTS ===
 
+// Mapping des characterId vers les fichiers images
+const CHARACTER_IMAGES: Record<string, string> = {
+  COGNEUR: "/image/cogneur.png",
+  RODEUR: "/image/rodeuse.png",
+  RODEUSE: "/image/rodeuse.png",
+  ILLUSIONISTE: "/image/illusioniste.png",
+  MANIPULATRICE: "/image/manipulatrice.png",
+  TAVERNIER: "/image/tavernier.png",
+  GARDE: "/image/garderoyal.png",
+  ARCHER: "/image/archere.png",
+  ARCHERE: "/image/archere.png",
+  CAVALIER: "/image/cavalier.png",
+  LEADER: "/image/vizir.png",
+  ASSASSIN: "/image/assassin.png",
+  ACROBATE: "/image/acrobate.png",
+  GEOLIER: "/image/geolier.png",
+  PROTECTEUR: "/image/protecteur.png",
+  NEMESIS: "/image/nemesis.png",
+  VIEILOURS: "/image/vieilours&ourson.png",
+};
+
 function CrownIcon({ color }: { color: string }) {
   return (
     <g transform="translate(-12, -10) scale(0.8)">
@@ -67,24 +88,25 @@ function CrownIcon({ color }: { color: string }) {
 function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
   const isLeader = piece.characterId === "LEADER";
   const color = piece.ownerIndex === 0 ? COLORS.player1 : COLORS.player2;
-  const glowColor = piece.ownerIndex === 0 ? COLORS.player1Glow : COLORS.player2Glow;
-  const radius = isLeader ? HEX_SIZE * 0.45 : HEX_SIZE * 0.38;
+  const radius = HEX_SIZE * 0.55;
   const glowId = `glow-${piece.id}`;
+  const clipId = `clip-${piece.id}`;
+  const imageUrl = CHARACTER_IMAGES[piece.characterId] || "/image/vizir.png";
 
   return (
     <g onClick={(e) => { e.stopPropagation(); onSelect(piece); }} style={{ cursor: "pointer" }} opacity={piece.hasActed ? 0.6 : 1}>
       <defs>
         <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <radialGradient id={`grad-${piece.id}`} cx="30%" cy="30%">
-          <stop offset="0%" stopColor={glowColor} />
-          <stop offset="100%" stopColor={color} />
-        </radialGradient>
+        {/* Masque circulaire pour l'image */}
+        <clipPath id={clipId}>
+          <circle cx={x} cy={y} r={radius - 3} />
+        </clipPath>
       </defs>
 
       {/* Selection Ring */}
@@ -95,16 +117,33 @@ function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
         </circle>
       )}
 
-      {/* Piece Body */}
-      <circle cx={x} cy={y} r={radius} fill={`url(#grad-${piece.id})`} stroke="#fff" strokeWidth={isLeader ? 3 : 2} filter={`url(#${glowId})`} />
+      {/* Cercle de fond avec couleur du joueur */}
+      <circle
+        cx={x}
+        cy={y}
+        r={radius}
+        fill="#1a1a2e"
+        stroke={color}
+        strokeWidth={isLeader ? 4 : 3}
+        filter={`url(#${glowId})`}
+      />
 
-      {/* Icon/Text */}
-      {isLeader ? (
-        <g transform={`translate(${x}, ${y})`}><CrownIcon color="#fff" /></g>
-      ) : (
-        <text x={x} y={y + 5} textAnchor="middle" fill="#fff" fontSize="14" fontWeight="bold" fontFamily="sans-serif">
-          {piece.characterId.charAt(0)}
-        </text>
+      {/* Image du personnage */}
+      <image
+        href={imageUrl}
+        x={x - radius + 3}
+        y={y - radius + 3}
+        width={(radius - 3) * 2}
+        height={(radius - 3) * 2}
+        clipPath={`url(#${clipId})`}
+        preserveAspectRatio="xMidYMid slice"
+      />
+
+      {/* Couronne pour le Leader */}
+      {isLeader && (
+        <g transform={`translate(${x}, ${y - radius - 8})`}>
+          <CrownIcon color={color} />
+        </g>
       )}
 
       {/* Acted Status */}
@@ -179,18 +218,54 @@ export default function HexBoard({
 
   return (
     <svg width={SVG_WIDTH} height={SVG_HEIGHT} className="drop-shadow-2xl overflow-visible">
+      {/* Defs pour les effets de brillance */}
+      <defs>
+        <filter id="glow-player1" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="glow-player2" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
       {/* Hexagons */}
       {cells.map((cell) => {
         const isValid = validMoves.has(`${cell.q},${cell.r}`);
         const isHovered = hoveredCell?.q === cell.q && hoveredCell?.r === cell.r;
 
+        // Vérifier si cette cellule contient une pièce du joueur actif
+        const pieceOnCell = findPieceAtCell(cell.q, cell.r);
+        const isCurrentPlayerPiece = pieceOnCell && pieceOnCell.ownerIndex === currentPlayer;
+        const canAct = isCurrentPlayerPiece && !pieceOnCell.hasActed && phase === "ACTIONS";
+
+        // Couleurs de surbrillance selon le joueur
+        const playerHighlightColor = currentPlayer === 0 ? COLORS.player1 : COLORS.player2;
+        const playerHighlightFill = currentPlayer === 0 ? "rgba(0, 245, 255, 0.1)" : "rgba(239, 68, 68, 0.1)";
+
         return (
           <polygon
             key={`${cell.q}-${cell.r}`}
             points={getHexagonPoints(cell.x, cell.y, HEX_SIZE * 0.93)}
-            fill={isValid ? "rgba(0, 245, 255, 0.15)" : isHovered ? COLORS.cellHover : COLORS.cellFill}
-            stroke={isValid ? COLORS.validMove : isHovered ? "#00f5ff" : COLORS.cellStroke}
-            strokeWidth={isValid ? 2 : 1}
+            fill={
+              isValid ? "rgba(0, 245, 255, 0.15)" :
+                canAct ? playerHighlightFill :
+                  isHovered ? COLORS.cellHover : COLORS.cellFill
+            }
+            stroke={
+              isValid ? COLORS.validMove :
+                canAct ? playerHighlightColor :
+                  isHovered ? "#00f5ff" : COLORS.cellStroke
+            }
+            strokeWidth={isValid ? 2 : canAct ? 2.5 : 1}
+            filter={canAct ? `url(#glow-player${currentPlayer + 1})` : undefined}
             onMouseEnter={() => setHoveredCell(cell)}
             onMouseLeave={() => setHoveredCell(null)}
             onClick={() => handleCellClick(cell)}
