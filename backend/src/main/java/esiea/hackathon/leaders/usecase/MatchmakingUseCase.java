@@ -10,19 +10,16 @@ public class MatchmakingUseCase {
     private final SessionRepository sessionRepository;
     private final CreateGameSessionUseCase createGameSessionUseCase;
     private final ConnectPlayerUseCase connectPlayerUseCase;
-    private final esiea.hackathon.leaders.application.services.GameSetupService gameSetupService;
 
     // Lock map to prevent race conditions for the same player
     private final ConcurrentHashMap<String, Object> playerLocks = new ConcurrentHashMap<>();
 
     public MatchmakingUseCase(SessionRepository sessionRepository,
             CreateGameSessionUseCase createGameSessionUseCase,
-            ConnectPlayerUseCase connectPlayerUseCase,
-            esiea.hackathon.leaders.application.services.GameSetupService gameSetupService) {
+            ConnectPlayerUseCase connectPlayerUseCase) {
         this.sessionRepository = sessionRepository;
         this.createGameSessionUseCase = createGameSessionUseCase;
         this.connectPlayerUseCase = connectPlayerUseCase;
-        this.gameSetupService = gameSetupService;
     }
 
     public Session findOrCreatePublicSession(String playerId) {

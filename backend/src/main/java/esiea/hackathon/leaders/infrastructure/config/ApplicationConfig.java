@@ -33,7 +33,9 @@ public class ApplicationConfig {
 
     @Bean
     public ConnectPlayerUseCase connectPlayerUseCase(SessionRepository sessionRepository,
-            GameSetupService gameSetupService) {
-        return new ConnectPlayerUseCase(sessionRepository, gameSetupService);
+            GameSetupService gameSetupService,
+            esiea.hackathon.leaders.application.services.GameQueryService gameQueryService,
+            org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
+        return new ConnectPlayerUseCase(sessionRepository, gameSetupService, gameQueryService, messagingTemplate);
     }
 }
