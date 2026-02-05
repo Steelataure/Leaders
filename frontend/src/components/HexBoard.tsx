@@ -172,13 +172,13 @@ export default function HexBoard({
   const [hoveredCell, setHoveredCell] = useState<HexCell | null>(null);
 
   // Sons
-    const { volume, sfxEnabled } = useAudio();
-  const soundConfig = {
-    volume: (volume / 100),
+    const { sfxVolume, sfxEnabled } = useAudio();
+  const soundConfigSfx = {
+    volume: (sfxVolume / 100),
     soundEnabled: sfxEnabled
   };
-  const [playBoardPlacementSfx] = useSound(boardPlacementSfx, soundConfig);
-  const [playPawnSelectSfx] = useSound(pawnSelectSfx, soundConfig);
+  const [playBoardPlacementSfx] = useSound(boardPlacementSfx, soundConfigSfx);
+  const [playPawnSelectSfx] = useSound(pawnSelectSfx, soundConfigSfx);
 
   // Generate board centered
   const cells = useMemo(() => generateBoard(SVG_WIDTH / 2, SVG_HEIGHT / 2), []);
