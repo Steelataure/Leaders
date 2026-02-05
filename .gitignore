@@ -1,0 +1,89 @@
+####################################
+# OS
+####################################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+####################################
+# IDE / Editors
+####################################
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+####################################
+# Logs
+####################################
+*.log
+logs/
+log/
+
+####################################
+# Environment variables / secrets
+####################################
+.env
+.env.*
+!.env.example
+
+####################################
+# Docker
+####################################
+**/docker-compose.override.yml
+**/*.pid
+
+####################################
+# Java / Spring Boot
+####################################
+# Maven
+**/target/
+**/dependency-reduced-pom.xml
+
+# Gradle (au cas où)
+**/build/
+**/.gradle/
+
+# Spring Boot
+**/application-local.properties
+**/application-dev.properties
+
+####################################
+# Node / Frontend (Vite, npm)
+####################################
+**/node_modules/
+**/dist/
+**/.vite/
+**/.cache/
+
+# npm / yarn / pnpm
+**/npm-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
+####################################
+# Tests / coverage
+####################################
+**/coverage/
+**/.nyc_output/
+
+####################################
+# Database / volumes (local only)
+####################################
+**/postgres_data/
+**/data/
+
+####################################
+# Temporary / backups
+####################################
+*.tmp
+*.temp
+*.bak
+*.old
+
+####################################
+# Misc
+####################################
+*.lock

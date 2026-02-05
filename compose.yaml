@@ -11,33 +11,41 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d leaders_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   backend:
     build:
-      context: ./backend  # On précise le dossier du backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: leaders_backend
     restart: always
     ports:
       - "8080:8080"
     environment:
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/leaders_db
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: password123
-      SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - database
+      database:
+        condition: service_healthy
 
   frontend:
     build:
-      context: ./frontend # On précise le dossier du frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: leaders_frontend
+    restart: always
     ports:
-      - "8081:80"  # Ton PC (8081) -> Docker (80 interne)
+      - "8081:80"
     depends_on:
       - backend
-    restart: always
 
 volumes:
   postgres_data:
