@@ -3,23 +3,32 @@ import Home from "./pages/Home";
 import Lobby from "./pages/Lobby";
 import Game from "./pages/Game";
 import Rules from "./pages/Rules";
+import { AudioProvider } from "./context/AudioContext";
 
 function App() {
   const [step, setStep] = useState("home"); // "home", "lobby", ou "game"
 
   if (step === "game") {
-    return <Game onBackToLobby={() => setStep("lobby")} />;
+    return <AudioProvider>
+      <Game onBackToLobby={() => setStep("lobby")} />
+    </AudioProvider>;
   }
 
   if (step === "lobby") {
-    return <Lobby onStartGame={() => setStep("game")} onOpenRules={() => setStep("rules")} />;
+    return <AudioProvider>
+      <Lobby onStartGame={() => setStep("game")} onOpenRules={() => setStep("rules")} />    
+      </AudioProvider>;
   }
 
   if (step === "rules") {
-    return <Rules onBack={() => setStep("lobby")} />;
+    return <AudioProvider>
+      <Rules onBack={() => setStep("lobby")} />     
+      </AudioProvider>;
   }
 
-  return <Home onStart={() => setStep("lobby")} />;
+  return <AudioProvider>
+    <Home onStart={() => setStep("lobby")} />
+    </AudioProvider>;
 }
 
 export default App;

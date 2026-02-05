@@ -7,6 +7,8 @@ import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
 import buttonHoverSfx from '../sounds/buttonHover.mp3';
 
+import { useAudio } from "../context/AudioContext";
+
 // --- STYLES & ANIMATIONS ---
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
@@ -67,8 +69,11 @@ export default function Lobby({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [volume, setVolume] = useState(50);
-  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const { volume, setVolume, sfxEnabled, setSfxEnabled } = useAudio();
+  const soundConfig = {
+    volume: (volume / 100),
+    soundEnabled: sfxEnabled
+  };
   const [aboutOpen, setAboutOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
 
@@ -136,8 +141,8 @@ export default function Lobby({
     }
   };
 
-  const [playButtonClickSfx] = useSound(buttonClickSfx);
-  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
+  const [playButtonClickSfx] = useSound(buttonClickSfx, soundConfig);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx, soundConfig);
 
   const closeAllModals = () => {
     setLoginOpen(false);
