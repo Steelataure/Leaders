@@ -22,19 +22,33 @@ public class GameController {
     private final GameSetupService setupService;
     private final GameService gameService;
     private final GameQueryService gameQueryService;
-
     private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping
     public ResponseEntity<UUID> createGame(@RequestBody(required = false) CreateGameRequestDto request) {
+        // 1. Extraction des données du DTO
         List<String> forcedDeck = (request != null) ? request.forcedDeck() : null;
-        UUID gameId;
-        if (request != null && request.gameId() != null) {
-            gameId = setupService.createGameWithId(request.gameId(), forcedDeck);
+        UUID requestedId = (request != null) ? request.gameId() : null;
+
+        // 2. Logique de création sécurisée
+        UUID finalGameId;
+
+        if (requestedId != null) {
+            try {
+                // On vérifie si la partie existe déjà via le QueryService
+                // Si getGameState ne lance pas d'exception, c'est que la partie existe
+                gameQueryService.getGameState(requestedId);
+                finalGameId = requestedId;
+            } catch (Exception e) {
+                // Si elle n'existe pas (exception), on la crée avec l'ID demandé
+                finalGameId = setupService.createGameWithId(requestedId, forcedDeck);
+            }
         } else {
-            gameId = setupService.createGame(forcedDeck);
+            // Pas d'ID fourni : création classique avec UUID généré par le serveur
+            finalGameId = setupService.createGame(forcedDeck);
         }
-        return ResponseEntity.ok(gameId);
+
+        return ResponseEntity.ok(finalGameId);
     }
 
     @GetMapping("/{gameId}")
@@ -42,20 +56,17 @@ public class GameController {
         return ResponseEntity.ok(gameQueryService.getGameState(gameId));
     }
 
-    // --- C'EST ICI LA CORRECTION ---
     @PostMapping("/{gameId}/end-turn")
     public ResponseEntity<GameStateDto> endTurn(@PathVariable UUID gameId) {
-        // 1. On effectue l'action (qui modifie la base de données)
+        // Effectuer l'action
         gameService.endTurn(gameId);
 
-        // 2. On récupère l'état à jour via ton QueryService (qui gère déjà le mapping
-        // manuel)
+        // Récupérer l'état mis à jour
         GameStateDto updatedGameState = gameQueryService.getGameState(gameId);
 
-        // 3. On notifie les abonnés WebSocket
+        // Notifier les clients via WebSocket
         messagingTemplate.convertAndSend("/topic/game/" + gameId, updatedGameState);
 
-        // 4. On renvoie le DTO (Status 200 OK avec Body)
         return ResponseEntity.ok(updatedGameState);
     }
 }

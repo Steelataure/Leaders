@@ -17,6 +17,7 @@ import java.util.UUID;
 public class JpaRecruitmentCardRepository implements RecruitmentCardRepository {
 
     private final RecruitmentCardJpaRepository jpaRepository;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     public Optional<RecruitmentCardEntity> findById(UUID id) {
@@ -26,6 +27,14 @@ public class JpaRecruitmentCardRepository implements RecruitmentCardRepository {
     @Override
     public RecruitmentCardEntity save(RecruitmentCardEntity card) {
         RecruitmentCardJpaEntity entity = RecruitmentCardMapper.toEntity(card);
+
+        // FIX: Re-attach Game Entity to avoid TransientPropertyValueException
+        if (card.getGame() != null && card.getGame().getId() != null) {
+            esiea.hackathon.leaders.adapter.infrastructure.entity.GameJpaEntity gameRef = entityManager.getReference(
+                    esiea.hackathon.leaders.adapter.infrastructure.entity.GameJpaEntity.class, card.getGame().getId());
+            entity.setGame(gameRef);
+        }
+
         RecruitmentCardJpaEntity saved = jpaRepository.save(entity);
         return RecruitmentCardMapper.toDomain(saved);
     }
