@@ -75,6 +75,7 @@ esiea\hackathon\leaders\adapter\controller\ActionController.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\GameJpaEntity$GameJpaEntityBuilder.class
 esiea\hackathon\leaders\domain\model\PieceEntity$PieceEntityBuilder.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\RecruitmentCardJpaEntity.class
+esiea\hackathon\leaders\infrastructure\exception\GameNotFoundException.class
 esiea\hackathon\leaders\application\strategies\action\ProwlerStealthAction.class
 esiea\hackathon\leaders\application\dto\request\MoveRequestDto.class
 esiea\hackathon\leaders\application\dto\request\RecruitmentRequestDto.class

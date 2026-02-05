@@ -37,22 +37,33 @@ public class GameSetupService {
 
     @Transactional
     public UUID createGameWithId(UUID gameId, List<String> forcedDeck) {
-        GameEntity game = GameEntity.builder()
-                .id(gameId)
-                .mode(GameMode.CLASSIC)
-                .phase(GamePhase.ACTION)
-                .status(GameStatus.WAITING)
-                .currentPlayerIndex(0)
-                .turnNumber(1)
-                .banishmentCount(0)
-                .build();
+        try {
+            System.out.println("DEBUG: Starting createGameWithId for " + gameId);
+            GameEntity game = GameEntity.builder()
+                    .id(gameId)
+                    .mode(GameMode.CLASSIC)
+                    .phase(GamePhase.ACTION)
+                    .status(GameStatus.WAITING)
+                    .currentPlayerIndex(0)
+                    .turnNumber(1)
+                    .banishmentCount(0)
+                    .build();
 
-        GameEntity savedGame = gameRepository.save(game);
+            GameEntity savedGame = gameRepository.save(game);
+            System.out.println("DEBUG: Game entity saved");
 
-        initializeDeck(savedGame, forcedDeck);
-        placeLeaders(savedGame.getId());
+            initializeDeck(savedGame, forcedDeck);
+            System.out.println("DEBUG: Deck initialized");
 
-        return savedGame.getId();
+            placeLeaders(savedGame.getId());
+            System.out.println("DEBUG: Leaders placed");
+
+            return savedGame.getId();
+        } catch (Exception e) {
+            System.err.println("CRITICAL ERROR in createGameWithId: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     private void initializeDeck(GameEntity game, List<String> forcedDeck) {

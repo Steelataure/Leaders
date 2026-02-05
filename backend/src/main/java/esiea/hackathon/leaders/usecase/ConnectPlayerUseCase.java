@@ -49,9 +49,14 @@ public class ConnectPlayerUseCase {
 
             // Send game state via WebSocket
             try {
+                // 1. Notify Lobby that session is ACTIVE
+                messagingTemplate.convertAndSend("/topic/session/" + session.getId(), session);
+                System.out.println("DEBUG: Session update sent via WebSocket to /topic/session/" + session.getId());
+
+                // 2. Notify Game components with initial state
                 GameStateDto gameState = gameQueryService.getGameState(gameId);
-                messagingTemplate.convertAndSend("/topic/session/" + session.getId(), gameState);
-                System.out.println("DEBUG: Game state sent via WebSocket to /topic/session/" + session.getId());
+                messagingTemplate.convertAndSend("/topic/game/" + session.getId(), gameState);
+                System.out.println("DEBUG: Game state sent via WebSocket to /topic/game/" + session.getId());
             } catch (Exception e) {
                 System.err.println("ERROR: Failed to send game state via WebSocket: " + e.getMessage());
             }

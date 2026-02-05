@@ -88,12 +88,12 @@ export async function getSession(sessionId: string): Promise<Session> {
 // --- Game API ---
 export interface GameState {
   gameId: string;
-  status: string;
-  currentPhase: "RECRUITMENT" | "ACTION" | "COMBAT";
+  status: "WAITING" | "IN_PROGRESS" | "FINISHED_CAPTURE" | "FINISHED";
+  currentPhase: "BANISHMENT" | "ACTION" | "RECRUITMENT";
   currentPlayerIndex: number;
   turnNumber: number;
   winnerPlayerIndex: number | null;
-  winnerVictoryType: string | null;
+  winnerVictoryType: "CAPTURE" | "ENCIRCLEMENT" | null;
   pieces: Piece[];
   river: RecruitmentCard[];
 }
@@ -101,7 +101,7 @@ export interface GameState {
 export interface RecruitmentCard {
   id: string;
   characterId: string;
-  state: "VISIBLE" | "IN_DECK" | "RECRUITED";
+  state: "VISIBLE" | "IN_DECK" | "RECRUITED" | "BANNED";
   visibleSlot: number | null;
 }
 

@@ -19,50 +19,52 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GameQueryService {
 
-    private final GameRepository gameRepository;
-    private final PieceRepository pieceRepository;
-    private final RecruitmentCardRepository cardRepository;
+        private final GameRepository gameRepository;
+        private final PieceRepository pieceRepository;
+        private final RecruitmentCardRepository cardRepository;
 
-    @Transactional(readOnly = true)
-    public GameStateDto getGameState(UUID gameId) {
-        // 1. Jeu
-        GameEntity game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+        @Transactional(readOnly = true)
+        public GameStateDto getGameState(UUID gameId) {
+                System.out.println("DEBUG: Fetching game state for ID: " + gameId);
+                // 1. Jeu
+                GameEntity game = gameRepository.findById(gameId)
+                                .orElseThrow(() -> {
+                                        System.out.println("ERROR: Game not found in DB for ID: " + gameId);
+                                        return new esiea.hackathon.leaders.infrastructure.exception.GameNotFoundException(
+                                                        "Game not found with ID: " + gameId);
+                                });
 
-        // 2. Pièces
-        List<PieceDto> pieces = pieceRepository.findByGameId(gameId).stream()
-                .map(p -> new PieceDto(
-                        p.getId(),
-                        p.getCharacterId(),
-                        p.getOwnerIndex().intValue(),
-                        p.getQ(),
-                        p.getR(),
-                        p.getHasActedThisTurn()
-                ))
-                .toList();
+                // 2. Pièces
+                List<PieceDto> pieces = pieceRepository.findByGameId(gameId).stream()
+                                .map(p -> new PieceDto(
+                                                p.getId(),
+                                                p.getCharacterId(),
+                                                p.getOwnerIndex().intValue(),
+                                                p.getQ(),
+                                                p.getR(),
+                                                p.getHasActedThisTurn()))
+                                .toList();
 
-        // 3. Rivière
-        List<CardDto> river = cardRepository.findAllByGameId(gameId).stream()
-                .filter(c -> c.getState() == CardState.VISIBLE)
-                .map(c -> new CardDto(
-                        c.getId(),
-                        c.getCharacter().getId(),
-                        c.getState(),
-                        c.getVisibleSlot()
-                ))
-                .toList();
+                // 3. Rivière
+                List<CardDto> river = cardRepository.findAllByGameId(gameId).stream()
+                                .filter(c -> c.getState() == CardState.VISIBLE)
+                                .map(c -> new CardDto(
+                                                c.getId(),
+                                                c.getCharacter().getId(),
+                                                c.getState(),
+                                                c.getVisibleSlot()))
+                                .toList();
 
-        // 4. DTO final
-        return new GameStateDto(
-                game.getId(),
-                game.getStatus(),
-                game.getPhase(),
-                game.getCurrentPlayerIndex(),
-                game.getTurnNumber(),
-                game.getWinnerPlayerIndex(),
-                game.getWinnerVictoryType(),
-                pieces,
-                river
-        );
-    }
+                // 4. DTO final
+                return new GameStateDto(
+                                game.getId(),
+                                game.getStatus(),
+                                game.getPhase(),
+                                game.getCurrentPlayerIndex(),
+                                game.getTurnNumber(),
+                                game.getWinnerPlayerIndex(),
+                                game.getWinnerVictoryType(),
+                                pieces,
+                                river);
+        }
 }

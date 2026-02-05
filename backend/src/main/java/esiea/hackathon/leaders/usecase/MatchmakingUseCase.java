@@ -1,26 +1,23 @@
 package esiea.hackathon.leaders.usecase;
 
+import esiea.hackathon.leaders.application.services.GameSetupService;
 import esiea.hackathon.leaders.domain.Session;
 import esiea.hackathon.leaders.domain.SessionRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+@RequiredArgsConstructor
 public class MatchmakingUseCase {
     private final SessionRepository sessionRepository;
     private final CreateGameSessionUseCase createGameSessionUseCase;
     private final ConnectPlayerUseCase connectPlayerUseCase;
+    private final GameSetupService gameSetupService;
 
     // Lock map to prevent race conditions for the same player
     private final ConcurrentHashMap<String, Object> playerLocks = new ConcurrentHashMap<>();
-
-    public MatchmakingUseCase(SessionRepository sessionRepository,
-            CreateGameSessionUseCase createGameSessionUseCase,
-            ConnectPlayerUseCase connectPlayerUseCase) {
-        this.sessionRepository = sessionRepository;
-        this.createGameSessionUseCase = createGameSessionUseCase;
-        this.connectPlayerUseCase = connectPlayerUseCase;
-    }
 
     public Session findOrCreatePublicSession(String playerId) {
         // Synchronize on player ID to ensure sequential processing of requests
@@ -109,5 +106,14 @@ public class MatchmakingUseCase {
             }
             throw new RuntimeException("Failed to join or create a session after retries");
         }
+    }
+
+    @Bean
+    public MatchmakingUseCase matchmakingUseCase(
+            SessionRepository sessionRepository,
+            CreateGameSessionUseCase createGameSessionUseCase,
+            ConnectPlayerUseCase connectPlayerUseCase,
+            GameSetupService gameSetupService) {
+        return new MatchmakingUseCase(sessionRepository, createGameSessionUseCase, connectPlayerUseCase, gameSetupService);
     }
 }

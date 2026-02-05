@@ -39,7 +39,8 @@ public class SessionController {
     public ResponseEntity<Session> joinPublicQueue(@RequestBody(required = false) Map<String, String> body) {
         String playerId = (body != null) ? body.get("playerId") : null;
         Session session = matchmakingUseCase.findOrCreatePublicSession(playerId);
-        notifySessionUpdate(session);
+        // notifySessionUpdate(session); // Redundant: ConnectPlayerUseCase already
+        // notifies
         return ResponseEntity.ok(session);
     }
 
@@ -59,7 +60,8 @@ public class SessionController {
         }
         try {
             Session session = joinPrivateSessionUseCase.joinByCode(code, playerId);
-            notifySessionUpdate(session);
+            // notifySessionUpdate(session); // Redundant: ConnectPlayerUseCase already
+            // notifies
             return ResponseEntity.ok(session);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(null);

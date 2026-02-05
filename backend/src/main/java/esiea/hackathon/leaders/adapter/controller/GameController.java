@@ -6,6 +6,7 @@ import esiea.hackathon.leaders.application.services.GameQueryService;
 import esiea.hackathon.leaders.application.services.GameService;
 import esiea.hackathon.leaders.application.services.GameSetupService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,10 +23,17 @@ public class GameController {
     private final GameService gameService;
     private final GameQueryService gameQueryService;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     @PostMapping
     public ResponseEntity<UUID> createGame(@RequestBody(required = false) CreateGameRequestDto request) {
         List<String> forcedDeck = (request != null) ? request.forcedDeck() : null;
-        UUID gameId = setupService.createGame(forcedDeck);
+        UUID gameId;
+        if (request != null && request.gameId() != null) {
+            gameId = setupService.createGameWithId(request.gameId(), forcedDeck);
+        } else {
+            gameId = setupService.createGame(forcedDeck);
+        }
         return ResponseEntity.ok(gameId);
     }
 
@@ -40,10 +48,14 @@ public class GameController {
         // 1. On effectue l'action (qui modifie la base de données)
         gameService.endTurn(gameId);
 
-        // 2. On récupère l'état à jour via ton QueryService (qui gère déjà le mapping manuel)
+        // 2. On récupère l'état à jour via ton QueryService (qui gère déjà le mapping
+        // manuel)
         GameStateDto updatedGameState = gameQueryService.getGameState(gameId);
 
-        // 3. On renvoie le DTO (Status 200 OK avec Body)
+        // 3. On notifie les abonnés WebSocket
+        messagingTemplate.convertAndSend("/topic/game/" + gameId, updatedGameState);
+
+        // 4. On renvoie le DTO (Status 200 OK avec Body)
         return ResponseEntity.ok(updatedGameState);
     }
 }

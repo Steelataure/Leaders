@@ -99,6 +99,7 @@ C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hack
 C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\infrastructure\config\ApplicationConfig.java
 C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\infrastructure\config\WebSocketConfig.java
 C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\infrastructure\controller\WebSocketController.java
+C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\infrastructure\exception\GameNotFoundException.java
 C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\infrastructure\exception\GlobalExceptionHandler.java
 C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\infrastructure\repository\InMemorySessionRepository.java
 C:\Users\Anthony\Desktop\Code\hackathon-zefallk\backend\src\main\java\esiea\hackathon\leaders\LeadersApplication.java

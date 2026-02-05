@@ -195,12 +195,10 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
     loadGame();
 
     if (webSocketService.isConnected()) {
-      webSocketService.subscribeToSession(gameId, (data) => {
-        // Check if it's a game state update (has pieces or gameId)
-        if (data.pieces || data.gameId) {
-          updateGameState(data);
-          setIsLoading(false);
-        }
+      // Subscribe to game-specific updates
+      webSocketService.subscribeToGame(gameId, (data) => {
+        updateGameState(data);
+        setIsLoading(false);
       });
     }
 

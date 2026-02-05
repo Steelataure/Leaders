@@ -34,21 +34,34 @@ class WebSocketService {
             const checkInterval = setInterval(() => {
                 if (this.connected) {
                     clearInterval(checkInterval);
-                    this.doSubscribe(sessionId, callback);
+                    this.doSubscribe(`/topic/session/${sessionId}`, callback);
                 }
             }, 100);
         } else {
-            this.doSubscribe(sessionId, callback);
+            this.doSubscribe(`/topic/session/${sessionId}`, callback);
         }
     }
 
-    private doSubscribe(sessionId: string, callback: (session: any) => void) {
-        console.log(`Attempting to subscribe to /topic/session/${sessionId}`);
-        this.client.subscribe(`/topic/session/${sessionId}`, (message: Message) => {
-            console.log(`Received message on /topic/session/${sessionId}:`, message.body);
+    subscribeToGame(gameId: string, callback: (gameState: any) => void) {
+        if (!this.connected) {
+            const checkInterval = setInterval(() => {
+                if (this.connected) {
+                    clearInterval(checkInterval);
+                    this.doSubscribe(`/topic/game/${gameId}`, callback);
+                }
+            }, 100);
+        } else {
+            this.doSubscribe(`/topic/game/${gameId}`, callback);
+        }
+    }
+
+    private doSubscribe(topic: string, callback: (data: any) => void) {
+        console.log(`Attempting to subscribe to ${topic}`);
+        this.client.subscribe(topic, (message: Message) => {
+            console.log(`Received message on ${topic}:`, message.body);
             if (message.body) {
-                const session = JSON.parse(message.body);
-                callback(session);
+                const data = JSON.parse(message.body);
+                callback(data);
             }
         });
     }
