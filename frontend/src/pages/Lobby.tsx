@@ -204,6 +204,7 @@ export default function Lobby({
             onClick={() => setDropdownOpen(!dropdownOpen)}
             onMouseEnter={() => playButtonHoverSfx()}
             className="relative border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/10 font-rajdhani font-bold py-2 px-6 rounded transition-all tracking-wider text-sm backdrop-blur-sm flex items-center gap-2"
+            data-testid="connexionUserButton"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             {user ? user.username.toUpperCase() : "CONNEXION"}
@@ -217,6 +218,7 @@ export default function Lobby({
                   <button
                     onClick={() => { closeAllModals(); setSuccessMsg(null); setError(null); setLoginOpen(true); }}
                     className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20 hover:text-cyan-400 border-b border-white/5"
+                    data-testid="connexionButtonDropdown"
                   >
                     CONNEXION
                   </button>
@@ -224,6 +226,7 @@ export default function Lobby({
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 border-b border-white/5"
+                    data-testid="deconnexionButtonDropdown"
                   >
                     DÉCONNEXION
                   </button>
@@ -231,12 +234,14 @@ export default function Lobby({
                 <button
                   className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20"
                   onClick={() => { closeAllModals(); setSettingsOpen(true); }}
+                  data-testid="parametresButtonDropdown"
                 >
                   PARAMÈTRES
                 </button>
                 <button
                   className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20"
                   onClick={() => { closeAllModals(); setAboutOpen(true); }}
+                  data-testid="infosSystemeButtonDropdown"
                 >
                   INFOS_SYSTÈME
                 </button>
@@ -371,25 +376,25 @@ export default function Lobby({
             <button onClick={() => setLoginOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">✕</button>
             <h2 className="text-2xl font-orbitron font-bold text-white mb-8 flex items-center gap-3">
               <span className="w-1 h-8 bg-cyan-500"></span>
-              {isRegistering ? "NOUVELLE RECRUE" : "IDENTIFICATION"}
+              <span data-testid="connexionPopUpTitle">{isRegistering ? "NOUVELLE RECRUE" : "IDENTIFICATION"}</span>
             </h2>
 
             <div className="space-y-5 font-rajdhani">
-              {successMsg && <div className="text-emerald-400 text-sm font-bold text-center bg-emerald-900/20 p-2 rounded border border-emerald-500/20">{successMsg}</div>}
-              {error && <div className="text-red-400 text-sm font-bold text-center bg-red-900/20 p-2 rounded border border-red-500/20">{error}</div>}
+              {successMsg && <div className="text-emerald-400 text-sm font-bold text-center bg-emerald-900/20 p-2 rounded border border-emerald-500/20" data-testid='messageSuccesConnexion'>{successMsg}</div>}
+              {error && <div className="text-red-400 text-sm font-bold text-center bg-red-900/20 p-2 rounded border border-red-500/20" data-testid='messageErreurConnexion_Inscription'>{error}</div>}
               <div>
                 <label className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2">Identifiant</label>
-                <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="COMMANDEUR..." />
+                <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="COMMANDEUR..." data-testid="connexionIdentifiantInput" />
               </div>
               {isRegistering && (
                 <div>
                   <label className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2">Nom de code</label>
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="PSEUDO" />
+                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="PSEUDO" data-testid="connexionPseudoInput" />
                 </div>
               )}
               <div>
                 <label className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2">Clef de sécurité</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="••••••••" />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="••••••••" data-testid="connexionMdpInput" />
               </div>
 
               <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
@@ -405,12 +410,13 @@ export default function Lobby({
                 onMouseEnter={() => playButtonHoverSfx()}
                 disabled={isLoading}
                 className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-orbitron font-bold tracking-widest rounded mt-2 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                data-testid="connexionProfilButton"
               >
                 {isLoading ? "TRAITEMENT..." : (isRegistering ? "S'ENROLER" : "ACCÉDER")}
               </button>
 
               <div className="text-center mt-4">
-                <button onClick={() => setIsRegistering(!isRegistering)} className="text-slate-400 hover:text-cyan-400 text-sm underline decoration-dotted underline-offset-4">
+                <button onClick={() => setIsRegistering(!isRegistering)} className="text-slate-400 hover:text-cyan-400 text-sm underline decoration-dotted underline-offset-4" data-testid="registerButton">
                   {isRegistering ? "J'ai déjà un matricule" : "Créer un nouveau profil"}
                 </button>
               </div>
