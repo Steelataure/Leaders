@@ -6,6 +6,8 @@ import VictoryScreen from "../components/VictoryScreen";
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
 import buttonHoverSfx from '../sounds/buttonHover.mp3';
+import characterSelectSfx from '../sounds/characterSelect.mp3';
+import characterHoverSfx from '../sounds/characterHover.mp3';
 
 import cogneurImg from '/image/cogneur.png';
 import rodeuseImg from '/image/rodeuse.png';
@@ -62,13 +64,14 @@ const CHARACTER_IMAGES: Record<string, string> = {
 // === COMPOSANTS UI ===
 
 // Carte de la rivière (Sidebar gauche)
-function SidebarCard({ card, onClick, disabled }: { card: CharacterCard; onClick: () => void; disabled: boolean }) {
+function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: CharacterCard; onClick: () => void; onMouseEnter: () => void; disabled: boolean }) {
   const icons: Record<string, string> = { ACTIVE: "⚡", PASSIVE: "🛡️", SPECIAL: "✨" };
   const cost = 3; // Mock cost
 
   return (
     <div
       onClick={!disabled ? onClick : undefined}
+      onMouseEnter={onMouseEnter}
       className={`
         group relative p-3 rounded-xl border transition-all duration-300
         ${disabled
@@ -115,6 +118,8 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   // Sons
   const [playButtonClickSfx] = useSound(buttonClickSfx);
   const [playButtonHoverSfx] = useSound(buttonHoverSfx);
+  const [playCharacterHoverSfx] = useSound(characterHoverSfx);
+  const [playCharacterSelectSfx] = useSound(characterSelectSfx);
 
   // === LOGIC ===
   const endTurn = useCallback(() => {
@@ -172,11 +177,10 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
       if (!card) return;
 
       // Définition simplifiée des cases de recrutement (Mock)
-      // Plateau flat-top : Joueur 1 en bas, Joueur 2 en haut
       const recruitmentCells =
         currentPlayer === 0
-          ? [{ q: -1, r: 3 }, { q: -2, r: 3 }, { q: 1, r: 2 }, { q: 2, r: 1 }]  // Joueur 1 (bleu) en bas
-          : [{ q: 1, r: -3 }, { q: 2, r: -3 }, { q: -1, r: -2 }, { q: -2, r: -1 }]; // Joueur 2 (rouge) en haut
+          ? [{ q: -3, r: 3 }, { q: -2, r: 3 }, { q: -1, r: 2 }, { q: -1, r: 3 }]
+          : [{ q: 3, r: -3 }, { q: 2, r: -3 }, { q: 1, r: -2 }, { q: 1, r: -3 }];
 
       const freeCell = recruitmentCells.find(
         (cell) => !pieces.find((p) => p.q === cell.q && p.r === cell.r),
@@ -297,7 +301,10 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
       {/* Quit Button */}
       <button
-        onClick={onBackToLobby}
+        onClick={() => {
+          onBackToLobby();
+          playButtonClickSfx();
+        }}
         onMouseEnter={() => playButtonHoverSfx()}
         className="absolute top-8 right-10 z-30 flex items-center gap-2 px-5 py-2.5 bg-rose-950/20 text-rose-500 border border-rose-500/30 rounded-lg hover:bg-rose-500 hover:text-white hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all uppercase text-[10px] font-bold tracking-[0.2em]"
       >
@@ -341,7 +348,15 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
               <SidebarCard
                 key={card.id}
                 card={card}
-                onClick={() => handleRecruit(card.id)}
+                onClick={() => {
+                  handleRecruit(card.id);
+                  playCharacterSelectSfx();
+                }}
+                onMouseEnter={() => {
+                  if (phase == "RECRUITMENT") {
+                    playCharacterHoverSfx();
+                  }
+                }}
                 disabled={phase !== "RECRUITMENT"}
               />
             ))}
@@ -370,7 +385,6 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
                 selectedPiece={selectedPiece}
                 onSelectPiece={(pc) => {
                   setSelectedPiece(pc);
-                  playButtonHoverSfx();
                 }}
               />
             </div>

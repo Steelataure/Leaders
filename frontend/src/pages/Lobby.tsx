@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { authService } from "../services/auth.service";
 import type { User } from "../types/auth.types";
 
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
+import buttonHoverSfx from '../sounds/buttonHover.mp3';
 
 // --- STYLES & ANIMATIONS ---
 const styles = `
@@ -135,6 +137,14 @@ export default function Lobby({
   };
 
   const [playButtonClickSfx] = useSound(buttonClickSfx);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
+
+  const closeAllModals = () => {
+    setLoginOpen(false);
+    setSettingsOpen(false);
+    setAboutOpen(false);
+    setDropdownOpen(false);
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#020617] text-slate-200 font-sans relative overflow-hidden">
@@ -175,7 +185,8 @@ export default function Lobby({
         <div className="absolute top-8 left-8 flex gap-4 z-50">
           <button
             onClick={onOpenRules}
-            className="border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/10 font-rajdhani font-bold py-2 px-4 rounded transition-all tracking-wider text-sm backdrop-blur-sm"
+            onMouseEnter={() => playButtonHoverSfx()}
+            className="border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/10 font-rajdhani font-bold py-2 px-4 rounded transition-all tracking-wider text-sm backdrop-blur-sm flex items-center gap-2"
           >
             RÈGLES
           </button>
@@ -190,6 +201,7 @@ export default function Lobby({
           {/* Auth Button */}
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
+            onMouseEnter={() => playButtonHoverSfx()}
             className="relative border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/10 font-rajdhani font-bold py-2 px-6 rounded transition-all tracking-wider text-sm backdrop-blur-sm flex items-center gap-2"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -202,7 +214,7 @@ export default function Lobby({
               <div className="py-1 font-rajdhani font-semibold">
                 {!user ? (
                   <button
-                    onClick={() => { setDropdownOpen(false); setLoginOpen(true); }}
+                    onClick={() => { closeAllModals(); setLoginOpen(true); }}
                     className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20 hover:text-cyan-400 border-b border-white/5"
                   >
                     CONNEXION
@@ -217,13 +229,13 @@ export default function Lobby({
                 )}
                 <button
                   className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20"
-                  onClick={() => { setDropdownOpen(false); setSettingsOpen(true); }}
+                  onClick={() => { closeAllModals(); setSettingsOpen(true); }}
                 >
                   PARAMÈTRES
                 </button>
                 <button
                   className="w-full text-left px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-500/20"
-                  onClick={() => { setDropdownOpen(false); setAboutOpen(true); }}
+                  onClick={() => { closeAllModals(); setAboutOpen(true); }}
                 >
                   INFOS_SYSTÈME
                 </button>
@@ -245,7 +257,7 @@ export default function Lobby({
         {/* MAIN CARDS CONTAINER */}
         <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-8 items-stretch justify-center flex-1 mb-12">
 
-          {/* --- LEFT: CREATE GAME --- */}
+          {/* --- LEFT: MATCHMAKING --- */}
           <div className="flex-1 bg-slate-900/40 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-5 hover:border-cyan-500/50 transition-all duration-300 group shadow-[0_0_20px_rgba(0,0,0,0.3)] flex flex-col">
 
             <div className="mb-3">
@@ -269,6 +281,7 @@ export default function Lobby({
                   playButtonClickSfx();
                   onStartGame("create");
                 }}
+                onMouseEnter={() => playButtonHoverSfx()}
                 className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] tracking-widest text-sm"
               >
                 TROUVER UN MATCH
@@ -308,6 +321,7 @@ export default function Lobby({
             {!joinMode ? (
               <button
                 onClick={() => setJoinMode(true)}
+                onMouseEnter={() => playButtonHoverSfx()}
                 className="mt-auto w-full bg-white text-black hover:bg-cyan-200 font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] tracking-widest text-sm"
               >
                 ENTRER UN CODE
@@ -329,6 +343,7 @@ export default function Lobby({
                 </div>
                 <button
                   onClick={() => onStartGame(code.join(""))}
+                  onMouseEnter={() => playButtonHoverSfx()}
                   className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron font-bold py-3 rounded-lg transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] tracking-widest text-sm"
                 >
                   VALIDER
@@ -348,7 +363,6 @@ export default function Lobby({
       </div>
 
       {/* --- MODALS (Login, Settings, About) --- */}
-      {/* (Réutilisation de la structure modale existante mais avec les nouveaux styles) */}
 
       {loginOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 p-4">
@@ -376,7 +390,20 @@ export default function Lobby({
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded px-4 py-3 text-white outline-none font-medium" placeholder="••••••••" />
               </div>
 
-              <button onClick={handleAuth} disabled={isLoading} className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-orbitron font-bold tracking-widest rounded mt-4">
+              <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer hover:text-slate-300">
+                  <input type="checkbox" className="rounded bg-slate-800 border-slate-700 accent-cyan-500" />
+                  Se souvenir de moi
+                </label>
+                <button className="hover:text-cyan-400 transition-colors">Mot de passe oublié ?</button>
+              </div>
+
+              <button
+                onClick={handleAuth}
+                onMouseEnter={() => playButtonHoverSfx()}
+                disabled={isLoading}
+                className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-orbitron font-bold tracking-widest rounded mt-2 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+              >
                 {isLoading ? "TRAITEMENT..." : (isRegistering ? "S'ENROLER" : "ACCÉDER")}
               </button>
 
