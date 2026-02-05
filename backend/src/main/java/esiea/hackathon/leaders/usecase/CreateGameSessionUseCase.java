@@ -12,14 +12,21 @@ public class CreateGameSessionUseCase {
         this.sessionRepository = sessionRepository;
     }
 
-    public Session createSession() {
+    public Session createSession(boolean isPrivate, String playerId) {
         String sessionId = UUID.randomUUID().toString();
-        String playerId = UUID.randomUUID().toString();
-        Player player1 = new Player(playerId);
+        // If playerId is not provided, generate one (fallback)
+        String actualPlayerId = (playerId != null) ? playerId : UUID.randomUUID().toString();
+        Player player1 = new Player(actualPlayerId);
 
-        Session session = new Session(sessionId, player1);
+        String code = isPrivate ? generateCode() : null;
+
+        Session session = new Session(sessionId, player1, isPrivate, code);
         sessionRepository.save(session);
 
         return session;
+    }
+
+    private String generateCode() {
+        return String.format("%06d", new java.util.Random().nextInt(1000000));
     }
 }

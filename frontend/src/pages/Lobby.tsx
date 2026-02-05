@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { authService } from "../services/auth.service";
+import { joinPublicQueue, createPrivateSession, joinPrivateSession, type Session } from "../api/gameApi";
+import { webSocketService } from "../services/WebSocketService";
 import type { User } from "../types/auth.types";
 
 import useSound from 'use-sound';
@@ -82,8 +84,30 @@ export default function Lobby({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Matchmaking State
+  const [isSearching, setIsSearching] = useState(false);
+  const [_currentSession, setCurrentSession] = useState<any>(null);
+  const [sessionStatus, setSessionStatus] = useState<string>("");
+
   useEffect(() => {
-    const currentUser = authService.getUser();
+    let currentUser = authService.getUser();
+
+    // If no user is logged in (Guest), or if the user is a legacy "Joueur",
+    // we MUST ensure a unique ID per tab to allow local testing.
+    // We use sessionStorage to persist across refreshes but NOT across tabs.
+    if (!currentUser || currentUser.username === "Joueur") {
+      const sessionGuestId = sessionStorage.getItem('guest_id') || crypto.randomUUID();
+      sessionStorage.setItem('guest_id', sessionGuestId);
+
+      currentUser = {
+        id: sessionGuestId,
+        username: "Joueur",
+        email: "",
+        roles: []
+      };
+      // Do NOT save to localStorage, or it will contaminate other tabs.
+    }
+
     setUser(currentUser);
   }, []);
 
@@ -103,7 +127,10 @@ export default function Lobby({
         if (response.user) {
           setUser(response.user);
         } else {
-          setUser({ username: "Joueur", id: "0", email, roles: [] });
+          // Fallback if login returns no user (unlikely but safe)
+          const guestId = sessionStorage.getItem('guest_id') || crypto.randomUUID();
+          sessionStorage.setItem('guest_id', guestId);
+          setUser({ username: "Joueur", id: guestId, email, roles: [] });
         }
         setLoginOpen(false);
       }
@@ -278,14 +305,40 @@ export default function Lobby({
                 </p>
               </div>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  if (isSearching) return; // Prevent double-clicks
                   playButtonClickSfx();
-                  onStartGame("create");
+                  try {
+                    setIsSearching(true);
+                    setSessionStatus("RECHERCHE DE PARTIE...");
+                    if (user && user.id) {
+                      const session = await joinPublicQueue(user.id);
+                      setCurrentSession(session);
+
+                      if (session.status === "ACTIVE") {
+                        onStartGame(session.id);
+                      } else {
+                        setSessionStatus("EN ATTENTE D'UN JOUEUR...");
+                        webSocketService.subscribeToSession(session.id, (updatedSession) => {
+                          console.log("WS UPDATE:", updatedSession);
+                          if (updatedSession.status === "ACTIVE") {
+                            onStartGame(updatedSession.id);
+                          }
+                        });
+                      }
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    setIsSearching(false);
+                    setSessionStatus("");
+                    setError("Impossible de rejoindre la file d'attente.");
+                  }
                 }}
+                disabled={isSearching}
                 onMouseEnter={() => playButtonHoverSfx()}
-                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] tracking-widest text-sm"
+                className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] tracking-widest text-sm"
               >
-                TROUVER UN MATCH
+                {isSearching ? sessionStatus : "TROUVER UN MATCH"}
               </button>
             </div>
           </div>
@@ -320,13 +373,42 @@ export default function Lobby({
             </div>
 
             {!joinMode ? (
-              <button
-                onClick={() => setJoinMode(true)}
-                onMouseEnter={() => playButtonHoverSfx()}
-                className="mt-auto w-full bg-white text-black hover:bg-cyan-200 font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] tracking-widest text-sm"
-              >
-                ENTRER UN CODE
-              </button>
+              <div className="mt-auto w-full flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    playButtonClickSfx();
+                    try {
+                      const session = await createPrivateSession();
+                      setCurrentSession(session);
+                      setJoinMode(true); // Re-use join mode UI or specialized UI?
+                      // Actually, if we create, we want to show the code.
+                      // Currently joinMode shows "Enter Code". We need a "Show Code" mode.
+                      // For simplicity, let's use an alert or a specific UI state.
+                      alert(`Partie créée ! Code: ${session.code}`); // Temporary fallback
+                      // Ideally, show code in UI and wait
+                      setSessionStatus(`CODE: ${session.code} - EN ATTENTE...`);
+                      setIsSearching(true);
+                      webSocketService.subscribeToSession(session.id, (updatedSession) => {
+                        if (updatedSession.status === "ACTIVE") {
+                          onStartGame(updatedSession.id);
+                        }
+                      });
+                    } catch (e) { console.error(e); }
+                  }}
+                  onMouseEnter={() => playButtonHoverSfx()}
+                  className="w-full bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/50 font-orbitron font-bold py-3 px-4 rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] tracking-widest text-sm"
+                >
+                  CRÉER UNE PARTIE
+                </button>
+
+                <button
+                  onClick={() => setJoinMode(true)}
+                  onMouseEnter={() => playButtonHoverSfx()}
+                  className="w-full bg-white text-black hover:bg-cyan-200 font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] tracking-widest text-sm"
+                >
+                  ENTRER UN CODE
+                </button>
+              </div>
             ) : (
               <div className="animate-in fade-in zoom-in duration-300 flex flex-col justify-end mt-auto">
                 <div className="flex gap-2 mb-3 justify-center">
@@ -343,7 +425,23 @@ export default function Lobby({
                   ))}
                 </div>
                 <button
-                  onClick={() => onStartGame(code.join(""))}
+                  onClick={async () => {
+                    const codeStr = code.join("");
+                    if (codeStr.length < 4) return;
+                    playButtonClickSfx();
+                    try {
+                      const session = await joinPrivateSession(codeStr);
+                      if (session.status === "ACTIVE") {
+                        onStartGame(session.id);
+                      } else {
+                        // If waiting (shouldn't happen for 2nd player but logic safe)
+                        onStartGame(session.id);
+                      }
+                    } catch (e) {
+                      console.error(e);
+                      setError("Code invalide ou session pleine.");
+                    }
+                  }}
                   onMouseEnter={() => playButtonHoverSfx()}
                   className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron font-bold py-3 rounded-lg transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] tracking-widest text-sm"
                 >
@@ -355,10 +453,9 @@ export default function Lobby({
           </div>
         </div>
 
-        {/* FOOTER */}
         <div className="mt-auto shrink-0 pb-2 flex flex-col items-center">
           <p className="text-[10px] font-orbitron text-slate-500 tracking-[0.3em] uppercase opacity-70">
-            System Ready • Neural Interface Standby • Latency: 14ms
+            System Ready • Neural Interface Standby • Latency: 14ms • Link: {webSocketService.isConnected() ? "ONLINE" : "OFFLINE"}
           </p>
         </div>
       </div>
@@ -430,7 +527,7 @@ export default function Lobby({
             <div className="space-y-8 font-rajdhani text-lg">
               <div>
                 <label className="text-emerald-400 font-bold tracking-widest text-sm uppercase block mb-3">Volume Audio</label>
-                <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(e.target.value)} className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer" />
+                <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(parseInt(e.target.value))} className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer" />
                 <div className="text-right text-slate-400 text-sm mt-1">{volume}%</div>
               </div>
               <div className="flex items-center justify-between p-4 bg-slate-950 rounded border border-white/5">

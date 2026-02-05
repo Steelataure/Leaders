@@ -13,6 +13,18 @@ public class Session {
         this.status = SessionStatus.WAITING_FOR_PLAYER;
     }
 
+    private boolean isPrivate;
+    private String code;
+
+    public Session(String id, Player player1, boolean isPrivate, String code) {
+        this.id = id;
+        this.player1 = player1;
+        this.player1.setSessionId(id);
+        this.status = SessionStatus.WAITING_FOR_PLAYER;
+        this.isPrivate = isPrivate;
+        this.code = code;
+    }
+
     public String getId() {
         return id;
     }
@@ -36,6 +48,14 @@ public class Session {
         this.player2 = player2;
         this.player2.setSessionId(id);
         this.status = SessionStatus.ACTIVE;
+    }
+
+    public boolean isPrivate() {
+        return isPrivate;
+    }
+
+    public String getCode() {
+        return code;
     }
 
     public enum SessionStatus {

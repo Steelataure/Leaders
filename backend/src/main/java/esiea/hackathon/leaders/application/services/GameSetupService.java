@@ -31,9 +31,14 @@ public class GameSetupService {
     private final PieceRepository pieceRepository;
 
     @Transactional
-    public UUID createGame(List<String> forcedDeck) { // <-- Changement de signature
-        // 1. Création de l'entité (inchangé)
+    public UUID createGame(List<String> forcedDeck) {
+        return createGameWithId(UUID.randomUUID(), forcedDeck);
+    }
+
+    @Transactional
+    public UUID createGameWithId(UUID gameId, List<String> forcedDeck) {
         GameEntity game = GameEntity.builder()
+                .id(gameId)
                 .mode(GameMode.CLASSIC)
                 .phase(GamePhase.ACTION)
                 .status(GameStatus.WAITING)
@@ -44,7 +49,6 @@ public class GameSetupService {
 
         GameEntity savedGame = gameRepository.save(game);
 
-        // 2. On passe la liste (qui peut être null) à l'initialisation
         initializeDeck(savedGame, forcedDeck);
         placeLeaders(savedGame.getId());
 
@@ -57,8 +61,7 @@ public class GameSetupService {
                 "ACROBAT", "ARCHER", "ASSASSIN", "BRAWLER", "CAVALRY",
                 "GRAPPLER", "ILLUSIONIST", "INNKEEPER", "JAILER",
                 "MANIPULATOR", "NEMESIS", "OLD_BEAR", "PROTECTOR",
-                "PROWLER", "ROYAL_GUARD", "VIZIER"
-        ));
+                "PROWLER", "ROYAL_GUARD", "VIZIER"));
 
         List<String> finalDeckOrder = new ArrayList<>();
 

@@ -27,7 +27,9 @@ public class WebSocketController {
     public Session createSession() {
         System.out.println("Received request to create session");
         try {
-            Session session = createGameSessionUseCase.createSession();
+            // WebSocket creation doesn't currently support passing playerId, defaulting to
+            // random
+            Session session = createGameSessionUseCase.createSession(false, null);
             System.out.println("Session created: " + session.getId());
             return session;
         } catch (Exception e) {
@@ -42,7 +44,8 @@ public class WebSocketController {
         System.out.println("Received request to join session: " + payload);
         try {
             String sessionId = payload.get("sessionId");
-            Session session = connectPlayerUseCase.connect(sessionId);
+            String playerId = payload.get("playerId"); // Extract if available
+            Session session = connectPlayerUseCase.connect(sessionId, playerId);
             System.out.println("Player joined session: " + sessionId);
             return session;
         } catch (Exception e) {

@@ -1,12 +1,18 @@
 esiea\hackathon\leaders\application\dto\response\PieceResponseDto.class
+esiea\hackathon\leaders\application\dto\response\UserDto.class
 esiea\hackathon\leaders\domain\repository\PieceRepository.class
+esiea\hackathon\leaders\application\services\AuthService.class
 esiea\hackathon\leaders\application\strategies\passive\PassiveFactory.class
+esiea\hackathon\leaders\application\dto\request\LoginRequestDto.class
+esiea\hackathon\leaders\infrastructure\exception\GlobalExceptionHandler.class
 esiea\hackathon\leaders\domain\repository\GameRepository.class
 esiea\hackathon\leaders\application\strategies\action\IllusionistSwapAction.class
 esiea\hackathon\leaders\application\strategies\passive\AssassinSoloStrategy.class
+esiea\hackathon\leaders\application\dto\response\LoginResponseDto.class
 esiea\hackathon\leaders\adapter\controller\GameController.class
 esiea\hackathon\leaders\application\strategies\action\CavalryChargeAction.class
 esiea\hackathon\leaders\application\strategies\passive\JailerBlockStrategy.class
+esiea\hackathon\leaders\usecase\JoinPrivateSessionUseCase.class
 esiea\hackathon\leaders\adapter\infrastructure\mappers\PieceMapper.class
 esiea\hackathon\leaders\domain\model\enums\GamePhase.class
 esiea\hackathon\leaders\application\services\ActionService.class
@@ -41,6 +47,7 @@ esiea\hackathon\leaders\domain\model\RecruitmentCardEntity.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\GameJpaEntity.class
 esiea\hackathon\leaders\application\services\GameSetupService.class
 esiea\hackathon\leaders\domain\model\RefCharacterEntity$RefCharacterEntityBuilder.class
+esiea\hackathon\leaders\application\dto\request\RegisterRequestDto.class
 esiea\hackathon\leaders\application\strategies\action\ManipulatorAction.class
 esiea\hackathon\leaders\application\strategies\movement\CavalryChargeStrategy.class
 esiea\hackathon\leaders\domain\model\GameEntity$GameEntityBuilder.class
@@ -61,6 +68,8 @@ esiea\hackathon\leaders\application\strategies\movement\MoveStrategyFactory.clas
 esiea\hackathon\leaders\adapter\controller\PieceController$ErrorResponse.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\AbilityJpaEntity$AbilityJpaEntityBuilder.class
 esiea\hackathon\leaders\adapter\infrastructure\repository\SpringRefCharacterRepository.class
+esiea\hackathon\leaders\domain\repository\UserCredentialsRepository.class
+esiea\hackathon\leaders\usecase\MatchmakingUseCase.class
 esiea\hackathon\leaders\adapter\infrastructure\repository\RecruitmentCardJpaRepository.class
 esiea\hackathon\leaders\adapter\controller\ActionController.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\GameJpaEntity$GameJpaEntityBuilder.class
@@ -101,9 +110,11 @@ esiea\hackathon\leaders\domain\model\AbilityEntity.class
 esiea\hackathon\leaders\infrastructure\repository\InMemorySessionRepository.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\RefCharacterJpaEntity$RefCharacterJpaEntityBuilder.class
 esiea\hackathon\leaders\application\strategies\passive\ArcherCaptureStrategy.class
+esiea\hackathon\leaders\adapter\controller\SessionController.class
 esiea\hackathon\leaders\application\strategies\movement\NemesisMoveStrategy.class
 esiea\hackathon\leaders\application\services\MovementService.class
 esiea\hackathon\leaders\infrastructure\config\WebSocketConfig.class
+esiea\hackathon\leaders\adapter\controller\AuthController.class
 esiea\hackathon\leaders\domain\model\UserCredentialsEntity.class
 esiea\hackathon\leaders\adapter\infrastructure\entity\RecruitmentCardJpaEntity$RecruitmentCardJpaEntityBuilder.class
 esiea\hackathon\leaders\adapter\infrastructure\repository\JpaGameRepository.class

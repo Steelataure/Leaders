@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import HexBoard from "../components/HexBoard";
 import { type CharacterCard } from "../components/River";
 import VictoryScreen from "../components/VictoryScreen";
-
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
 import buttonHoverSfx from '../sounds/buttonHover.mp3';
@@ -16,37 +15,20 @@ import manipulatriceImg from '/image/manipulatrice.png';
 import tavernierImg from '/image/tavernier.png';
 import gardeImg from '/image/garderoyal.png';
 
-// === TYPES ===
-export type GamePhase = "ACTIONS" | "RECRUITMENT";
+import { getGame, endTurn as endTurnApi, recruitCharacter, type GameState, type Piece as ApiPiece } from "../api/gameApi";
+import { webSocketService } from "../services/WebSocketService";
 
-export interface Piece {
-  id: string;
-  characterId: string;
-  ownerIndex: number;
-  q: number;
-  r: number;
+// === TYPES ===
+export type GamePhase = "ACTION" | "RECRUITMENT" | "COMBAT" | "BANISHMENT";
+
+// UI Piece extends API Piece to include UI-specific state if needed
+export interface UiPiece extends ApiPiece {
   hasActed: boolean;
 }
 
-// === DONNÉES INITIALES (MOCKS) ===
-const INITIAL_PIECES: Piece[] = [
-  { id: "p1", characterId: "LEADER", ownerIndex: 0, q: 0, r: 3, hasActed: false },  // Joueur 1 (bleu) en bas
-  { id: "p2", characterId: "LEADER", ownerIndex: 1, q: 0, r: -3, hasActed: false }, // Joueur 2 (rouge) en haut
-  { id: "p3", characterId: "ARCHER", ownerIndex: 0, q: 1, r: 2, hasActed: false },
-  { id: "p4", characterId: "CAVALIER", ownerIndex: 1, q: -1, r: -2, hasActed: false },
-];
-
-const INITIAL_RIVER: CharacterCard[] = [
-  { id: "c1", characterId: "COGNEUR", name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
-  { id: "c2", characterId: "RODEUR", name: "Rôdeuse", description: "Se déplace sur une case non-adjacente", type: "ACTIVE" },
-  { id: "c3", characterId: "ILLUSIONISTE", name: "Illusionniste", description: "Échange de position avec un personnage", type: "ACTIVE" },
-];
-
-const DECK_CARDS: CharacterCard[] = [
-  { id: "c5", characterId: "MANIPULATRICE", name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
-  { id: "c6", characterId: "TAVERNIER", name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
-  { id: "c7", characterId: "GARDE", name: "Garde Royal", description: "Protège le leader adjacent", type: "PASSIVE" }
-];
+// === CONSTANTS ===
+const INITIAL_RIVER: CharacterCard[] = [];
+const DECK_CARDS: CharacterCard[] = [];
 
 // === MAPPING IMAGES ===
 const CHARACTER_IMAGES: Record<string, string> = {
@@ -61,12 +43,40 @@ const CHARACTER_IMAGES: Record<string, string> = {
   LEADER: gardeImg, // Placeholder
 };
 
+// === CHARACTER DATA MAPPING ===
+const CHARACTER_DATA: Record<string, { name: string; description: string; type: "ACTIVE" | "PASSIVE" | "SPECIAL" }> = {
+  ARCHER: { name: "Archère", description: "Participe à la capture à 2 cases en ligne droite", type: "PASSIVE" },
+  COGNEUR: { name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
+  RODEUR: { name: "Rôdeuse", description: "Se déplace sur une case non-adjacente à un ennemi", type: "ACTIVE" },
+  CAVALIER: { name: "Cavalier", description: "Se déplace de 2 cases en ligne droite", type: "ACTIVE" },
+  ACROBAT: { name: "Acrobate", description: "Saute par-dessus un personnage adjacent", type: "ACTIVE" },
+  ILLUSIONISTE: { name: "Illusioniste", description: "Échange de position avec un personnage visible", type: "ACTIVE" },
+  LANCE_GRAPPIN: { name: "Lance-Grappin", description: "Se déplace jusqu'à un personnage visible", type: "ACTIVE" },
+  MANIPULATRICE: { name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
+  TAVERNIER: { name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
+  GEOLIER: { name: "Geôlier", description: "Les ennemis adjacents ne peuvent utiliser leur compétence", type: "PASSIVE" },
+  PROTECTEUR: { name: "Protecteur", description: "Protège les alliés adjacents des compétences ennemies", type: "PASSIVE" },
+  ASSASSIN: { name: "Assassin", description: "Capture le Leader adverse seul", type: "PASSIVE" },
+  GARDE_ROYAL: { name: "Garde Royal", description: "Se déplace près du Leader puis d'une case", type: "ACTIVE" },
+  VIZIR: { name: "Vizir", description: "Votre Leader peut se déplacer d'une case supplémentaire", type: "PASSIVE" },
+  NEMESIS: { name: "Némésis", description: "Se déplace automatiquement quand le Leader adverse bouge", type: "SPECIAL" },
+  OLD_BEAR: { name: "Vieil Ours", description: "Vient avec son Ourson (2 pièces)", type: "SPECIAL" },
+  PROWLER: { name: "Rôdeuse", description: "Se déplace sur une case non-adjacente à un ennemi", type: "ACTIVE" },
+  BRAWLER: { name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
+  CAVALRY: { name: "Cavalier", description: "Se déplace de 2 cases en ligne droite", type: "ACTIVE" },
+  GRAPPLER: { name: "Lance-Grappin", description: "Se déplace jusqu'à un personnage visible", type: "ACTIVE" },
+  ILLUSIONIST: { name: "Illusioniste", description: "Échange de position avec un personnage visible", type: "ACTIVE" },
+  INNKEEPER: { name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
+  JAILER: { name: "Geôlier", description: "Les ennemis adjacents ne peuvent utiliser leur compétence", type: "PASSIVE" },
+  MANIPULATOR: { name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
+  ROYAL_GUARD: { name: "Garde Royal", description: "Se déplace près du Leader puis d'une case", type: "ACTIVE" },
+};
+
 // === COMPOSANTS UI ===
 
 // Carte de la rivière (Sidebar gauche)
 function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: CharacterCard; onClick: () => void; onMouseEnter: () => void; disabled: boolean }) {
   const icons: Record<string, string> = { ACTIVE: "⚡", PASSIVE: "🛡️", SPECIAL: "✨" };
-  const cost = 3; // Mock cost
 
   return (
     <div
@@ -95,7 +105,6 @@ function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: Characte
             </div>
             <span className="text-white font-bold text-sm tracking-wide">{card.name}</span>
           </div>
-          {/* Cost removed */}
         </div>
         <p className="text-slate-500 text-[10px] leading-relaxed group-hover:text-slate-400">
           {card.description}
@@ -105,15 +114,16 @@ function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: Characte
   );
 }
 
-export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
-  const [pieces, setPieces] = useState<Piece[]>(INITIAL_PIECES);
+export default function Game({ gameId, onBackToLobby }: { gameId: string | null, onBackToLobby: () => void }) {
+  const [pieces, setPieces] = useState<UiPiece[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<0 | 1>(0);
   const [phase, setPhase] = useState<GamePhase>("ACTIONS");
   const [turnNumber, setTurnNumber] = useState(1);
   const [deck, setDeck] = useState<CharacterCard[]>(DECK_CARDS);
   const [river, setRiver] = useState<CharacterCard[]>(INITIAL_RIVER);
-  const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<UiPiece | null>(null);
   const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Sons
   const [playButtonClickSfx] = useSound(buttonClickSfx);
@@ -121,26 +131,103 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   const [playCharacterHoverSfx] = useSound(characterHoverSfx);
   const [playCharacterSelectSfx] = useSound(characterSelectSfx);
 
-  // === LOGIC ===
-  const endTurn = useCallback(() => {
-    const nextPlayer = currentPlayer === 0 ? 1 : 0;
-    setCurrentPlayer(nextPlayer);
-    setPhase("ACTIONS");
-    if (nextPlayer === 0) setTurnNumber((t) => t + 1);
-    setPieces((prev) => prev.map((p) => ({ ...p, hasActed: false })));
-    setSelectedPiece(null);
-  }, [currentPlayer]);
-
-  const handlePass = useCallback(() => {
-    // On ne peut passer manuellement que pendant la phase d'actions (pour finir le tour plus tôt si voulu, bien que l'UI actuelle ne le permette pas explicitement via ce bouton)
-    // Le recrutement est obligatoire, donc on ne peut pas le passer.
-    if (phase === "ACTIONS") {
-      playButtonClickSfx();
-      setPhase("RECRUITMENT");
+  const updateGameState = useCallback((game: GameState) => {
+    // Map backend pieces to UI pieces
+    if (game.pieces) {
+      const mappedPieces: UiPiece[] = game.pieces.map((p) => ({
+        ...p,
+        hasActed: p.hasActedThisTurn
+      }));
+      setPieces(mappedPieces);
     }
-  }, [phase, playButtonClickSfx]);
 
-  const checkPhaseTransition = useCallback((currentPieces: Piece[]) => {
+    // Map backend river cards to UI cards
+    if (game.river) {
+      const visibleCards = game.river
+        .filter(card => card.state === "VISIBLE")
+        .sort((a, b) => (a.visibleSlot || 0) - (b.visibleSlot || 0))
+        .map(card => {
+          const charData = CHARACTER_DATA[card.characterId] || {
+            name: card.characterId,
+            description: "Personnage mystérieux",
+            type: "ACTIVE" as const
+          };
+          return {
+            id: card.id,
+            characterId: card.characterId,
+            name: charData.name,
+            description: charData.description,
+            type: charData.type
+          };
+        });
+      setRiver(visibleCards);
+    }
+
+    setCurrentPlayer(game.currentPlayerIndex as 0 | 1);
+    setPhase(game.currentPhase as GamePhase);
+    setTurnNumber(game.turnNumber);
+
+    if (game.winnerPlayerIndex !== null) {
+      setVictory({ winner: game.winnerPlayerIndex as 0 | 1, type: game.winnerVictoryType as any });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!gameId) return;
+
+    const loadGame = async (retries = 5) => {
+      try {
+        const game = await getGame(gameId);
+        updateGameState(game);
+        setIsLoading(false);
+      } catch (e) {
+        console.error("Failed to load game", e);
+        // Retry if game doesn't exist yet (it might still be creating)
+        if (retries > 0) {
+          console.log(`Retrying game load... (${retries} attempts left)`);
+          setTimeout(() => loadGame(retries - 1), 1000);
+        } else {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadGame();
+
+    if (webSocketService.isConnected()) {
+      webSocketService.subscribeToSession(gameId, (data) => {
+        // Check if it's a game state update (has pieces or gameId)
+        if (data.pieces || data.gameId) {
+          updateGameState(data);
+          setIsLoading(false);
+        }
+      });
+    }
+
+    return () => {
+      // Unsubscribe logic if implemented
+    };
+  }, [gameId, updateGameState]);
+
+
+  // === LOGIC ===
+  const endTurn = useCallback(async () => {
+    if (!gameId) return;
+
+    try {
+      // Call backend API to end turn
+      const updatedGame = await endTurnApi(gameId);
+
+      // Update local state with response
+      updateGameState(updatedGame);
+
+      setSelectedPiece(null);
+    } catch (error) {
+      console.error("Failed to end turn:", error);
+    }
+  }, [gameId, updateGameState]);
+
+  const checkPhaseTransition = useCallback((currentPieces: UiPiece[]) => {
     const playerPieces = currentPieces.filter((p) => p.ownerIndex === currentPlayer);
     if (playerPieces.every((p) => p.hasActed)) {
       setTimeout(() => setPhase("RECRUITMENT"), 500);
@@ -149,6 +236,7 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
   const handleMove = useCallback(
     (pieceId: string, toQ: number, toR: number) => {
+      // Optimistic update
       setPieces((prev) => {
         const updated = prev.map((p) =>
           p.id === pieceId ? { ...p, q: toQ, r: toR, hasActed: true } : p,
@@ -156,18 +244,22 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
         checkPhaseTransition(updated);
         return updated;
       });
+      // TODO: Call API to persist move
     },
     [checkPhaseTransition],
   );
 
   const handleRecruit = useCallback(
-    (cardId: string) => {
+    async (cardId: string) => {
+      if (!gameId) return;
+
+      // Simplify recruitment check for now
       const playerPieceCount = pieces.filter(
         (p) => p.ownerIndex === currentPlayer,
       ).length;
-      if (playerPieceCount >= 6) { // Limit to 6 to be safe (mock limit)
+
+      if (playerPieceCount >= 5) {
         console.log("Limite d'unités atteinte");
-        // alert("Maximum d'unités atteint !"); // Avoid alert for better UX
         return;
       }
 
@@ -176,62 +268,45 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
       const card = river.find((c) => c.id === cardId);
       if (!card) return;
 
-      // Définition simplifiée des cases de recrutement (Mock)
-      const recruitmentCells =
-        currentPlayer === 0
-          ? [{ q: -3, r: 3 }, { q: -2, r: 3 }, { q: -1, r: 2 }, { q: -1, r: 3 }]
-          : [{ q: 3, r: -3 }, { q: 2, r: -3 }, { q: 1, r: -2 }, { q: 1, r: -3 }];
+      // Define recruitment zones based on player
+      // Player 0 (top): zones around (-1, -2), (0, -2), (1, -2)
+      // Player 1 (bottom): zones around (-1, 2), (0, 2), (1, 2)
+      const recruitmentZones = currentPlayer === 0
+        ? [{ q: -1, r: -2 }, { q: 0, r: -2 }, { q: 1, r: -2 }]
+        : [{ q: -1, r: 2 }, { q: 0, r: 2 }, { q: 1, r: 2 }];
 
-      const freeCell = recruitmentCells.find(
-        (cell) => !pieces.find((p) => p.q === cell.q && p.r === cell.r),
+      // Find first available recruitment zone
+      const availableZone = recruitmentZones.find(zone =>
+        !pieces.some(p => p.q === zone.q && p.r === zone.r)
       );
 
-      if (!freeCell) {
-        console.log("Zones de recrutement occupées");
-        endTurn();
+      if (!availableZone) {
+        console.log("Aucune zone de recrutement disponible");
         return;
       }
 
-      // Ajout de la nouvelle pièce sur le plateau
-      const newPiece: Piece = {
-        id: `recruited-${Date.now()}`,
-        characterId: card.characterId,
-        ownerIndex: currentPlayer,
-        q: freeCell.q,
-        r: freeCell.r,
-        hasActed: true, // Une unité recrutée ne peut pas agir le même tour
-      };
+      try {
+        playCharacterSelectSfx();
 
-      setPieces((prev) => [...prev, newPiece]);
+        // Call backend API
+        await recruitCharacter(gameId, cardId, [availableZone]);
 
-      // Remplacement de la carte dans la rivière par une carte du deck
-      const newDeck = [...deck];
-      const replacement = newDeck.shift();
-      if (replacement) {
-        setDeck(newDeck);
-        setRiver((prev) =>
-          prev.map((c) => (c.id === cardId ? replacement : c)),
-        );
-      } else {
-        // Deck empty logic? Just remove from river or keep empty slot
-        setRiver((prev) => prev.map(c => c.id === cardId ? { ...c, id: "empty", name: "Vide", type: "PASSIVE", description: "" } : c)); // Mock empty
+        // The game state will be updated via WebSocket
+      } catch (error) {
+        console.error("Failed to recruit character:", error);
       }
-
-      playButtonClickSfx();
-      endTurn(); // Le recrutement finit le tour du joueur
     },
-    [pieces, river, deck, currentPlayer, endTurn, phase, playButtonClickSfx],
+    [gameId, pieces, river, currentPlayer, phase, playCharacterSelectSfx],
   );
 
   const resetGame = () => {
-    setPieces(INITIAL_PIECES);
-    setCurrentPlayer(0);
-    setPhase("ACTIONS");
-    setTurnNumber(1);
-    setRiver(INITIAL_RIVER);
-    setDeck(DECK_CARDS);
+    // Reset local state if needed
     setVictory(null);
   };
+
+  if (isLoading) {
+    return <div className="h-screen w-screen flex items-center justify-center text-white font-cyber">CHARGEMENT DU CHAMP DE BATAILLE...</div>;
+  }
 
   if (victory) {
     return (
@@ -376,15 +451,16 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
 
             {/* Board Render */}
             <div className="relative scale-90 xl:scale-105 transition-transform duration-500 filter drop-shadow-[0_0_40px_rgba(6,182,212,0.2)]">
+              {/* Cast pieces to any if HexBoard types are strict or ensure HexBoard accepts UiPiece */}
               <HexBoard
-                pieces={pieces}
+                pieces={pieces as any}
                 currentPlayer={currentPlayer}
                 phase={phase}
                 turnNumber={turnNumber}
                 onMove={handleMove}
-                selectedPiece={selectedPiece}
+                selectedPiece={selectedPiece as any}
                 onSelectPiece={(pc) => {
-                  setSelectedPiece(pc);
+                  setSelectedPiece(pc as UiPiece);
                 }}
               />
             </div>
