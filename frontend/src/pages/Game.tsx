@@ -9,6 +9,8 @@ import buttonHoverSfx from '../sounds/buttonHover.mp3';
 import characterSelectSfx from '../sounds/characterSelect.mp3';
 import characterHoverSfx from '../sounds/characterHover.mp3';
 
+import { useAudio } from "../context/AudioContext";
+
 import cogneurImg from '/image/cogneur.png';
 import rodeuseImg from '/image/rodeuse.png';
 import illusionisteImg from '/image/illusioniste.png';
@@ -116,10 +118,15 @@ export default function Game({ onBackToLobby }: { onBackToLobby: () => void }) {
   const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
 
   // Sons
-  const [playButtonClickSfx] = useSound(buttonClickSfx);
-  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
-  const [playCharacterHoverSfx] = useSound(characterHoverSfx);
-  const [playCharacterSelectSfx] = useSound(characterSelectSfx);
+  const { volume, sfxEnabled } = useAudio();
+  const soundConfig = {
+    volume: (volume / 100),
+    soundEnabled: sfxEnabled
+  };
+  const [playButtonClickSfx] = useSound(buttonClickSfx, soundConfig);
+  const [playButtonHoverSfx] = useSound(buttonHoverSfx, soundConfig);
+  const [playCharacterHoverSfx] = useSound(characterHoverSfx, soundConfig);
+  const [playCharacterSelectSfx] = useSound(characterSelectSfx, soundConfig);
 
   // === LOGIC ===
   const endTurn = useCallback(() => {
