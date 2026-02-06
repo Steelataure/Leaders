@@ -9,7 +9,6 @@ build-back:
   services:
     - docker:dind
   before_script:
-    # Connexion au registre GitLab de l'école
     - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
   script:
     - cd backend
@@ -33,9 +32,10 @@ build-front:
   only:
     - main
 
-# 3. Déploiement automatique
+# 3. Déploiement vers esiea.cloud (FIXÉ)
 deploy-to-cloud:
   stage: deploy
+  image: curlimages/curl:latest  # On utilise une image qui a curl installé
   script:
     - |
       curl -X POST -H "Authorization: Bearer $BACK_ESIEA_TOKEN" https://api.esiea.cloud/deploy-back
