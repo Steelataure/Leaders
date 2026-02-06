@@ -1,6 +1,6 @@
 // En production Docker (ou local), le backend est sur le port 8080
 // On utilise une variable d'environnement ou une valeur par défaut absolue
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://zefallk-api.on.esiea.cloud/api';
 
 export const apiClient = {
     async post<T>(endpoint: string, data: unknown): Promise<T> {
