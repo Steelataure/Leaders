@@ -10,8 +10,9 @@ build-back:
     - docker:dind
   script:
     - cd backend
-    - docker build -t registry.esiea.fr/back .
-    - echo "Image Backend construite"
+    # On utilise le chemin complet du registre GitLab pour que l'image soit trouvable
+    - docker build -t registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest .
+    - docker push registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest
   only:
     - main
 
@@ -23,12 +24,13 @@ build-front:
     - docker:dind
   script:
     - cd frontend
-    - docker build -t registry.esiea.fr/front .
-    - echo "Image Frontend construite"
+    # On utilise le même registre pour le front, le cloud fera le tri avec les tokens
+    - docker build -t registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest .
+    - docker push registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest
   only:
     - main
 
-# 3. Déploiement vers esiea.cloud (CORRIGÉ)
+# 3. Déploiement automatique vers esiea.cloud
 deploy-to-cloud:
   stage: deploy
   script:
