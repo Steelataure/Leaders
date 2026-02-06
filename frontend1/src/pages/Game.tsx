@@ -125,6 +125,43 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
   const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [validMoves, setValidMoves] = useState<{ q: number, r: number }[]>([]);
+  const [targetingState, setTargetingState] = useState<{ isActive: boolean; targetId: string | null } | null>(null);
+
+  // Handler for starting ability targeting
+  const handleStartAbility = useCallback(() => {
+    if (selectedPiece) {
+      setTargetingState({ isActive: true, targetId: null });
+    }
+  }, [selectedPiece]);
+
+  // Handler for canceling targeting mode
+  const cancelTargeting = useCallback(() => {
+    setTargetingState(null);
+  }, []);
+
+  // Handler for clicking on a target during ability targeting
+  const handleTargetClick = useCallback((target: { type: "PIECE" | "CELL"; id?: string; q: number; r: number }) => {
+    if (!targetingState?.isActive || !selectedPiece) return;
+
+    const { q, r, id } = target;
+
+    // If we need a second target (destination), set it
+    if (targetingState.targetId) {
+      // Execute the ability with target and destination
+      console.log(`Executing ability from ${selectedPiece.id} on target ${targetingState.targetId} to (${q}, ${r})`);
+      setTargetingState(null);
+    } else {
+      // First click: select the target (prefer piece id if available)
+      if (id) {
+        setTargetingState({ isActive: true, targetId: id });
+      } else {
+        const targetPiece = pieces.find(p => p.q === q && p.r === r);
+        if (targetPiece) {
+          setTargetingState({ isActive: true, targetId: targetPiece.id });
+        }
+      }
+    }
+  }, [targetingState, selectedPiece, pieces]);
 
   const handlePieceSelect = useCallback(async (piece: UiPiece | null) => {
     setSelectedPiece(piece);
