@@ -3,6 +3,8 @@ package esiea.hackathon.leaders.application.strategies.movement;
 import esiea.hackathon.leaders.application.strategies.MoveAbilityStrategy;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -10,11 +12,16 @@ import java.util.List;
 
 @Component
 public class ProwlerStealthStrategy implements MoveAbilityStrategy {
+
+    private static final Logger LOGGER = LogManager.getLogger(ProwlerStealthStrategy.class);
+
     @Override
     public String getAbilityId() { return "PROWLER_STEALTH"; }
 
     @Override
     public List<HexCoord> getExtraMoves(PieceEntity piece, List<PieceEntity> allPieces) {
+        LOGGER.info("Calcul des mouvements furtifs pour la pièce de l'owner: {}", piece.getOwnerIndex());
+        
         List<HexCoord> moves = new ArrayList<>();
         int radius = HexCoord.BOARD_RADIUS; // 3
 
@@ -29,11 +36,14 @@ public class ProwlerStealthStrategy implements MoveAbilityStrategy {
                 if (isFree(q, r, allPieces)) {
                     // Et ne doit avoir AUCUN ennemi voisin
                     if (!hasEnemyNeighbor(target, piece.getOwnerIndex(), allPieces)) {
+                        LOGGER.debug("Position valide trouvée : (q={}, r={})", q, r);
                         moves.add(target);
                     }
                 }
             }
         }
+        
+        LOGGER.info("Nombre de mouvements furtifs trouvés : {}", moves.size());
         return moves;
     }
 
@@ -51,7 +61,10 @@ public class ProwlerStealthStrategy implements MoveAbilityStrategy {
             boolean enemyFound = allPieces.stream()
                     .anyMatch(p -> p.getQ() == nQ && p.getR() == nR && !p.getOwnerIndex().equals(myOwnerIndex));
 
-            if (enemyFound) return true;
+            if (enemyFound) {
+                LOGGER.debug("Ennemi détecté à proximité de (q={}, r={}) sur (q={}, r={})", coord.q(), coord.r(), nQ, nR);
+                return true;
+            }
         }
         return false;
     }

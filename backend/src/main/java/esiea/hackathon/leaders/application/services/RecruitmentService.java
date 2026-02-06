@@ -9,6 +9,8 @@ import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RecruitmentCardRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,30 +22,42 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RecruitmentService {
 
+    private static final Logger LOGGER = LogManager.getLogger(RecruitmentService.class);
+
     private final RecruitmentCardRepository cardRepository;
     private final PieceRepository pieceRepository;
     private final GameRepository gameRepository;
 
     @Transactional
     public List<PieceEntity> recruit(UUID gameId, Short playerIndex, UUID cardId, List<HexCoord> placements) {
+        LOGGER.info("Début du processus de recrutement pour le joueur {} dans la partie {}", playerIndex, gameId);
 
         // 1. Chargement du Jeu
         GameEntity game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+                .orElseThrow(() -> {
+                    LOGGER.error("Échec du recrutement : Partie {} introuvable", gameId);
+                    return new IllegalArgumentException("Game not found");
+                });
 
         // 2. SÉCURITÉ : Vérification du tour
         if (game.getCurrentPlayerIndex() != playerIndex.intValue()) {
+            LOGGER.warn("Tentative de recrutement hors tour par le joueur {}. Tour actuel : {}", playerIndex, game.getCurrentPlayerIndex());
             throw new IllegalStateException("Action refusée : Ce n'est pas le tour du joueur " + playerIndex);
         }
 
         RecruitmentCardEntity card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new IllegalArgumentException("Card not found"));
+                .orElseThrow(() -> {
+                    LOGGER.error("Échec du recrutement : Carte {} introuvable", cardId);
+                    return new IllegalArgumentException("Card not found");
+                });
 
         // 3. Validations de la carte
         if (!card.getGame().getId().equals(gameId)) {
+            LOGGER.error("La carte {} n'appartient pas à la partie {}", cardId, gameId);
             throw new IllegalArgumentException("Card does not belong to this game");
         }
         if (card.getState() != CardState.VISIBLE) {
+            LOGGER.warn("La carte {} ne peut pas être recrutée car elle n'est pas visible (État actuel : {})", cardId, card.getState());
             throw new IllegalArgumentException("Card is not visible in the river (State: " + card.getState() + ")");
         }
 
@@ -62,6 +76,7 @@ public class RecruitmentService {
 
         // C. La somme dépasse-t-elle 5 ?
         if (currentPieceCount + piecesToAdd > 5) {
+            LOGGER.warn("Recrutement annulé : Le joueur {} possède déjà {} pièces. Limite de 5 dépassée avec cet ajout.", playerIndex, currentPieceCount);
             throw new IllegalArgumentException("Recruitment failed: You cannot exceed the limit of 5 units.");
         }
         // ==================================================================================
@@ -69,16 +84,19 @@ public class RecruitmentService {
 
         // 5. Logique de Création des Pièces
         List<PieceEntity> createdPieces = new ArrayList<>();
+        LOGGER.debug("Création des pièces pour le personnage : {}", characterId);
 
         if ("OLD_BEAR".equals(characterId)) {
             // Cas Spécial : L'Ours vient avec son Ourson
             validatePlacementCount(placements, 2);
             createdPieces.add(createPiece(gameId, "OLD_BEAR", playerIndex, placements.get(0)));
             createdPieces.add(createPiece(gameId, "CUB", playerIndex, placements.get(1)));
+            LOGGER.info("Le Vieux Ours et son ourson ont été déployés pour le joueur {}", playerIndex);
         } else {
             // Cas Standard
             validatePlacementCount(placements, 1);
             createdPieces.add(createPiece(gameId, characterId, playerIndex, placements.get(0)));
+            LOGGER.info("Unité {} déployée aux coordonnées ({},{})", characterId, placements.get(0).q(), placements.get(0).r());
         }
 
         // 6. Mise à jour de la carte recrutée
@@ -87,10 +105,12 @@ public class RecruitmentService {
         card.setRecruitedByIndex(Integer.valueOf(playerIndex));
         card.setVisibleSlot(null);
         cardRepository.save(card);
+        LOGGER.debug("Carte {} marquée comme recrutée par le joueur {}", cardId, playerIndex);
 
         // 7. Remplissage de la rivière
         refillRiver(gameId, emptySlot);
 
+        LOGGER.info("Recrutement terminé avec succès pour le joueur {}", playerIndex);
         return createdPieces;
     }
 
@@ -98,16 +118,19 @@ public class RecruitmentService {
 
     private void validatePlacementCount(List<HexCoord> placements, int expected) {
         if (placements == null || placements.size() != expected) {
+            LOGGER.error("Erreur de placement : {} coordonnées reçues, {} attendues", (placements != null ? placements.size() : 0), expected);
             throw new IllegalArgumentException("Recruitment requires exactly " + expected + " placement coordinate(s).");
         }
     }
 
     private PieceEntity createPiece(UUID gameId, String charId, Short owner, HexCoord pos) {
         if (!pos.isValid()) {
+            LOGGER.error("Coordonnées invalides : ({},{})", pos.q(), pos.r());
             throw new IllegalArgumentException("Invalid placement coordinates: (" + pos.q() + "," + pos.r() + ")");
         }
 
         if (pieceRepository.findByGameIdAndPosition(gameId, pos.q(), pos.r()).isPresent()) {
+            LOGGER.warn("Emplacement déjà occupé aux coordonnées ({},{})", pos.q(), pos.r());
             throw new IllegalArgumentException("Cell (" + pos.q() + "," + pos.r() + ") is already occupied.");
         }
 
@@ -127,10 +150,11 @@ public class RecruitmentService {
         if (slotToFill == null) return;
 
         cardRepository.findNextCardInDeck(gameId)
-                .ifPresent(nextCard -> {
+                .ifPresentOrElse(nextCard -> {
                     nextCard.setState(CardState.VISIBLE);
                     nextCard.setVisibleSlot(slotToFill);
                     cardRepository.save(nextCard);
-                });
+                    LOGGER.info("Nouvelle carte ajoutée à la rivière dans l'emplacement {}", slotToFill);
+                }, () -> LOGGER.info("La pioche est vide, aucun remplacement pour l'emplacement {}", slotToFill));
     }
 }
