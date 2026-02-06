@@ -8,9 +8,11 @@ build-back:
   image: docker:latest
   services:
     - docker:dind
+  before_script:
+    # Connexion au registre GitLab de l'école
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
   script:
     - cd backend
-    # On utilise le chemin complet du registre GitLab pour que l'image soit trouvable
     - docker build -t registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest .
     - docker push registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest
   only:
@@ -22,15 +24,16 @@ build-front:
   image: docker:latest
   services:
     - docker:dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
   script:
     - cd frontend
-    # On utilise le même registre pour le front, le cloud fera le tri avec les tokens
     - docker build -t registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest .
     - docker push registry.esiea.fr/hackathon-zefallk/hackathon-zefallk:latest
   only:
     - main
 
-# 3. Déploiement automatique vers esiea.cloud
+# 3. Déploiement automatique
 deploy-to-cloud:
   stage: deploy
   script:
