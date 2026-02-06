@@ -21,6 +21,8 @@ public class PieceController {
 
     private final PieceRepository pieceRepository;
     private final MovementService movementService;
+    private final esiea.hackathon.leaders.application.services.GameQueryService gameQueryService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     /**
      * GET /api/pieces?gameId=xxx
@@ -47,14 +49,22 @@ public class PieceController {
      */
     @PostMapping("/{pieceId}/move")
     public ResponseEntity<?> movePiece(
-                                        @PathVariable UUID pieceId,
-                                        @RequestBody MoveRequest request
-    ) {
+            @PathVariable UUID pieceId,
+            @RequestBody MoveRequest request) {
         try {
+            System.out.println("DEBUG: Received move request for piece " + pieceId + " to (" + request.toQ() + ","
+                    + request.toR() + ")");
             PieceEntity movedPiece = movementService.movePiece(pieceId, request.toQ(), request.toR());
+
+            // Broadcast update
+            esiea.hackathon.leaders.application.dto.response.GameStateDto gameState = gameQueryService
+                    .getGameState(movedPiece.getGameId());
+            messagingTemplate.convertAndSend("/topic/game/" + movedPiece.getGameId(), gameState);
+
             return ResponseEntity.ok(toDto(movedPiece));
 
         } catch (IllegalArgumentException e) {
+            System.err.println("ERROR: Move rejected: " + e.getMessage());
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
@@ -66,12 +76,14 @@ public class PieceController {
                 domain.getOwnerIndex(),
                 domain.getQ(),
                 domain.getR(),
-                domain.getHasActedThisTurn()
-        );
+                domain.getHasActedThisTurn());
     }
 
     // --- DTOs INTERNES ---
 
-    public record MoveRequest(short toQ, short toR) {}
-    public record ErrorResponse(String message) {}
+    public record MoveRequest(short toQ, short toR) {
+    }
+
+    public record ErrorResponse(String message) {
+    }
 }

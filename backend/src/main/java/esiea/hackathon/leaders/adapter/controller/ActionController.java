@@ -24,24 +24,33 @@ public class ActionController {
     private final ActionService actionService;
     private final RecruitmentService recruitmentService;
     private final GameRepository gameRepository;
+    private final esiea.hackathon.leaders.application.services.GameQueryService gameQueryService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     // 1. Déplacer une pièce
     @PostMapping("/move")
     public ResponseEntity<Void> movePiece(@PathVariable UUID gameId, @RequestBody MoveRequestDto request) {
-        // Note: Idéalement, on vérifierait ici si la pièce appartient bien au joueur courant via gameId
+        // Note: Idéalement, on vérifierait ici si la pièce appartient bien au joueur
+        // courant via gameId
+        System.out.println("DEBUG: ActionController move " + request.pieceId());
         movementService.movePiece(request.pieceId(), request.destination().q(), request.destination().r());
+
+        broadcastUpdate(gameId);
         return ResponseEntity.ok().build();
     }
 
     // 2. Utiliser une compétence
     @PostMapping("/action")
     public ResponseEntity<Void> useAbility(@PathVariable UUID gameId, @RequestBody ActionRequestDto request) {
+        System.out
+                .println("DEBUG: ActionController useAbility " + request.abilityId() + " source=" + request.sourceId());
         actionService.useAbility(
                 request.sourceId(),
                 request.targetId(),
                 request.abilityId(),
-                request.destination()
-        );
+                request.destination());
+
+        broadcastUpdate(gameId);
         return ResponseEntity.ok().build();
     }
 
@@ -54,12 +63,19 @@ public class ActionController {
 
         Short currentPlayerIndex = (short) game.getCurrentPlayerIndex();
 
+        System.out.println("DEBUG: ActionController recruit " + request.cardId());
         recruitmentService.recruit(
                 gameId,
                 currentPlayerIndex,
                 request.cardId(),
-                request.placements()
-        );
+                request.placements());
+
+        broadcastUpdate(gameId);
         return ResponseEntity.ok().build();
+    }
+
+    private void broadcastUpdate(UUID gameId) {
+        esiea.hackathon.leaders.application.dto.response.GameStateDto gameState = gameQueryService.getGameState(gameId);
+        messagingTemplate.convertAndSend("/topic/game/" + gameId, gameState);
     }
 }

@@ -41,6 +41,7 @@ public class ActionService {
 
         // 3. 🛑 SÉCURITÉ : Vérification du tour
         if (source.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
+            System.err.println("DEBUG: Not your turn to use ability!");
             throw new IllegalStateException("Action refusée : Ce n'est pas votre tour !");
         }
 
@@ -81,6 +82,7 @@ public class ActionService {
 
         // Exécution de la Stratégie via Factory
         ActionAbilityStrategy strategy = actionFactory.getStrategy(abilityId);
+        System.out.println("DEBUG: Executing strategy " + abilityId);
         if (strategy == null) {
             throw new IllegalArgumentException("No implementation found for ability: " + abilityId);
         }
@@ -100,7 +102,8 @@ public class ActionService {
 
     private boolean isBlockedByJailer(PieceEntity me, List<PieceEntity> allPieces) {
         JailerBlockStrategy strategy = passiveFactory.getStrategy("JAILER_BLOCK", JailerBlockStrategy.class);
-        if (strategy == null) return false;
+        if (strategy == null)
+            return false;
 
         return allPieces.stream()
                 .filter(p -> "JAILER".equals(p.getCharacterId()))
@@ -109,8 +112,10 @@ public class ActionService {
     }
 
     private boolean isTargetProtected(PieceEntity target, List<PieceEntity> allPieces) {
-        ProtectorShieldStrategy strategy = passiveFactory.getStrategy("PROTECTOR_SHIELD", ProtectorShieldStrategy.class);
-        if (strategy == null) return false;
+        ProtectorShieldStrategy strategy = passiveFactory.getStrategy("PROTECTOR_SHIELD",
+                ProtectorShieldStrategy.class);
+        if (strategy == null)
+            return false;
 
         return allPieces.stream()
                 .filter(p -> "PROTECTOR".equals(p.getCharacterId()))

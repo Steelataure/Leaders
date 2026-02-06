@@ -25,6 +25,7 @@ public class GameService {
 
     @Transactional
     public GameEntity endTurn(UUID gameId) {
+        System.out.println("DEBUG: Ending turn for game " + gameId);
         // 1. Récupérer le jeu
         GameEntity game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
@@ -47,6 +48,7 @@ public class GameService {
 
             // A. Changer de joueur (Alternance 0 / 1)
             short nextPlayer = (short) ((game.getCurrentPlayerIndex() + 1) % 2);
+            System.out.println("DEBUG: Switching player from " + game.getCurrentPlayerIndex() + " to " + nextPlayer);
             game.setCurrentPlayerIndex(nextPlayer);
 
             // B. Incrémenter le tour
@@ -70,7 +72,7 @@ public class GameService {
 
         List<PieceEntity> piecesToReset = allPieces.stream()
                 .filter(PieceEntity::getHasActedThisTurn) // On filtre celles qui sont true
-                .peek(p -> p.setHasActedThisTurn(false))  // On les passe à false
+                .peek(p -> p.setHasActedThisTurn(false)) // On les passe à false
                 .collect(Collectors.toList());
 
         if (!piecesToReset.isEmpty()) {

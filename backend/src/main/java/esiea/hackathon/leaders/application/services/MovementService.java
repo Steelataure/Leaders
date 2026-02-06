@@ -39,6 +39,8 @@ public class MovementService {
         // Chargement de la pièce
         PieceEntity pieceEntity = pieceRepository.findById(pieceId)
                 .orElseThrow(() -> new IllegalArgumentException("Piece not found: " + pieceId));
+        System.out.println(
+                "DEBUG: Moving piece " + pieceEntity.getCharacterId() + " owned by " + pieceEntity.getOwnerIndex());
 
         // 2. Chargement du Jeu
         GameEntity game = gameRepository.findById(pieceEntity.getGameId())
@@ -47,6 +49,8 @@ public class MovementService {
         // 3. 🛑 SÉCURITÉ : Vérification du tour
         // On compare l'index du propriétaire de la pièce avec l'index du joueur courant
         if (pieceEntity.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
+            System.err.println("DEBUG: Not your turn! PieceOwner=" + pieceEntity.getOwnerIndex() + ", CurrentPlayer="
+                    + game.getCurrentPlayerIndex());
             throw new IllegalStateException("Action refusée : Ce n'est pas votre tour !");
         }
 
@@ -59,9 +63,10 @@ public class MovementService {
         List<HexCoord> legalMoves = getValidMovesForPiece(pieceId);
 
         if (!legalMoves.contains(target)) {
+            System.err.println("DEBUG: Illegal move. Target invalid. Legal moves: " + legalMoves);
             throw new IllegalArgumentException(
-                    "Illegal move from (" + pieceEntity.getQ() + "," + pieceEntity.getR() + ") to (" + toQ + "," + toR + ")"
-            );
+                    "Illegal move from (" + pieceEntity.getQ() + "," + pieceEntity.getR() + ") to (" + toQ + "," + toR
+                            + ")");
         }
 
         // 6. Application du déplacement
@@ -116,7 +121,8 @@ public class MovementService {
     // --- Helpers ---
 
     private void triggerNemesisIfLeaderMoved(PieceEntity movedPiece, UUID gameId) {
-        if (!"LEADER".equals(movedPiece.getCharacterId())) return;
+        if (!"LEADER".equals(movedPiece.getCharacterId()))
+            return;
 
         List<PieceEntity> allPieces = pieceRepository.findByGameId(gameId);
 
@@ -139,12 +145,12 @@ public class MovementService {
 
     public List<HexCoord> getAdjacentCells(short q, short r) {
         List<HexCoord> adjacent = new ArrayList<>();
-        adjacent.add(new HexCoord((short)(q + 1), r));
-        adjacent.add(new HexCoord((short)(q - 1), r));
-        adjacent.add(new HexCoord(q, (short)(r + 1)));
-        adjacent.add(new HexCoord(q, (short)(r - 1)));
-        adjacent.add(new HexCoord((short)(q + 1), (short)(r - 1)));
-        adjacent.add(new HexCoord((short)(q - 1), (short)(r + 1)));
+        adjacent.add(new HexCoord((short) (q + 1), r));
+        adjacent.add(new HexCoord((short) (q - 1), r));
+        adjacent.add(new HexCoord(q, (short) (r + 1)));
+        adjacent.add(new HexCoord(q, (short) (r - 1)));
+        adjacent.add(new HexCoord((short) (q + 1), (short) (r - 1)));
+        adjacent.add(new HexCoord((short) (q - 1), (short) (r + 1)));
 
         // Filtre pour garder ceux qui sont dans le plateau (Rayon 3)
         return adjacent.stream()

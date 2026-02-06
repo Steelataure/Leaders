@@ -119,6 +119,21 @@ export async function movePiece(
   return res.json();
 }
 
+export async function performAction(
+  gameId: string,
+  sourceId: string,
+  abilityId: string,
+  targetId?: string,
+  destination?: { q: number; r: number }
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/games/${gameId}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sourceId, abilityId, targetId, destination }),
+  });
+  if (!res.ok) throw new Error("Failed to perform action");
+}
+
 // --- Session API ---
 
 export async function joinPublicQueue(playerId: string): Promise<Session> {

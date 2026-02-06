@@ -22,7 +22,7 @@ export interface Piece {
   hasActed: boolean;
 }
 
-export type GamePhase = "ACTIONS" | "RECRUITMENT";
+export type GamePhase = "ACTION" | "RECRUITMENT" | "COMBAT" | "BANISHMENT";
 
 interface HexBoardProps {
   pieces: Piece[];
@@ -33,6 +33,9 @@ interface HexBoardProps {
   // New props for lifted state
   selectedPiece: Piece | null;
   onSelectPiece: (piece: Piece | null) => void;
+  validMoves?: { q: number, r: number }[];
+  isTargeting?: boolean;
+  onTargetClick?: (target: { type: 'PIECE' | 'CELL', id?: string, q: number, r: number }) => void;
 }
 
 // === CONSTANTES DE STYLE ===
@@ -159,14 +162,15 @@ function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
 
 // === COMPOSANT PRINCIPAL ===
 
-export default function HexBoard({
-  pieces,
-  currentPlayer,
-  phase,
-  selectedPiece,
-  onSelectPiece,
-  onMove,
-}: HexBoardProps) {
+export default function HexBoard(props: HexBoardProps) {
+  const {
+    pieces,
+    currentPlayer,
+    phase,
+    selectedPiece,
+    onSelectPiece,
+    onMove,
+  } = props;
   const [hoveredCell, setHoveredCell] = useState<HexCell | null>(null);
 
   // Sons
@@ -179,8 +183,16 @@ export default function HexBoard({
   const findPieceAtCell = (q: number, r: number) => pieces.find((p) => p.q === q && p.r === r);
 
   const validMoves = useMemo(() => {
-    // On ne peut bouger qu'en phase ACTIONS et avec une pièce qui n'a pas encore agi
-    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTIONS")
+    // Si des moves valides sont passés en props (venant de l'API), on les utilise
+    if (props.validMoves) {
+      const moves = new Set<string>();
+      props.validMoves.forEach(m => moves.add(`${m.q},${m.r}`));
+      return moves;
+    }
+
+    // Fallback: calcul local (legacy)
+    // On ne peut bouger qu'en phase ACTION et avec une pièce qui n'a pas encore agi
+    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTION")
       return new Set<string>();
 
     const moves = new Set<string>();
@@ -191,11 +203,16 @@ export default function HexBoard({
       }
     });
     return moves;
-  }, [selectedPiece, pieces, phase, cells]);
+  }, [selectedPiece, pieces, phase, cells, props.validMoves]);
 
   const handlePieceSelect = (piece: Piece) => {
+    if (props.isTargeting && props.onTargetClick) {
+      props.onTargetClick({ type: 'PIECE', id: piece.id, q: piece.q, r: piece.r });
+      return;
+    }
+
     // Interdit de sélectionner une pièce adverse ou si on est en phase recrutement
-    if (piece.ownerIndex !== currentPlayer || phase !== "ACTIONS") return;
+    if (piece.ownerIndex !== currentPlayer || phase !== "ACTION") return;
 
     // Si on sélectionne une nouvelle pièce (différente de null et différente de l'actuelle)
     if (piece && selectedPiece?.id !== piece.id) {
@@ -206,6 +223,11 @@ export default function HexBoard({
   };
 
   const handleCellClick = (cell: HexCell) => {
+    if (props.isTargeting && props.onTargetClick) {
+      props.onTargetClick({ type: 'CELL', q: cell.q, r: cell.r });
+      return;
+    }
+
     if (selectedPiece && validMoves.has(`${cell.q},${cell.r}`)) {
       playBoardPlacementSfx();
       onMove(selectedPiece.id, cell.q, cell.r);
@@ -244,7 +266,7 @@ export default function HexBoard({
         // Vérifier si cette cellule contient une pièce du joueur actif
         const pieceOnCell = findPieceAtCell(cell.q, cell.r);
         const isCurrentPlayerPiece = pieceOnCell && pieceOnCell.ownerIndex === currentPlayer;
-        const canAct = isCurrentPlayerPiece && !pieceOnCell.hasActed && phase === "ACTIONS";
+        const canAct = isCurrentPlayerPiece && !pieceOnCell.hasActed && phase === "ACTION";
 
         // Couleurs de surbrillance selon le joueur
         const playerHighlightColor = currentPlayer === 0 ? COLORS.player1 : COLORS.player2;

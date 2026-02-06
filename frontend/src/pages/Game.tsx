@@ -15,7 +15,7 @@ import manipulatriceImg from '/image/manipulatrice.png';
 import tavernierImg from '/image/tavernier.png';
 import gardeImg from '/image/garderoyal.png';
 
-import { getGame, endTurn as endTurnApi, recruitCharacter, type GameState, type Piece as ApiPiece } from "../api/gameApi";
+import { getGame, endTurn as endTurnApi, recruitCharacter, movePiece, getValidMoves, type GameState, type Piece as ApiPiece } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
 
 // === TYPES ===
@@ -117,13 +117,28 @@ function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: Characte
 export default function Game({ gameId, onBackToLobby }: { gameId: string | null, onBackToLobby: () => void }) {
   const [pieces, setPieces] = useState<UiPiece[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<0 | 1>(0);
-  const [phase, setPhase] = useState<GamePhase>("ACTIONS");
+  const [phase, setPhase] = useState<GamePhase>("ACTION");
   const [turnNumber, setTurnNumber] = useState(1);
   const [deck, setDeck] = useState<CharacterCard[]>(DECK_CARDS);
   const [river, setRiver] = useState<CharacterCard[]>(INITIAL_RIVER);
   const [selectedPiece, setSelectedPiece] = useState<UiPiece | null>(null);
   const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [validMoves, setValidMoves] = useState<{ q: number, r: number }[]>([]);
+
+  const handlePieceSelect = useCallback(async (piece: UiPiece | null) => {
+    setSelectedPiece(piece);
+    setValidMoves([]); // Reset previous moves
+
+    if (piece && piece.ownerIndex === currentPlayer && !piece.hasActed && phase === "ACTION") {
+      try {
+        const moves = await getValidMoves(piece.id);
+        setValidMoves(moves);
+      } catch (error) {
+        console.error("Failed to fetch valid moves:", error);
+      }
+    }
+  }, [currentPlayer, phase]);
 
   // Sons
   const [playButtonClickSfx] = useSound(buttonClickSfx);
@@ -227,13 +242,20 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
 
   const checkPhaseTransition = useCallback((currentPieces: UiPiece[]) => {
     const playerPieces = currentPieces.filter((p) => p.ownerIndex === currentPlayer);
+
     if (playerPieces.every((p) => p.hasActed)) {
-      setTimeout(() => setPhase("RECRUITMENT"), 500);
+      // Check if player can recruit (limit 5)
+      if (playerPieces.length >= 5) {
+        console.log("Max units reached, auto-ending turn...");
+        setTimeout(() => endTurn(), 500);
+      } else {
+        setTimeout(() => setPhase("RECRUITMENT"), 500);
+      }
     }
-  }, [currentPlayer]);
+  }, [currentPlayer, endTurn]);
 
   const handleMove = useCallback(
-    (pieceId: string, toQ: number, toR: number) => {
+    async (pieceId: string, toQ: number, toR: number) => {
       // Optimistic update
       setPieces((prev) => {
         const updated = prev.map((p) =>
@@ -242,7 +264,16 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
         checkPhaseTransition(updated);
         return updated;
       });
-      // TODO: Call API to persist move
+
+      try {
+        console.log(`Sending move for ${pieceId} to (${toQ},${toR})`);
+        await movePiece(pieceId, toQ, toR);
+        // Note: The websocket update will overwrite the local state eventually, ensuring synchronization
+      } catch (error) {
+        console.error("Failed to move piece:", error);
+        // Revert optimistic update on error (optional, but good practice)
+        // For now we rely on the next WebSocket update to correct the state
+      }
     },
     [checkPhaseTransition],
   );
@@ -289,12 +320,15 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
         // Call backend API
         await recruitCharacter(gameId, cardId, [availableZone]);
 
+        // Auto End Turn after recruitment
+        await endTurn();
+
         // The game state will be updated via WebSocket
       } catch (error) {
         console.error("Failed to recruit character:", error);
       }
     },
-    [gameId, pieces, river, currentPlayer, phase, playCharacterSelectSfx],
+    [gameId, pieces, river, currentPlayer, phase, playCharacterSelectSfx, endTurn],
   );
 
   const resetGame = () => {
@@ -369,6 +403,8 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
               JOUEUR {currentPlayer + 1} EN LIGNE
             </div>
           </div>
+
+          {/* End Turn Button REMOVED */}
         </div>
       </div>
 
@@ -457,10 +493,13 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
                 turnNumber={turnNumber}
                 onMove={handleMove}
                 selectedPiece={selectedPiece as any}
-                onSelectPiece={(pc) => {
-                  setSelectedPiece(pc as UiPiece);
-                }}
+                onSelectPiece={handlePieceSelect as any}
+                validMoves={validMoves}
+                isTargeting={!!targetingState?.isActive}
+                onTargetClick={handleTargetClick}
               />
+
+            // ...
             </div>
           </div>
         </div>
@@ -493,13 +532,42 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
 
                 <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent my-3" />
 
-                <div className="text-xs font-mono space-y-1.5 uppercase tracking-wide">
+                <div className="text-xs font-mono space-y-1.5 uppercase tracking-wide mb-4">
                   <p className="text-slate-400">COORD : <span className="text-white font-bold ml-1">[{selectedPiece.q}, {selectedPiece.r}]</span></p>
                   <div className={`inline-flex items-center gap-2 px-3 py-1 rounded border overflow-hidden relative ${selectedPiece.hasActed ? "border-rose-500/30 text-rose-400" : "border-emerald-500/30 text-emerald-400"}`}>
                     <div className={`w-2 h-2 rounded-full animate-pulse ${selectedPiece.hasActed ? "bg-rose-500" : "bg-emerald-500"}`} />
                     {selectedPiece.hasActed ? "SYSTÈME : ÉPUISÉ" : "SYSTÈME : PRÊT"}
                   </div>
                 </div>
+
+                {/* ABILITY BUTTON */}
+                {CHARACTER_DATA[selectedPiece.characterId]?.type === "ACTIVE" &&
+                  selectedPiece.ownerIndex === currentPlayer &&
+                  !selectedPiece.hasActed &&
+                  phase === "ACTION" && (
+                    <div className="w-full flex flex-col gap-2">
+                      {targetingState?.isActive ? (
+                        <div className="flex flex-col gap-2 animate-pulse">
+                          <span className="text-cyan-400 font-bold text-xs">
+                            {targetingState.targetId ? "CHOISIR DESTINATION" : "CHOISIR CIBLE"}
+                          </span>
+                          <button
+                            onClick={cancelTargeting}
+                            className="px-4 py-2 bg-rose-500/20 border border-rose-500 text-rose-400 rounded hover:bg-rose-500 hover:text-white transition-colors text-xs font-bold"
+                          >
+                            ANNULER
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleStartAbility}
+                          className="px-4 py-2 bg-cyan-500/20 border border-cyan-500 text-cyan-400 rounded hover:bg-cyan-500 hover:text-black transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] text-xs font-bold"
+                        >
+                          ACTIVER COMPÉTENCE
+                        </button>
+                      )}
+                    </div>
+                  )}
               </div>
             ) : (
               <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8">

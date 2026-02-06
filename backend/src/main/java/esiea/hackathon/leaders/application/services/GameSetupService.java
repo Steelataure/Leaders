@@ -43,7 +43,7 @@ public class GameSetupService {
                     .id(gameId)
                     .mode(GameMode.CLASSIC)
                     .phase(GamePhase.ACTION)
-                    .status(GameStatus.WAITING)
+                    .status(GameStatus.IN_PROGRESS)
                     .currentPlayerIndex(0)
                     .turnNumber(1)
                     .banishmentCount(0)
