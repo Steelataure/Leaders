@@ -10,7 +10,6 @@ esiea\hackathon\leaders\application\strategies\passive\JailerBlockStrategy.class
 esiea\hackathon\leaders\adapter\infrastructure\mappers\PieceMapper.class
 esiea\hackathon\leaders\domain\model\enums\GamePhase.class
 esiea\hackathon\leaders\application\services\ActionService.class
-esiea\hackathon\leaders\application\strategies\actions\GrappleHookAction.class
 esiea\hackathon\leaders\domain\model\enums\AbilityType.class
 esiea\hackathon\leaders\adapter\infrastructure\mappers\AbilityMapper.class
 esiea\hackathon\leaders\application\dto\request\CreateGameRequestDto.class
@@ -20,6 +19,7 @@ esiea\hackathon\leaders\application\services\GameService.class
 esiea\hackathon\leaders\adapter\infrastructure\repository\JpaRecruitmentCardRepository.class
 esiea\hackathon\leaders\usecase\ConnectPlayerUseCase.class
 esiea\hackathon\leaders\domain\model\VictoryCheckResult.class
+esiea\hackathon\leaders\application\strategies\action\GrappleHookAction.class
 esiea\hackathon\leaders\application\strategies\movement\RoyalGuardStrategy.class
 esiea\hackathon\leaders\domain\model\HexCoord.class
 esiea\hackathon\leaders\domain\repository\RefCharacterRepository.class

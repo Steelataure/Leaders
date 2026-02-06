@@ -6,13 +6,24 @@ import Rules from "./pages/Rules";
 
 function App() {
   const [step, setStep] = useState("home"); // "home", "lobby", ou "game"
+  const [gameId, setGameId] = useState<string | null>(null);
 
-  if (step === "game") {
-    return <Game onBackToLobby={() => setStep("lobby")} />;
+  const handleStartGame = (id: string) => {
+    setGameId(id);
+    setStep("game");
+  };
+
+  const handleBackToLobby = () => {
+    setGameId(null);
+    setStep("lobby");
+  };
+
+  if (step === "game" && gameId) {
+    return <Game gameId={gameId} onBackToLobby={handleBackToLobby} />;
   }
 
   if (step === "lobby") {
-    return <Lobby onStartGame={() => setStep("game")} onOpenRules={() => setStep("rules")} />;
+    return <Lobby onStartGame={handleStartGame} onOpenRules={() => setStep("rules")} />;
   }
 
   if (step === "rules") {

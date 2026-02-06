@@ -2,6 +2,7 @@ package esiea.hackathon.leaders.application.services;
 
 import esiea.hackathon.leaders.application.strategies.ActionAbilityStrategy;
 import esiea.hackathon.leaders.application.strategies.action.ActionFactory;
+import esiea.hackathon.leaders.application.strategies.action.NemesisBehavior;
 import esiea.hackathon.leaders.application.strategies.passive.JailerBlockStrategy;
 import esiea.hackathon.leaders.application.strategies.passive.PassiveFactory;
 import esiea.hackathon.leaders.application.strategies.passive.ProtectorShieldStrategy;
@@ -9,6 +10,8 @@ import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.model.VictoryCheckResult;
+import esiea.hackathon.leaders.domain.model.enums.GameStatus;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
@@ -16,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +32,8 @@ public class ActionService {
     private final ActionFactory actionFactory;
     private final PassiveFactory passiveFactory;
     private final GameRepository gameRepository;
+    private final NemesisBehavior nemesisBehavior;
+    private final VictoryService victoryService; // 🆕 Injection pour Scénario 7
 
     @Transactional
     public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination) {
@@ -94,6 +100,65 @@ public class ActionService {
         if (target != null) {
             pieceRepository.save(target);
         }
+
+        // 🆕 SCÉNARIO 5 : Trigger Némésis si un Leader a été déplacé par une capacité
+        // Recharger les pièces car les positions ont pu changer
+        List<PieceEntity> updatedPieces = pieceRepository.findByGameId(source.getGameId());
+        
+        // Vérifier si la SOURCE est un Leader qui a bougé (ex: Illusionniste swap avec Leader)
+        triggerNemesisIfLeaderMoved(source, updatedPieces);
+        
+        // Vérifier si la CIBLE est un Leader qui a été déplacé (ex: Manipulatrice, Grappler, Cogneur)
+        if (target != null) {
+            triggerNemesisIfLeaderMoved(target, updatedPieces);
+        }
+
+        // 🆕 SCÉNARIO 7 : Vérification de victoire IMMÉDIATE après chaque capacité
+        // Cela permet à l'Assassin (seul) ou à l'Archère (à distance 2) de déclencher la victoire
+        // même si le déplacement vient d'une capacité (Illusionniste swap, Manipulatrice move, etc.)
+        checkAndApplyVictory(game);
+    }
+
+    /**
+     * 🆕 SCÉNARIO 7 : Vérifie si une condition de victoire est remplie et termine la partie si nécessaire.
+     * Appelé après chaque mouvement et chaque action.
+     * - Assassin adjacent au Leader = 2 points (capture solo immédiate)
+     * - Archère à distance 2 du Leader = 1 point (aide à la capture)
+     */
+    private void checkAndApplyVictory(GameEntity game) {
+        VictoryCheckResult result = victoryService.checkVictory(game.getId());
+        
+        if (result.isGameOver()) {
+            game.setStatus(GameStatus.FINISHED);
+            game.setWinnerPlayerIndex(result.winnerPlayerIndex());
+            game.setWinnerVictoryType(result.victoryType());
+            game.setUpdatedAt(LocalDateTime.now());
+            gameRepository.save(game);
+        }
+    }
+
+    // --- Trigger Némésis (Scénario 5) ---
+
+    /**
+     * Déclenche la réaction de la Némésis ennemie si un Leader vient de bouger.
+     * La Némésis se déplace de 2 cases vers le Leader adverse.
+     */
+    private void triggerNemesisIfLeaderMoved(PieceEntity movedPiece, List<PieceEntity> allPieces) {
+        // Seul le mouvement d'un Leader déclenche la Némésis
+        if (!"LEADER".equals(movedPiece.getCharacterId())) {
+            return;
+        }
+
+        // Trouver la Némésis de l'équipe adverse
+        allPieces.stream()
+                .filter(p -> "NEMESIS".equals(p.getCharacterId()))
+                .filter(p -> !p.getOwnerIndex().equals(movedPiece.getOwnerIndex())) // Némésis ennemie
+                .findFirst()
+                .ifPresent(nemesis -> {
+                    // La Némésis réagit et se déplace de 2 cases vers le Leader
+                    nemesisBehavior.react(nemesis, movedPiece, allPieces);
+                    pieceRepository.save(nemesis);
+                });
     }
 
     // --- Helpers Passifs ---
