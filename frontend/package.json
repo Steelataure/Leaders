@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "cross-env NODE_OPTIONS=\"--import tsx\" cucumber-js --import features/hooks.ts --import \"features/step_definitions/**/*.ts\" --format progress --format html:cucumber-report.html",
+    "test:e2e:headed": "cross-env HEADLESS=false npm run test:e2e",
+    "test:e2e:debug": "cross-env PWDEBUG=1 npm run test:e2e",
+    "test:e2e:smoke": "npm run test:e2e -- --tags \"@smoke\"",
+    "test:e2e:report": "start cucumber-report.html",
+    "test:e2e:codegen": "playwright codegen http://localhost:5173/"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -22,15 +28,20 @@
     "use-sound": "^5.0.0"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^12.6.0",
     "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
+    "@playwright/test": "^1.58.1",
+    "@types/node": "^24.10.11",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.3.1"
