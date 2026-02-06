@@ -11,7 +11,7 @@ build-back:
   script:
     - cd backend
     - docker build -t registry.esiea.fr/back .
-    - echo "Image Backend construite pour le main"
+    - echo "Image Backend construite"
   only:
     - main
 
@@ -24,16 +24,16 @@ build-front:
   script:
     - cd frontend
     - docker build -t registry.esiea.fr/front .
-    - echo "Image Frontend construite pour le main"
+    - echo "Image Frontend construite"
   only:
     - main
 
-# 3. Déploiement automatique vers esiea.cloud
+# 3. Déploiement vers esiea.cloud (CORRIGÉ)
 deploy-to-cloud:
   stage: deploy
   script:
-    # On utilise les variables définies dans GitLab
-    - curl -X POST -H "Authorization: Bearer $BACK_ESIEA_TOKEN" https://api.esiea.cloud/deploy-back
-    - curl -X POST -H "Authorization: Bearer $FRONT_ESIEA_TOKEN" https://api.esiea.cloud/deploy-front
+    - |
+      curl -X POST -H "Authorization: Bearer $BACK_ESIEA_TOKEN" https://api.esiea.cloud/deploy-back
+      curl -X POST -H "Authorization: Bearer $FRONT_ESIEA_TOKEN" https://api.esiea.cloud/deploy-front
   only:
     - main
