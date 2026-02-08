@@ -3,6 +3,7 @@
 .env
 .env.local
 .idea
+target/
 
 # --- LOGS ---
 # Historique des erreurs des conteneurs
