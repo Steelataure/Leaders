@@ -33,6 +33,7 @@ public class GameMapper {
                 .currentPlayerIndex(entity.getCurrentPlayerIndex())
                 .turnNumber(entity.getTurnNumber())
                 .banishmentCount(entity.getBanishmentCount())
+                .hasRecruitedThisTurn(entity.isHasRecruitedThisTurn())
                 .winnerPlayerIndex(entity.getWinnerPlayerIndex())
                 .winnerVictoryType(entity.getWinnerVictoryType())
                 .players(players)
@@ -51,6 +52,7 @@ public class GameMapper {
                 .currentPlayerIndex(domain.getCurrentPlayerIndex())
                 .turnNumber(domain.getTurnNumber())
                 .banishmentCount(domain.getBanishmentCount())
+                .hasRecruitedThisTurn(domain.isHasRecruitedThisTurn())
                 .winnerPlayerIndex(domain.getWinnerPlayerIndex())
                 .winnerVictoryType(domain.getWinnerVictoryType())
                 .build();

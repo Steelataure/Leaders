@@ -50,6 +50,10 @@ public class Session {
         this.status = SessionStatus.ACTIVE;
     }
 
+    public void finish() {
+        this.status = SessionStatus.FINISHED;
+    }
+
     public boolean isPrivate() {
         return isPrivate;
     }

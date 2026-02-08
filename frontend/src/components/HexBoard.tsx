@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   generateBoard,
   getHexagonPoints,
@@ -167,14 +167,18 @@ function PieceComponent({
   };
 
   return (
-    <g onClick={handleClick} style={{ cursor: "pointer" }} opacity={piece.hasActed ? 0.6 : 1}>
+    <g onClick={handleClick} style={{ cursor: "pointer" }}>
       <defs>
         <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="4" result="coloredBlur" />
           <feMerge>
             <feMergeNode in="coloredBlur" />
+            <feMergeNode in="coloredBlur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
+        </filter>
+        <filter id="grayscale">
+          <feColorMatrix type="matrix" values="0.33 0.33 0.33 0 0 0.33 0.33 0.33 0 0 0.33 0.33 0.33 0 0 0 0 0 1 0" />
         </filter>
         <clipPath id={clipId}>
           <circle cx={x} cy={y} r={radius - 3} />
@@ -217,6 +221,7 @@ function PieceComponent({
         stroke={isAbilityTarget ? targetColor : isBlocked ? "#ef4444" : isProtected ? "#22c55e" : color}
         strokeWidth={isAbilityTarget ? 4 : isLeader ? 4 : 3}
         filter={`url(#${glowId})`}
+        opacity={piece.hasActed ? 0.6 : 1}
       />
 
       <image
@@ -227,6 +232,8 @@ function PieceComponent({
         height={(radius - 3) * 2}
         clipPath={`url(#${clipId})`}
         preserveAspectRatio="xMidYMid slice"
+        style={{ filter: piece.hasActed ? "grayscale(100%) brightness(70%)" : "none" }}
+        opacity={piece.hasActed ? 0.6 : 1}
       />
 
       {isLeader && <g transform={`translate(${x}, ${y - radius - 8})`}><CrownIcon color={color} /></g>}
@@ -236,9 +243,18 @@ function PieceComponent({
       {isProtected && !isProtector && <g transform={`translate(${x + radius - 8}, ${y + radius - 8})`}><ShieldIcon /></g>}
 
       {piece.hasActed && (
-        <g transform={`translate(${x + radius - 5}, ${y - radius + 5})`}>
-          <circle r="8" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
-          <text y="3.5" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">✓</text>
+        <g transform={`translate(${x}, ${y})`}>
+          <circle r={radius} fill="rgba(0,0,0,0.5)" />
+          {/* Logo validé (cadenas/coche) - Ici on met le cadenas pour uniformité */}
+          <text
+            x="0"
+            y="5"
+            textAnchor="middle"
+            fontSize="24"
+            style={{ filter: "drop-shadow(0px 0px 4px rgba(0,0,0,0.8))" }}
+          >
+            🔒
+          </text>
         </g>
       )}
     </g>
@@ -270,7 +286,6 @@ export default function HexBoard({
   onInnkeeperTargetSelect,
   isLocalTurn = true,
 }: HexBoardProps) {
-  const [hoveredCell, setHoveredCell] = useState<HexCell | null>(null);
   const [playBoardPlacementSfx] = useSound(boardPlacementSfx);
   const [playPawnSelectSfx] = useSound(pawnSelectSfx);
   const cells = useMemo(() => generateBoard(SVG_WIDTH / 2, SVG_HEIGHT / 2), []);
@@ -330,7 +345,8 @@ export default function HexBoard({
 
   // Movement calculation
   const validMoves = useMemo(() => {
-    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTIONS" || !isLocalTurn) return new Set<string>();
+    // Si ce n'est pas mon tour, ou si la pièce n'est pas à moi, ou si elle a déjà joué, pas de mouvement.
+    if (!selectedPiece || selectedPiece.ownerIndex !== currentPlayer || selectedPiece.hasActed || phase !== "ACTIONS" || !isLocalTurn) return new Set<string>();
     const moves = new Set<string>();
 
     if (selectedPiece.characterId === "PROWLER") {
@@ -498,9 +514,11 @@ export default function HexBoard({
   };
 
   const handlePieceSelect = (piece: PieceFrontend) => {
-    if (!isLocalTurn || piece.characterId === "NEMESIS") return;
-    if (piece.ownerIndex !== currentPlayer || phase !== "ACTIONS" || piece.hasActed) return;
+    // On autorise la sélection de n'importe quelle pièce pour voir ses infos (Scanner)
+    // Sauf Némésis qui est spéciale (à voir si on veut l'autoriser aussi plus tard)
+    if (piece.characterId === "NEMESIS") return;
 
+    // Jouer le son si changement de sélection
     if (selectedPiece?.id !== piece.id) playPawnSelectSfx();
 
     onSelectPiece(selectedPiece?.id === piece.id ? null : piece);

@@ -17,7 +17,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/games/{gameId}")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ActionController {
 
     private final MovementService movementService;

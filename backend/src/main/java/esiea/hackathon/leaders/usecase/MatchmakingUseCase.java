@@ -4,10 +4,8 @@ import esiea.hackathon.leaders.application.services.GameSetupService;
 import esiea.hackathon.leaders.domain.Session;
 import esiea.hackathon.leaders.domain.SessionRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Bean;
 
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RequiredArgsConstructor
 public class MatchmakingUseCase {
@@ -16,24 +14,28 @@ public class MatchmakingUseCase {
     private final ConnectPlayerUseCase connectPlayerUseCase;
     private final GameSetupService gameSetupService;
 
-    // Lock map to prevent race conditions for the same player
-    private final ConcurrentHashMap<String, Object> playerLocks = new ConcurrentHashMap<>();
+    // Global lock for matchmaking to prevent multiple players from joining the same
+    // session simultaneously
+    private static final Object GLOBAL_MATCHMAKING_LOCK = new Object();
 
     public Session findOrCreatePublicSession(String playerId) {
-        // Synchronize on player ID to ensure sequential processing of requests
-        Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+        synchronized (GLOBAL_MATCHMAKING_LOCK) {
 
-        synchronized (lock) {
             System.out.println("DEBUG: Matchmaking request for player: " + playerId);
 
             // 0. Check if player is already in a session
             // This prevents creating a second session if the first request succeeded
             // locally but the frontend retried
+            // 0. Only rejoin if in a WAITING session (handles UI retries/page refresh while
+            // in queue)
+            // If the session is ACTIVE, we allow the player to find a NEW match
+            // unless they specifically want to reconnect (handled by another logic)
             Optional<Session> currentSession = sessionRepository.findAll().stream()
-                    .filter(s -> s.getPlayer1().getId().equals(playerId)
-                            || (s.getPlayer2() != null && s.getPlayer2().getId().equals(playerId)))
-                    .filter(s -> s.getStatus() == Session.SessionStatus.WAITING_FOR_PLAYER
-                            || s.getStatus() == Session.SessionStatus.ACTIVE)
+                    .filter(s -> s != null && s.getPlayer1() != null)
+                    .filter(s -> (s.getPlayer1().getId() != null && s.getPlayer1().getId().equals(playerId))
+                            || (s.getPlayer2() != null && s.getPlayer2().getId() != null
+                                    && s.getPlayer2().getId().equals(playerId)))
+                    .filter(s -> s.getStatus() == Session.SessionStatus.WAITING_FOR_PLAYER)
                     .findFirst();
 
             if (currentSession.isPresent()) {
@@ -59,13 +61,22 @@ public class MatchmakingUseCase {
                         System.out.println("DEBUG: No suitable session found. Creating new one for player " + playerId);
                         return createGameSessionUseCase.createSession(false, playerId);
                     }
-                } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-                    System.out.println("DEBUG: Optimistic locking failure. Retrying...");
+                } catch (Exception e) {
+                    System.err.println("CRITICAL Matchmaking error during attempt " + i + ": " + e.getMessage());
+                    e.printStackTrace();
+
+                    if (e instanceof org.springframework.orm.ObjectOptimisticLockingFailureException) {
+                        System.out.println("DEBUG: Optimistic locking failure. Retrying...");
+                    } else {
+                        throw new RuntimeException("Matchmaking failed: " + e.getMessage(), e);
+                    }
 
                     // Re-check if player actually joined despite the exception
                     Optional<Session> recheckSession = sessionRepository.findAll().stream()
-                            .filter(s -> s.getPlayer1().getId().equals(playerId)
-                                    || (s.getPlayer2() != null && s.getPlayer2().getId().equals(playerId)))
+                            .filter(s -> s != null && s.getPlayer1() != null)
+                            .filter(s -> (s.getPlayer1().getId() != null && s.getPlayer1().getId().equals(playerId))
+                                    || (s.getPlayer2() != null && s.getPlayer2().getId() != null
+                                            && s.getPlayer2().getId().equals(playerId)))
                             .filter(s -> s.getStatus() == Session.SessionStatus.WAITING_FOR_PLAYER
                                     || s.getStatus() == Session.SessionStatus.ACTIVE)
                             .findFirst();
@@ -108,12 +119,25 @@ public class MatchmakingUseCase {
         }
     }
 
-    @Bean
-    public MatchmakingUseCase matchmakingUseCase(
-            SessionRepository sessionRepository,
-            CreateGameSessionUseCase createGameSessionUseCase,
-            ConnectPlayerUseCase connectPlayerUseCase,
-            GameSetupService gameSetupService) {
-        return new MatchmakingUseCase(sessionRepository, createGameSessionUseCase, connectPlayerUseCase, gameSetupService);
+    public void removePlayerFromQueue(String playerId) {
+        synchronized (GLOBAL_MATCHMAKING_LOCK) {
+            System.out.println("DEBUG: Removing player " + playerId + " from queue");
+            sessionRepository.findAll().stream()
+                    .filter(s -> s.getStatus() == Session.SessionStatus.WAITING_FOR_PLAYER)
+                    .filter(s -> s.getPlayer1() != null && s.getPlayer1().getId().equals(playerId))
+                    .findFirst()
+                    .ifPresent(session -> {
+                        System.out.println("DEBUG: Found waiting session " + session.getId() + " for player " + playerId
+                                + ". Marking as FINISHED (cancelled).");
+                        session.finish();
+                        // Note: In a real DB we would delete it, but marking as FINISHED is safer for
+                        // in-memory
+                        // to avoid concurrent modification issues if we tried to remove from the map
+                        // directly
+                        // without a repository delete method.
+                        // Actually sessionRepository has no delete.
+                        // Marking as FINISHED effectively removes it from "WAITING_FOR_PLAYER" queries.
+                    });
+        }
     }
 }

@@ -6,6 +6,7 @@ import esiea.hackathon.leaders.domain.model.VictoryCheckResult;
 import esiea.hackathon.leaders.domain.model.enums.GameStatus;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
+import esiea.hackathon.leaders.domain.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class GameService {
     private final GameRepository gameRepository;
     private final PieceRepository pieceRepository;
     private final VictoryService victoryService;
+    private final SessionRepository sessionRepository;
 
     @Transactional
     public GameEntity endTurn(UUID gameId) {
@@ -56,11 +58,34 @@ public class GameService {
 
             // C. Réinitialiser les actions des pièces pour le prochain tour
             resetPiecesActions(gameId);
+
+            // D. Réinitialiser le flag de recrutement
+            game.setHasRecruitedThisTurn(false);
         }
 
         // 3. Mise à jour timestamp et sauvegarde
         game.setUpdatedAt(LocalDateTime.now());
-        return gameRepository.save(game);
+        GameEntity savedGame = gameRepository.save(game);
+
+        if (victoryResult.isGameOver()) {
+            updateSessionStatusToFinished(gameId);
+        }
+
+        return savedGame;
+    }
+
+    private void updateSessionStatusToFinished(UUID gameId) {
+        try {
+            // GameID is the same as SessionID
+            sessionRepository.findById(gameId.toString()).ifPresent(session -> {
+                if (session.getStatus() == esiea.hackathon.leaders.domain.Session.SessionStatus.ACTIVE) {
+                    session.finish();
+                    System.out.println("DEBUG: Session " + gameId + " marked as FINISHED.");
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Error updating session status: " + e.getMessage());
+        }
     }
 
     /**

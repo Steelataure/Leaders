@@ -19,7 +19,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // More robust for newer Spring Boot versions
+                .setAllowedOrigins("http://localhost:5173", "http://localhost:3000") // Explicit origins to fix
+                                                                                     // IllegalArgumentException
                 .withSockJS();
     }
 }

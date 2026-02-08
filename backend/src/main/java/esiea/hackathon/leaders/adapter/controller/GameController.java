@@ -16,7 +16,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/games")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class GameController {
 
     private final GameSetupService setupService;

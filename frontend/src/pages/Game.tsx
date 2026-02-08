@@ -248,9 +248,11 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string; onBack
 
   const spawnCells = useMemo(() => {
     if (!gameState) return [];
+    // P0 (Bleu) est maintenant en BAS -> Spawn zones du BAS (q négatif, r positif)
+    // P1 (Rouge) est maintenant en HAUT -> Spawn zones du HAUT (q positif, r négatif)
     return gameState.currentPlayerIndex === 0
-      ? [{ q: 3, r: -2 }, { q: 2, r: -3 }, { q: 3, r: -3 }]
-      : [{ q: -3, r: 2 }, { q: -2, r: 3 }, { q: -3, r: 3 }];
+      ? [{ q: -3, r: 2 }, { q: -2, r: 3 }, { q: -3, r: 3 }]
+      : [{ q: 3, r: -2 }, { q: 2, r: -3 }, { q: 3, r: -3 }];
   }, [gameState?.currentPlayerIndex]);
 
   const availableSpawnCells = useMemo(() => {
@@ -633,6 +635,9 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string; onBack
                 )}
               </div>
               <h3 className="font-cyber text-2xl font-bold text-amber-400 mb-2">{CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}</h3>
+              <p className="text-[11px] text-slate-300 mb-3 text-center leading-tight px-2 italic">
+                "{CHARACTER_DATA[selectedPiece.characterId]?.description || "Aucune description"}"
+              </p>
               <p className="text-[10px] text-slate-500 mb-4 tracking-widest uppercase">COORD: [{selectedPiece.q}, {selectedPiece.r}]</p>
               <div className={`px-4 py-1 rounded-full border text-[10px] font-bold ${selectedPiece.hasActed ? "border-rose-500/30 text-rose-400" : "border-emerald-500/30 text-emerald-400"}`}>
                 {selectedPiece.hasActed ? "ÉPUISÉ" : "PRÊT"}

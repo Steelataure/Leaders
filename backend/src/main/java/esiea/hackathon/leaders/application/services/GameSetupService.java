@@ -116,23 +116,23 @@ public class GameSetupService {
     }
 
     private void placeLeaders(UUID gameId) {
-        // Placement du Leader Joueur 0 (En haut : 0, -3)
+        // Placement du Leader Joueur 0 (BLEU) -> MAINTENANT EN BAS (0, 3)
         PieceEntity leaderP1 = PieceEntity.builder()
                 .gameId(gameId)
                 .characterId("LEADER")
                 .ownerIndex((short) 0)
                 .q((short) 0)
-                .r((short) -3)
+                .r((short) 3)
                 .hasActedThisTurn(false)
                 .build();
 
-        // Placement du Leader Joueur 1 (En bas : 0, 3)
+        // Placement du Leader Joueur 1 (ROUGE) -> MAINTENANT EN HAUT (0, -3)
         PieceEntity leaderP2 = PieceEntity.builder()
                 .gameId(gameId)
                 .characterId("LEADER")
                 .ownerIndex((short) 1)
                 .q((short) 0)
-                .r((short) 3)
+                .r((short) -3)
                 .hasActedThisTurn(false)
                 .build();
 

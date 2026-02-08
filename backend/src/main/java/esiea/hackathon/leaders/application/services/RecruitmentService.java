@@ -36,6 +36,11 @@ public class RecruitmentService {
             throw new IllegalStateException("Action refusée : Ce n'est pas le tour du joueur " + playerIndex);
         }
 
+        // 2b. SÉCURITÉ : Limite de recrutement par tour
+        if (game.isHasRecruitedThisTurn()) {
+            throw new IllegalStateException("Recrutement impossible : Vous avez déjà recruté ce tour-ci.");
+        }
+
         RecruitmentCardEntity card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("Card not found"));
 
@@ -51,7 +56,8 @@ public class RecruitmentService {
         // 4. 👇 VERIFICATION DE LA LIMITE (Max 5 pièces) - AJOUT IMPORTANT 👇
         // ==================================================================================
 
-        // A. Combien de pièces cette carte va-t-elle ajouter ? (1 normalement, 2 pour l'Ours)
+        // A. Combien de pièces cette carte va-t-elle ajouter ? (1 normalement, 2 pour
+        // l'Ours)
         String characterId = card.getCharacter().getId();
         int piecesToAdd = "OLD_BEAR".equals(characterId) ? 2 : 1;
 
@@ -65,7 +71,6 @@ public class RecruitmentService {
             throw new IllegalArgumentException("Recruitment failed: You cannot exceed the limit of 5 units.");
         }
         // ==================================================================================
-
 
         // 5. Logique de Création des Pièces
         List<PieceEntity> createdPieces = new ArrayList<>();
@@ -88,6 +93,10 @@ public class RecruitmentService {
         card.setVisibleSlot(null);
         cardRepository.save(card);
 
+        // 6b. Marquer que le joueur a recruté ce tour-ci
+        game.setHasRecruitedThisTurn(true);
+        gameRepository.save(game);
+
         // 7. Remplissage de la rivière
         refillRiver(gameId, emptySlot);
 
@@ -98,7 +107,8 @@ public class RecruitmentService {
 
     private void validatePlacementCount(List<HexCoord> placements, int expected) {
         if (placements == null || placements.size() != expected) {
-            throw new IllegalArgumentException("Recruitment requires exactly " + expected + " placement coordinate(s).");
+            throw new IllegalArgumentException(
+                    "Recruitment requires exactly " + expected + " placement coordinate(s).");
         }
     }
 
@@ -124,7 +134,8 @@ public class RecruitmentService {
     }
 
     private void refillRiver(UUID gameId, Integer slotToFill) {
-        if (slotToFill == null) return;
+        if (slotToFill == null)
+            return;
 
         cardRepository.findNextCardInDeck(gameId)
                 .ifPresent(nextCard -> {

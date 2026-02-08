@@ -13,7 +13,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class GameEntity {
     private UUID id;
     private GameMode mode;
@@ -24,6 +27,7 @@ public class GameEntity {
     private Integer winnerPlayerIndex;
     private VictoryType winnerVictoryType;
     private int banishmentCount;
+    private boolean hasRecruitedThisTurn;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<GamePlayerEntity> players;

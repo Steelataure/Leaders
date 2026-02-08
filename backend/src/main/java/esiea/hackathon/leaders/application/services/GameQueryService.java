@@ -70,6 +70,7 @@ public class GameQueryService {
                                 game.getPhase(),
                                 game.getCurrentPlayerIndex(),
                                 game.getTurnNumber(),
+                                game.isHasRecruitedThisTurn(),
                                 game.getWinnerPlayerIndex(),
                                 game.getWinnerVictoryType(),
                                 pieces,

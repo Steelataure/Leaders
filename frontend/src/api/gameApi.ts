@@ -260,6 +260,15 @@ export async function joinPublicQueue(playerId: string): Promise<Session> {
   return res.json();
 }
 
+export async function cancelSearch(playerId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/sessions/matchmaking/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ playerId }),
+  });
+  if (!res.ok) throw new Error("Failed to cancel search");
+}
+
 export async function createPrivateSession(): Promise<Session> {
   const res = await fetch(`${BASE_URL}/sessions/private`, {
     method: "POST",

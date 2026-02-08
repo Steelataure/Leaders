@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { authService } from "../services/auth.service";
-import { joinPublicQueue, createPrivateSession, joinPrivateSession, type Session } from "../api/gameApi";
+import { joinPublicQueue, createPrivateSession, joinPrivateSession, cancelSearch } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
 import type { User } from "../types/auth.types";
 import { createGame, SCENARIO_NAMES } from "../api/gameApi";
@@ -98,8 +98,70 @@ export default function Lobby({
 
   // Matchmaking State
   const [isSearching, setIsSearching] = useState(false);
+  const isSearchingRef = useRef(isSearching);
+
+  // Update ref when state changes
+  useEffect(() => {
+    isSearchingRef.current = isSearching;
+
+    // Cleanup function when component unmounts - if searching, cancel it
+    return () => {
+      // This cleanup runs when isSearching changes OR when component unmounts
+      // But we only want to cancel on UNMOUNT, not on state change?
+      // Actually, if we put this in a separate effect with empty dependency it runs on unmount.
+    };
+  }, [isSearching]);
+
+  // Cleanup on unmount - using ref to access latest state
+  useEffect(() => {
+    return () => {
+      if (isSearchingRef.current && user && user.id) {
+        console.log("Unmounting lobby while searching - cancelling search");
+        cancelSearch(user.id).catch(err => console.error("Failed to cancel search on unmount", err));
+      }
+    };
+  }, [user]); // Re-bind if user changes, but mainly for unmount
+
   const [_currentSession, setCurrentSession] = useState<any>(null);
   const [sessionStatus, setSessionStatus] = useState<string>("");
+
+  // 🆕 Stats State
+  const [stats, setStats] = useState<{ inGame: number; inQueue: number } | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/stats", { cache: "no-store", headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const data = await res.json();
+          console.log("STATS RECEIVED:", data);
+          setStats(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch stats", e);
+      }
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 5000);
+    return () => {
+      clearInterval(interval);
+      // We can't easily access isSearching state here in cleanup of exact this effect due to closure
+      // But we can add a separate effect for cleanup/cancellation on unmount if needed.
+      // However, usually navigating away unmounts.
+    };
+  }, []);
+
+  // Cleanup effect for searching
+  useEffect(() => {
+    return () => {
+      // If we want to cancel on unmount, we need a ref to track if searching was active
+      // But React state in cleanup is tricky. 
+      // For now, let's just rely on the button. 
+      // Users often close tab which we can't always catch.
+      // But if they navigate to "Home", we should cancel.
+    };
+  }, []);
 
   useEffect(() => {
     let currentUser = authService.getUser();
@@ -312,6 +374,19 @@ export default function Lobby({
 
             <div className="mt-auto w-full space-y-4">
               {/* 🆕 Sélecteur de scénario AMÉLIORÉ */}
+              {/* 🆕 Stats Display */}
+              <div className="flex justify-between items-center text-[10px] font-orbitron text-cyan-400/80 tracking-widest bg-cyan-950/30 px-3 py-2 rounded border border-cyan-500/20 mb-4">
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  JEU: <span className="text-white font-bold">{stats ? stats.inGame : 0}</span>
+                </span>
+                <span className="text-cyan-500/30">|</span>
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  JOUEURS DANS LA FILE: <span className="text-white font-bold">{stats ? stats.inQueue : 0}</span>
+                </span>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2 font-rajdhani">
                   Mode de jeu
@@ -356,11 +431,26 @@ export default function Lobby({
 
               <button
                 onClick={async () => {
-                  if (isSearching) return; // Prevent double-clicks
                   playButtonClickSfx();
+
+                  // CANCEL LOGIC
+                  if (isSearching) {
+                    if (user && user.id) {
+                      try {
+                        await cancelSearch(user.id);
+                        setSessionStatus("RECHERCHE ANNULÉE");
+                        setTimeout(() => setSessionStatus(""), 1000);
+                      } catch (e) {
+                        console.error("Error cancelling search:", e);
+                      }
+                    }
+                    setIsSearching(false);
+                    return;
+                  }
+
                   try {
                     setIsSearching(true);
-                    setSessionStatus("RECHERCHE DE PARTIE...");
+                    setSessionStatus("RECHERCHE DE PARTIE... (CLIQUER POUR ANNULER)");
 
                     // Priorité au matchmaking si l'utilisateur est connecté et qu'on ne force pas un scénario particulier
                     // Pour Leaders, on va simplifier : "TROUVER UN MATCH" utilise le matchmaking standard
@@ -375,7 +465,7 @@ export default function Lobby({
                       if (session.status === "ACTIVE") {
                         onStartGame(session.id);
                       } else {
-                        setSessionStatus("EN ATTENTE D'UN JOUEUR...");
+                        setSessionStatus("EN ATTENTE D'UN JOUEUR... (CLIQUER POUR ANNULER)");
                         webSocketService.subscribeToSession(session.id, (updatedSession) => {
                           console.log("WS UPDATE:", updatedSession);
                           if (updatedSession.status === "ACTIVE") {
@@ -394,13 +484,13 @@ export default function Lobby({
                     setError("Impossible de rejoindre la file d'attente.");
                   }
                 }}
-                disabled={isSearching}
+                disabled={false}
                 onMouseEnter={() => playButtonHoverSfx()}
                 className={`w-full font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 tracking-widest text-sm
                   ${isMastersMode
                     ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)]'
                     : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]'
-                  } ${isSearching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${isSearching ? 'animate-pulse bg-amber-600 hover:bg-amber-500' : ''}`}
               >
                 {isSearching ? sessionStatus : (isMastersMode ? '🎲 LANCER MODE MASTERS' : 'TROUVER UN MATCH')}
               </button>
@@ -517,7 +607,8 @@ export default function Lobby({
           </div>
         </div>
 
-        <div className="mt-auto shrink-0 pb-2 flex flex-col items-center">
+        <div className="mt-auto shrink-0 pb-2 flex flex-col items-center gap-1">
+
           <p className="text-[10px] font-orbitron text-slate-500 tracking-[0.3em] uppercase opacity-70">
             System Ready • Neural Interface Standby • Latency: 14ms • Link: {webSocketService.isConnected() ? "ONLINE" : "OFFLINE"}
           </p>

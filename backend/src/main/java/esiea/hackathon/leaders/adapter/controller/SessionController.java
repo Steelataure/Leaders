@@ -5,7 +5,7 @@ import esiea.hackathon.leaders.domain.SessionRepository;
 import esiea.hackathon.leaders.usecase.CreateGameSessionUseCase;
 import esiea.hackathon.leaders.usecase.JoinPrivateSessionUseCase;
 import esiea.hackathon.leaders.usecase.MatchmakingUseCase;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,34 +14,44 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/sessions")
-@CrossOrigin(origins = "*")
 public class SessionController {
 
     private final MatchmakingUseCase matchmakingUseCase;
     private final CreateGameSessionUseCase createGameSessionUseCase;
     private final JoinPrivateSessionUseCase joinPrivateSessionUseCase;
     private final SessionRepository sessionRepository;
-    private final SimpMessagingTemplate messagingTemplate;
 
     public SessionController(MatchmakingUseCase matchmakingUseCase,
             CreateGameSessionUseCase createGameSessionUseCase,
             JoinPrivateSessionUseCase joinPrivateSessionUseCase,
-            SessionRepository sessionRepository,
-            SimpMessagingTemplate messagingTemplate) {
+            SessionRepository sessionRepository) {
         this.matchmakingUseCase = matchmakingUseCase;
         this.createGameSessionUseCase = createGameSessionUseCase;
         this.joinPrivateSessionUseCase = joinPrivateSessionUseCase;
         this.sessionRepository = sessionRepository;
-        this.messagingTemplate = messagingTemplate;
     }
 
     @PostMapping("/matchmaking")
-    public ResponseEntity<Session> joinPublicQueue(@RequestBody(required = false) Map<String, String> body) {
-        String playerId = (body != null) ? body.get("playerId") : null;
-        Session session = matchmakingUseCase.findOrCreatePublicSession(playerId);
-        // notifySessionUpdate(session); // Redundant: ConnectPlayerUseCase already
-        // notifies
-        return ResponseEntity.ok(session);
+    public ResponseEntity<?> joinPublicQueue(@RequestBody(required = false) Map<String, String> body) {
+        try {
+            String playerId = (body != null) ? body.get("playerId") : null;
+            Session session = matchmakingUseCase.findOrCreatePublicSession(playerId);
+            return ResponseEntity.ok(session);
+        } catch (Exception e) {
+            System.err.println("FATAL: Matchmaking endpoint failed: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/matchmaking/cancel")
+    public ResponseEntity<?> cancelSearch(@RequestBody Map<String, String> body) {
+        String playerId = body.get("playerId");
+        if (playerId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "playerId is required"));
+        }
+        matchmakingUseCase.removePlayerFromQueue(playerId);
+        return ResponseEntity.ok(Map.of("message", "Search cancelled"));
     }
 
     @PostMapping("/private")
@@ -75,13 +85,20 @@ public class SessionController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private void notifySessionUpdate(Session session) {
-        // Notify subscribers of this session (e.g. waiting player)
-        messagingTemplate.convertAndSend("/topic/session/" + session.getId(), session);
-    }
-
     @GetMapping("/debug")
-    public ResponseEntity<java.util.List<Session>> getAllSessions() {
-        return ResponseEntity.ok(sessionRepository.findAll());
+    public ResponseEntity<java.util.List<Map<String, Object>>> getAllSessions() {
+        java.util.List<Map<String, Object>> debugInfo = sessionRepository.findAll().stream()
+                .map(s -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("id", s.getId());
+                    map.put("status", s.getStatus());
+                    map.put("private", s.isPrivate());
+                    map.put("code", s.getCode());
+                    map.put("player1", s.getPlayer1() != null ? s.getPlayer1().getId() : "null");
+                    map.put("player2", s.getPlayer2() != null ? s.getPlayer2().getId() : "null");
+                    return map;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(debugInfo);
     }
 }
