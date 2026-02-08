@@ -1,9 +1,10 @@
 package esiea.hackathon.leaders.usecase;
 
-import esiea.hackathon.leaders.domain.Player;
 import esiea.hackathon.leaders.domain.Session;
 import esiea.hackathon.leaders.domain.SessionRepository;
 import esiea.hackathon.leaders.infrastructure.repository.InMemorySessionRepository;
+import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGamePlayerRepository; // Import ajouté
+import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGameRepository; // Import ajouté
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.*;
@@ -22,9 +23,20 @@ public class MatchmakingTest {
         sessionRepository = new InMemorySessionRepository();
         createGameSessionUseCase = new CreateGameSessionUseCase(sessionRepository);
         gameSetupService = mock(esiea.hackathon.leaders.application.services.GameSetupService.class);
-        connectPlayerUseCase = new ConnectPlayerUseCase(sessionRepository, gameSetupService,
+
+        // On mock les nouveaux repositories requis par le constructeur
+        SpringGamePlayerRepository gamePlayerRepository = mock(SpringGamePlayerRepository.class);
+        SpringGameRepository gameRepository = mock(SpringGameRepository.class);
+
+        connectPlayerUseCase = new ConnectPlayerUseCase(
+                sessionRepository,
+                gameSetupService,
                 mock(esiea.hackathon.leaders.application.services.GameQueryService.class),
-                mock(org.springframework.messaging.simp.SimpMessagingTemplate.class));
+                mock(org.springframework.messaging.simp.SimpMessagingTemplate.class),
+                gamePlayerRepository, // Nouvel argument
+                gameRepository // Nouvel argument
+        );
+
         matchmakingUseCase = new MatchmakingUseCase(sessionRepository, createGameSessionUseCase, connectPlayerUseCase,
                 gameSetupService);
     }
@@ -40,13 +52,9 @@ public class MatchmakingTest {
         assertEquals(Session.SessionStatus.WAITING_FOR_PLAYER, s1.getStatus());
         assertEquals(p1, s1.getPlayer1().getId());
 
-        System.out.println("S1 Created: " + s1.getId());
-
         // 2. Player 2 searches
         Session s2 = matchmakingUseCase.findOrCreatePublicSession(p2);
         assertNotNull(s2);
-
-        System.out.println("S2 Found: " + s2.getId());
 
         // 3. Should match
         assertEquals(s1.getId(), s2.getId());

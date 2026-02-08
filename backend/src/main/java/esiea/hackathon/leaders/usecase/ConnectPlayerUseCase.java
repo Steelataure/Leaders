@@ -13,6 +13,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.UUID;
 import java.util.Optional;
 
+import org.springframework.transaction.annotation.Transactional;
+
 public class ConnectPlayerUseCase {
     private final SessionRepository sessionRepository;
     private final esiea.hackathon.leaders.application.services.GameSetupService gameSetupService;
@@ -35,6 +37,7 @@ public class ConnectPlayerUseCase {
         this.springGameRepository = springGameRepository;
     }
 
+    @Transactional
     public Session connect(String sessionId, String playerId) {
         Optional<Session> sessionOpt = sessionRepository.findById(sessionId);
 
@@ -57,14 +60,28 @@ public class ConnectPlayerUseCase {
             gameSetupService.createGameWithId(gameId, null);
             System.out.println("DEBUG: Game created successfully!");
 
-            // Save players to game_player table
+            // Save players to game_player table and notify
             try {
                 GameJpaEntity gameRef = springGameRepository.findById(gameId)
                         .orElseThrow(() -> new RuntimeException("Game not found after creation"));
 
+                // Ensure players list is initialized (for memory cache consistency)
+                if (gameRef.getPlayers() == null) {
+                    gameRef.setPlayers(new java.util.ArrayList<>());
+                }
+
+                // Helper for UUID parsing
+                java.util.function.Function<String, UUID> safeUuid = (id) -> {
+                    try {
+                        return UUID.fromString(id);
+                    } catch (IllegalArgumentException e) {
+                        return UUID.nameUUIDFromBytes(id.getBytes());
+                    }
+                };
+
                 // Player 1 (host)
                 if (session.getPlayer1() != null) {
-                    UUID player1Id = UUID.fromString(session.getPlayer1().getId());
+                    UUID player1Id = safeUuid.apply(session.getPlayer1().getId());
                     GamePlayerJpaEntity gp1 = GamePlayerJpaEntity.builder()
                             .game(gameRef)
                             .userId(player1Id)
@@ -72,11 +89,13 @@ public class ConnectPlayerUseCase {
                             .isFirstTurnCompleted(false)
                             .build();
                     gamePlayerRepository.save(gp1);
-                    System.out.println("DEBUG: Saved player 0 with userId: " + player1Id);
+                    gameRef.getPlayers().add(gp1);
+                    System.out.println("DEBUG: Saved player 0 with userId: " + player1Id + " (original: "
+                            + session.getPlayer1().getId() + ")");
                 }
 
                 // Player 2 (joiner)
-                UUID player2Id = UUID.fromString(actualPlayerId);
+                UUID player2Id = safeUuid.apply(actualPlayerId);
                 GamePlayerJpaEntity gp2 = GamePlayerJpaEntity.builder()
                         .game(gameRef)
                         .userId(player2Id)
@@ -84,15 +103,12 @@ public class ConnectPlayerUseCase {
                         .isFirstTurnCompleted(false)
                         .build();
                 gamePlayerRepository.save(gp2);
-                System.out.println("DEBUG: Saved player 1 with userId: " + player2Id);
+                gameRef.getPlayers().add(gp2);
+                System.out.println(
+                        "DEBUG: Saved player 1 with userId: " + player2Id + " (original: " + actualPlayerId + ")");
 
-            } catch (Exception e) {
-                System.err.println("ERROR: Failed to save game players: " + e.getMessage());
-                e.printStackTrace();
-            }
+                // Send game state via WebSocket ONLY if players were saved successfully
 
-            // Send game state via WebSocket
-            try {
                 // 1. Notify Lobby that session is ACTIVE
                 messagingTemplate.convertAndSend("/topic/session/" + session.getId(), session);
                 System.out.println("DEBUG: Session update sent via WebSocket to /topic/session/" + session.getId());
@@ -101,8 +117,11 @@ public class ConnectPlayerUseCase {
                 GameStateDto gameState = gameQueryService.getGameState(gameId);
                 messagingTemplate.convertAndSend("/topic/game/" + session.getId(), gameState);
                 System.out.println("DEBUG: Game state sent via WebSocket to /topic/game/" + session.getId());
+
             } catch (Exception e) {
-                System.err.println("ERROR: Failed to send game state via WebSocket: " + e.getMessage());
+                System.err.println("ERROR: Failed to save players or send game state: " + e.getMessage());
+                e.printStackTrace();
+                // Potentially rethrow or handle connection failure
             }
         } else {
             System.out.println("DEBUG: Session not ACTIVE, status is: " + session.getStatus());

@@ -20,6 +20,7 @@ public class PieceJpaEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false)
     @ToString.Exclude // Important : Coupe la boucle infinie des logs
+    @EqualsAndHashCode.Exclude
     private GameJpaEntity game;
 
     @ManyToOne(fetch = FetchType.EAGER)

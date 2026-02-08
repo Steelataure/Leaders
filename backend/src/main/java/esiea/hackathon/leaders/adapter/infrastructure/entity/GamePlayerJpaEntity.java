@@ -7,7 +7,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "game_player")
-@Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class GamePlayerJpaEntity {
 
     @Id
@@ -18,6 +21,7 @@ public class GamePlayerJpaEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false)
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private GameJpaEntity game;
 
     @Column(name = "user_id")

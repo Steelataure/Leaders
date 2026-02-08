@@ -1,5 +1,5 @@
 import { apiClient } from '../api/client';
-import type { LoginRequest, LoginResponse, User } from '../types/auth.types';
+import type { LoginRequest, LoginResponse, User, RegisterRequest } from '../types/auth.types';
 
 export const authService = {
     async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -32,11 +32,25 @@ export const authService = {
 
     getUser(): User | null {
         const userStr = localStorage.getItem('user');
-        if (!userStr) return null;
-        try {
-            return JSON.parse(userStr);
-        } catch {
-            return null;
+        if (userStr) {
+            try {
+                return JSON.parse(userStr);
+            } catch {
+                return null;
+            }
         }
+
+        // Fallback for Guest Users (sessionStorage)
+        const guestId = sessionStorage.getItem('guest_id');
+        if (guestId) {
+            return {
+                id: guestId,
+                username: "Joueur", // Default guest name
+                email: "",
+                roles: []
+            };
+        }
+
+        return null;
     }
 };
