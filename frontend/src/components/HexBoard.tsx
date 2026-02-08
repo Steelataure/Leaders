@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   generateBoard,
   getHexagonPoints,
@@ -6,81 +6,97 @@ import {
   HEX_SIZE,
   areAdjacent,
 } from "../utils/hexCoords";
+import type { PieceFrontend, GamePhase } from "../api/gameApi";
 
 // @ts-ignore
-import useSound from 'use-sound';
-import boardPlacementSfx from '../sounds/boardPlacement.mp3';
-import pawnSelectSfx from '../sounds/pawnSelect.mp3';
+import useSound from "use-sound";
+import boardPlacementSfx from "../sounds/boardPlacement.mp3";
+import pawnSelectSfx from "../sounds/pawnSelect.mp3";
 
 // === TYPES ===
-export interface Piece {
-  id: string;
-  characterId: string;
-  ownerIndex: number;
-  q: number;
-  r: number;
-  hasActed: boolean;
-}
-
-export type GamePhase = "ACTION" | "RECRUITMENT" | "COMBAT" | "BANISHMENT";
-
 interface HexBoardProps {
-  pieces: Piece[];
+  pieces: PieceFrontend[];
   currentPlayer: number;
   phase: GamePhase;
   turnNumber: number;
   onMove: (pieceId: string, toQ: number, toR: number) => void;
-  // New props for lifted state
-  selectedPiece: Piece | null;
-  onSelectPiece: (piece: Piece | null) => void;
-  validMoves?: { q: number, r: number }[];
-  isTargeting?: boolean;
-  onTargetClick?: (target: { type: 'PIECE' | 'CELL', id?: string, q: number, r: number }) => void;
+  selectedPiece: PieceFrontend | null;
+  onSelectPiece: (piece: PieceFrontend | null) => void;
+  placementMode?: { cardId: string; cardName: string } | null;
+  availablePlacementCells?: { q: number; r: number }[];
+  onPlacementConfirm?: (q: number, r: number) => void;
+  onAbilityUse?: (
+    pieceId: string,
+    abilityId: string,
+    targetId: string,
+    destination?: { q: number; r: number },
+  ) => void;
+  // Mode Manipulatrice (2 étapes)
+  manipulatorTarget?: PieceFrontend | null;
+  onManipulatorTargetSelect?: (target: PieceFrontend | null) => void;
+  // Mode Cogneur (2 étapes)
+  brawlerTarget?: PieceFrontend | null;
+  onBrawlerTargetSelect?: (target: PieceFrontend | null) => void;
+  // Mode Lance-Grappin (2 étapes pour MOVE)
+  grapplerTarget?: PieceFrontend | null;
+  onGrapplerTargetSelect?: (target: PieceFrontend | null) => void;
+  grapplerMode?: "PULL" | "MOVE" | null;
+  onGrapplerModeSelect?: (mode: "PULL" | "MOVE" | null) => void;
+  // Mode Tavernier (2 étapes)
+  innkeeperTarget?: PieceFrontend | null;
+  onInnkeeperTargetSelect?: (target: PieceFrontend | null) => void;
+  isLocalTurn?: boolean;
 }
 
 // === CONSTANTES DE STYLE ===
 const COLORS = {
-  player1: "#00f5ff",     // Cyan neon
+  player1: "#00f5ff",
   player1Glow: "#00f5ff",
-  player2: "#ef4444",     // Red/Pink neon
+  player2: "#ef4444",
   player2Glow: "#f87171",
-  cellFill: "#0f1a2a",    // Dark blue
-  cellStroke: "#1e4a5a",  // Cyan dim
+  cellFill: "#0f1a2a",
+  cellStroke: "#1e4a5a",
   cellHover: "#1e3a4a",
   validMove: "#00f5ff",
-  selected: "#fbbf24",    // Amber
+  selected: "#fbbf24",
 };
 
 const SVG_WIDTH = 700;
 const SVG_HEIGHT = 600;
 
-// === SOUS-COMPOSANTS ===
-
-// Mapping des characterId vers les fichiers images
+// === IMAGES DES PERSONNAGES ===
 const CHARACTER_IMAGES: Record<string, string> = {
-  COGNEUR: "/image/cogneur.png",
-  RODEUR: "/image/rodeuse.png",
-  RODEUSE: "/image/rodeuse.png",
-  ILLUSIONISTE: "/image/illusioniste.png",
-  MANIPULATRICE: "/image/manipulatrice.png",
-  TAVERNIER: "/image/tavernier.png",
-  GARDE: "/image/garderoyal.png",
+  LEADER: "/image/garderoyal.png",
   ARCHER: "/image/archere.png",
-  ARCHERE: "/image/archere.png",
-  CAVALIER: "/image/cavalier.png",
-  LEADER: "/image/vizir.png",
+  BRAWLER: "/image/cogneur.png",
+  PROWLER: "/image/rodeuse.png",
+  CAVALRY: "/image/cavalier.png",
+  ACROBAT: "/image/acrobate.png",
+  ILLUSIONIST: "/image/illusioniste.png",
+  GRAPPLER: "/image/lance-grappin.png",
+  MANIPULATOR: "/image/manipulatrice.png",
+  INNKEEPER: "/image/tavernier.png",
+  JAILER: "/image/geolier.png",
+  PROTECTOR: "/image/protecteur.png",
   ASSASSIN: "/image/assassin.png",
-  ACROBATE: "/image/acrobate.png",
-  GEOLIER: "/image/geolier.png",
-  PROTECTEUR: "/image/protecteur.png",
+  ROYAL_GUARD: "/image/garderoyal.png",
+  VIZIER: "/image/vizir.png",
   NEMESIS: "/image/nemesis.png",
-  VIEILOURS: "/image/vieilours&ourson.png",
+  OLD_BEAR: "/image/vieilours_ourson.png",
+  CUB: "/image/vieilours_ourson.png",
 };
+
+// === SOUS-COMPOSANTS ===
 
 function CrownIcon({ color }: { color: string }) {
   return (
     <g transform="translate(-12, -10) scale(0.8)">
-      <path d="M3 18L6 8L12 12L18 4L24 8L27 18H3Z" fill={color} stroke="#fff" strokeWidth="1.5" />
+      <path
+        d="M3 18L6 8L12 12L18 4L24 8L27 18H3Z"
+        fill={color}
+        stroke="#fff"
+        strokeWidth="1.5"
+      />
       <circle cx="6" cy="6" r="2" fill={color} stroke="#fff" strokeWidth="1" />
       <circle cx="15" cy="2" r="2" fill={color} stroke="#fff" strokeWidth="1" />
       <circle cx="24" cy="4" r="2" fill={color} stroke="#fff" strokeWidth="1" />
@@ -88,16 +104,70 @@ function CrownIcon({ color }: { color: string }) {
   );
 }
 
-function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
+function LockIcon() {
+  return (
+    <g transform="translate(-8, -8) scale(0.7)">
+      <rect x="4" y="10" width="16" height="12" rx="2" fill="#ef4444" stroke="#fff" strokeWidth="1.5" />
+      <path d="M8 10V6a4 4 0 1 1 8 0v4" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="16" r="1.5" fill="#fff" />
+    </g>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <g transform="translate(-8, -8) scale(0.7)">
+      <path d="M12 2L4 6v6c0 5.5 3.5 10 8 11 4.5-1 8-5.5 8-11V6l-8-4z" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+      <path d="M9 12l2 2 4-4" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+  );
+}
+
+interface PieceComponentProps {
+  piece: PieceFrontend;
+  x: number;
+  y: number;
+  isSelected: boolean;
+  isBlocked: boolean;
+  isProtected: boolean;
+  isAbilityTarget: boolean;
+  targetColor?: string;
+  onSelect: (piece: PieceFrontend) => void;
+  onAbilityTargetClick?: () => void;
+}
+
+function PieceComponent({
+  piece,
+  x,
+  y,
+  isSelected,
+  isBlocked,
+  isProtected,
+  isAbilityTarget,
+  targetColor = "#a855f7",
+  onSelect,
+  onAbilityTargetClick,
+}: PieceComponentProps) {
   const isLeader = piece.characterId === "LEADER";
+  const isJailer = piece.characterId === "JAILER";
+  const isProtector = piece.characterId === "PROTECTOR";
   const color = piece.ownerIndex === 0 ? COLORS.player1 : COLORS.player2;
   const radius = HEX_SIZE * 0.55;
   const glowId = `glow-${piece.id}`;
   const clipId = `clip-${piece.id}`;
-  const imageUrl = CHARACTER_IMAGES[piece.characterId] || "/image/vizir.png";
+  const imageUrl = CHARACTER_IMAGES[piece.characterId] || "/image/garderoyal.png";
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isAbilityTarget && onAbilityTargetClick) {
+      onAbilityTargetClick();
+    } else {
+      onSelect(piece);
+    }
+  };
 
   return (
-    <g onClick={(e) => { e.stopPropagation(); onSelect(piece); }} style={{ cursor: "pointer" }} opacity={piece.hasActed ? 0.6 : 1}>
+    <g onClick={handleClick} style={{ cursor: "pointer" }} opacity={piece.hasActed ? 0.6 : 1}>
       <defs>
         <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="4" result="coloredBlur" />
@@ -106,13 +176,12 @@ function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        {/* Masque circulaire pour l'image */}
         <clipPath id={clipId}>
           <circle cx={x} cy={y} r={radius - 3} />
         </clipPath>
       </defs>
 
-      {/* Selection Ring */}
+      {/* Selection/Ability Rings */}
       {isSelected && (
         <circle cx={x} cy={y} r={radius + 8} fill="none" stroke={COLORS.selected} strokeWidth="2">
           <animate attributeName="r" values={`${radius + 6};${radius + 10};${radius + 6}`} dur="2s" repeatCount="indefinite" />
@@ -120,18 +189,36 @@ function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
         </circle>
       )}
 
-      {/* Cercle de fond avec couleur du joueur */}
+      {isAbilityTarget && (
+        <circle cx={x} cy={y} r={radius + 10} fill="none" stroke={targetColor} strokeWidth="3">
+          <animate attributeName="r" values={`${radius + 8};${radius + 12};${radius + 8}`} dur="1.5s" repeatCount="indefinite" />
+          <animate attributeName="stroke-opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+      )}
+
+      {/* Scenario Rings */}
+      {isBlocked && (
+        <circle cx={x} cy={y} r={radius + 5} fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4 2">
+          <animate attributeName="stroke-opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+      )}
+
+      {isProtected && !isProtector && (
+        <circle cx={x} cy={y} r={radius + 5} fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 2">
+          <animate attributeName="stroke-opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+      )}
+
       <circle
         cx={x}
         cy={y}
         r={radius}
         fill="#1a1a2e"
-        stroke={color}
-        strokeWidth={isLeader ? 4 : 3}
+        stroke={isAbilityTarget ? targetColor : isBlocked ? "#ef4444" : isProtected ? "#22c55e" : color}
+        strokeWidth={isAbilityTarget ? 4 : isLeader ? 4 : 3}
         filter={`url(#${glowId})`}
       />
 
-      {/* Image du personnage */}
       <image
         href={imageUrl}
         x={x - radius + 3}
@@ -142,14 +229,12 @@ function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
         preserveAspectRatio="xMidYMid slice"
       />
 
-      {/* Couronne pour le Leader */}
-      {isLeader && (
-        <g transform={`translate(${x}, ${y - radius - 8})`}>
-          <CrownIcon color={color} />
-        </g>
-      )}
+      {isLeader && <g transform={`translate(${x}, ${y - radius - 8})`}><CrownIcon color={color} /></g>}
+      {isJailer && <g transform={`translate(${x - radius + 5}, ${y - radius + 5})`}><LockIcon /></g>}
+      {isProtector && <g transform={`translate(${x - radius + 5}, ${y - radius + 5})`}><ShieldIcon /></g>}
+      {isBlocked && !isJailer && <g transform={`translate(${x + radius - 8}, ${y + radius - 8})`}><LockIcon /></g>}
+      {isProtected && !isProtector && <g transform={`translate(${x + radius - 8}, ${y + radius - 8})`}><ShieldIcon /></g>}
 
-      {/* Acted Status */}
       {piece.hasActed && (
         <g transform={`translate(${x + radius - 5}, ${y - radius + 5})`}>
           <circle r="8" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
@@ -162,69 +247,239 @@ function PieceComponent({ piece, x, y, isSelected, onSelect }: any) {
 
 // === COMPOSANT PRINCIPAL ===
 
-export default function HexBoard(props: HexBoardProps) {
-  const {
-    pieces,
-    currentPlayer,
-    phase,
-    selectedPiece,
-    onSelectPiece,
-    onMove,
-  } = props;
+export default function HexBoard({
+  pieces,
+  currentPlayer,
+  phase,
+  selectedPiece,
+  onSelectPiece,
+  onMove,
+  placementMode,
+  availablePlacementCells = [],
+  onPlacementConfirm,
+  onAbilityUse,
+  manipulatorTarget,
+  onManipulatorTargetSelect,
+  brawlerTarget,
+  onBrawlerTargetSelect,
+  grapplerTarget,
+  onGrapplerTargetSelect,
+  grapplerMode,
+  onGrapplerModeSelect,
+  innkeeperTarget,
+  onInnkeeperTargetSelect,
+  isLocalTurn = true,
+}: HexBoardProps) {
   const [hoveredCell, setHoveredCell] = useState<HexCell | null>(null);
-
-  // Sons
   const [playBoardPlacementSfx] = useSound(boardPlacementSfx);
   const [playPawnSelectSfx] = useSound(pawnSelectSfx);
-
-  // Generate board centered
   const cells = useMemo(() => generateBoard(SVG_WIDTH / 2, SVG_HEIGHT / 2), []);
 
   const findPieceAtCell = (q: number, r: number) => pieces.find((p) => p.q === q && p.r === r);
 
+  const HEX_DIRECTIONS = [
+    { dq: 1, dr: 0 }, { dq: -1, dr: 0 }, { dq: 0, dr: 1 },
+    { dq: 0, dr: -1 }, { dq: 1, dr: -1 }, { dq: -1, dr: 1 },
+  ];
+
+  const isValidHex = (q: number, r: number) => Math.abs(q) <= 3 && Math.abs(r) <= 3 && Math.abs(q + r) <= 3;
+
+  const hexDistance = (q1: number, r1: number, q2: number, r2: number): number => {
+    return (Math.abs(q1 - q2) + Math.abs(r1 - r2) + Math.abs(q1 + r1 - (q2 + r2))) / 2;
+  };
+
+  const isInLineOfSight = (q1: number, r1: number, q2: number, r2: number): boolean => {
+    const dq = q2 - q1;
+    const dr = r2 - r1;
+    const ds = -dq - dr;
+    return dq === 0 || dr === 0 || ds === 0;
+  };
+
+  const isPathClear = (q1: number, r1: number, q2: number, r2: number): boolean => {
+    const distance = hexDistance(q1, r1, q2, r2);
+    if (distance <= 1) return true;
+    const stepQ = (q2 - q1) / distance;
+    const stepR = (r2 - r1) / distance;
+    for (let i = 1; i < distance; i++) {
+      if (pieces.some((p) => p.q === q1 + stepQ * i && p.r === r1 + stepR * i)) return false;
+    }
+    return true;
+  };
+
+  // Scenario 3 logic
+  const blockedPieceIds = useMemo(() => {
+    const blocked = new Set<string>();
+    pieces.filter(p => p.characterId === "JAILER").forEach(jailer => {
+      pieces.forEach(p => {
+        if (p.ownerIndex !== jailer.ownerIndex && areAdjacent(jailer.q, jailer.r, p.q, p.r)) blocked.add(p.id);
+      });
+    });
+    return blocked;
+  }, [pieces]);
+
+  const protectedPieceIds = useMemo(() => {
+    const shielded = new Set<string>();
+    pieces.filter(p => p.characterId === "PROTECTOR").forEach(protector => {
+      shielded.add(protector.id);
+      pieces.forEach(p => {
+        if (p.ownerIndex === protector.ownerIndex && areAdjacent(protector.q, protector.r, p.q, p.r)) shielded.add(p.id);
+      });
+    });
+    return shielded;
+  }, [pieces]);
+
+  // Movement calculation
   const validMoves = useMemo(() => {
-    // Si des moves valides sont passés en props (venant de l'API), on les utilise
-    if (props.validMoves) {
-      const moves = new Set<string>();
-      props.validMoves.forEach(m => moves.add(`${m.q},${m.r}`));
+    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTIONS" || !isLocalTurn) return new Set<string>();
+    const moves = new Set<string>();
+
+    if (selectedPiece.characterId === "PROWLER") {
+      cells.forEach(cell => {
+        if (!findPieceAtCell(cell.q, cell.r) && !pieces.some(p => p.ownerIndex !== selectedPiece.ownerIndex && hexDistance(cell.q, cell.r, p.q, p.r) === 1)) {
+          moves.add(`${cell.q},${cell.r}`);
+        }
+      });
       return moves;
     }
 
-    // Fallback: calcul local (legacy)
-    // On ne peut bouger qu'en phase ACTION et avec une pièce qui n'a pas encore agi
-    if (!selectedPiece || selectedPiece.hasActed || phase !== "ACTION")
-      return new Set<string>();
-
-    const moves = new Set<string>();
-    cells.forEach((cell) => {
-      // Logic: Adjacent + Empty
-      if (areAdjacent(selectedPiece.q, selectedPiece.r, cell.q, cell.r) && !findPieceAtCell(cell.q, cell.r)) {
-        moves.add(`${cell.q},${cell.r}`);
-      }
+    cells.forEach(cell => {
+      if (areAdjacent(selectedPiece.q, selectedPiece.r, cell.q, cell.r) && !findPieceAtCell(cell.q, cell.r)) moves.add(`${cell.q},${cell.r}`);
     });
-    return moves;
-  }, [selectedPiece, pieces, phase, cells, props.validMoves]);
 
-  const handlePieceSelect = (piece: Piece) => {
-    if (props.isTargeting && props.onTargetClick) {
-      props.onTargetClick({ type: 'PIECE', id: piece.id, q: piece.q, r: piece.r });
+    if (selectedPiece.characterId === "ACROBAT") {
+      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+        const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
+        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
+        if (isValidHex(midQ, midR) && findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) moves.add(`${destQ},${destR}`);
+      });
+    }
+
+    if (selectedPiece.characterId === "CAVALRY") {
+      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+        const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
+        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
+        if (isValidHex(midQ, midR) && !findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) moves.add(`${destQ},${destR}`);
+      });
+    }
+
+    return moves;
+  }, [selectedPiece, pieces, phase, cells, isLocalTurn]);
+
+  // UI helpers for abilities
+  const illusionistTargets = useMemo(() => {
+    if (!selectedPiece || selectedPiece.characterId !== "ILLUSIONIST" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
+    const targets = new Set<string>();
+    pieces.forEach(p => {
+      if (p.id !== selectedPiece.id && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+    });
+    return targets;
+  }, [selectedPiece, pieces, isLocalTurn]);
+
+  const manipulatorTargets = useMemo(() => {
+    if (!selectedPiece || selectedPiece.characterId !== "MANIPULATOR" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
+    const targets = new Set<string>();
+    pieces.forEach(p => {
+      if (p.ownerIndex !== selectedPiece.ownerIndex && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+    });
+    return targets;
+  }, [selectedPiece, pieces, isLocalTurn]);
+
+  const manipulatorDestinations = useMemo(() => {
+    if (!manipulatorTarget) return new Set<string>();
+    const dest = new Set<string>();
+    HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+      const q = manipulatorTarget.q + dq, r = manipulatorTarget.r + dr;
+      if (isValidHex(q, r) && !findPieceAtCell(q, r)) dest.add(`${q},${r}`);
+    });
+    return dest;
+  }, [manipulatorTarget, pieces]);
+
+  const brawlerTargets = useMemo(() => {
+    if (!selectedPiece || selectedPiece.characterId !== "BRAWLER" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
+    const targets = new Set<string>();
+    pieces.forEach(p => {
+      if (p.ownerIndex !== selectedPiece.ownerIndex && areAdjacent(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+    });
+    return targets;
+  }, [selectedPiece, pieces, isLocalTurn]);
+
+  const brawlerDestinations = useMemo(() => {
+    if (!brawlerTarget || !selectedPiece) return new Set<string>();
+    const dest = new Set<string>();
+    HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+      const q = brawlerTarget.q + dq, r = brawlerTarget.r + dr;
+      if (isValidHex(q, r) && !findPieceAtCell(q, r) && hexDistance(selectedPiece.q, selectedPiece.r, q, r) === 2) dest.add(`${q},${r}`);
+    });
+    return dest;
+  }, [brawlerTarget, selectedPiece, pieces]);
+
+  const grapplerTargets = useMemo(() => {
+    if (!selectedPiece || selectedPiece.characterId !== "GRAPPLER" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
+    const targets = new Set<string>();
+    pieces.forEach(p => {
+      if (p.id === selectedPiece.id) return;
+      if (isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+    });
+    return targets;
+  }, [selectedPiece, pieces, isLocalTurn]);
+
+  const grapplerMoveDestinations = useMemo(() => {
+    if (!grapplerTarget) return new Set<string>();
+    const dest = new Set<string>();
+    HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+      const q = grapplerTarget.q + dq, r = grapplerTarget.r + dr;
+      if (isValidHex(q, r) && !findPieceAtCell(q, r)) dest.add(`${q},${r}`);
+    });
+    return dest;
+  }, [grapplerTarget, pieces]);
+
+  const innkeeperTargets = useMemo(() => {
+    if (!selectedPiece || selectedPiece.characterId !== "INNKEEPER" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
+    const targets = new Set<string>();
+    pieces.forEach(p => {
+      if (p.ownerIndex === selectedPiece.ownerIndex && p.id !== selectedPiece.id && areAdjacent(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+    });
+    return targets;
+  }, [selectedPiece, pieces, isLocalTurn]);
+
+  const innkeeperDestinations = useMemo(() => {
+    if (!innkeeperTarget) return new Set<string>();
+    const dest = new Set<string>();
+    HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+      const q = innkeeperTarget.q + dq, r = innkeeperTarget.r + dr;
+      if (isValidHex(q, r) && !findPieceAtCell(q, r)) dest.add(`${q},${r}`);
+    });
+    return dest;
+  }, [innkeeperTarget, pieces]);
+
+  const handleCellClick = (cell: HexCell) => {
+    if (!isLocalTurn) return;
+
+    if (placementMode && onPlacementConfirm) {
+      if (availablePlacementCells.some(c => c.q === cell.q && c.r === cell.r)) {
+        playBoardPlacementSfx();
+        onPlacementConfirm(cell.q, cell.r);
+        return;
+      }
+    }
+
+    if (manipulatorTarget && manipulatorDestinations.has(`${cell.q},${cell.r}`) && onAbilityUse && selectedPiece) {
+      onAbilityUse(selectedPiece.id, "MANIPULATOR_MOVE", manipulatorTarget.id, { q: cell.q, r: cell.r });
       return;
     }
 
-    // Interdit de sélectionner une pièce adverse ou si on est en phase recrutement
-    if (piece.ownerIndex !== currentPlayer || phase !== "ACTION") return;
-
-    // Si on sélectionne une nouvelle pièce (différente de null et différente de l'actuelle)
-    if (piece && selectedPiece?.id !== piece.id) {
-      playPawnSelectSfx();
+    if (brawlerTarget && brawlerDestinations.has(`${cell.q},${cell.r}`) && onAbilityUse && selectedPiece) {
+      onAbilityUse(selectedPiece.id, "BRAWLER_PUSH", brawlerTarget.id, { q: cell.q, r: cell.r });
+      return;
     }
 
-    onSelectPiece(selectedPiece?.id === piece.id ? null : piece);
-  };
+    if (grapplerTarget && grapplerMode === "MOVE" && grapplerMoveDestinations.has(`${cell.q},${cell.r}`) && onAbilityUse && selectedPiece) {
+      onAbilityUse(selectedPiece.id, "GRAPPLE_HOOK", grapplerTarget.id, { q: cell.q, r: cell.r });
+      return;
+    }
 
-  const handleCellClick = (cell: HexCell) => {
-    if (props.isTargeting && props.onTargetClick) {
-      props.onTargetClick({ type: 'CELL', q: cell.q, r: cell.r });
+    if (innkeeperTarget && innkeeperDestinations.has(`${cell.q},${cell.r}`) && onAbilityUse && selectedPiece) {
+      onAbilityUse(selectedPiece.id, "INNKEEPER_ASSIST", innkeeperTarget.id, { q: cell.q, r: cell.r });
       return;
     }
 
@@ -233,81 +488,89 @@ export default function HexBoard(props: HexBoardProps) {
       onMove(selectedPiece.id, cell.q, cell.r);
       onSelectPiece(null);
     } else {
-      // Deselect if clicking on empty cell not in valid moves
       onSelectPiece(null);
+      if (onManipulatorTargetSelect) onManipulatorTargetSelect(null);
+      if (onBrawlerTargetSelect) onBrawlerTargetSelect(null);
+      if (onGrapplerTargetSelect) onGrapplerTargetSelect(null);
+      if (onGrapplerModeSelect) onGrapplerModeSelect(null);
+      if (onInnkeeperTargetSelect) onInnkeeperTargetSelect(null);
     }
+  };
+
+  const handlePieceSelect = (piece: PieceFrontend) => {
+    if (!isLocalTurn || piece.characterId === "NEMESIS") return;
+    if (piece.ownerIndex !== currentPlayer || phase !== "ACTIONS" || piece.hasActed) return;
+
+    if (selectedPiece?.id !== piece.id) playPawnSelectSfx();
+
+    onSelectPiece(selectedPiece?.id === piece.id ? null : piece);
   };
 
   return (
     <svg width={SVG_WIDTH} height={SVG_HEIGHT} className="drop-shadow-2xl overflow-visible">
-      {/* Defs pour les effets de brillance */}
       <defs>
-        <filter id="glow-player1" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="glow-player2" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        <filter id="glow-player1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id="glow-player2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id="glow-amber" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id="glow-ability" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       </defs>
 
-      {/* Hexagons */}
-      {cells.map((cell) => {
+      {cells.map(cell => {
         const isValid = validMoves.has(`${cell.q},${cell.r}`);
-        const isHovered = hoveredCell?.q === cell.q && hoveredCell?.r === cell.r;
+        const isPlacement = placementMode && availablePlacementCells.some(c => c.q === cell.q && c.r === cell.r);
+        const isAbility = manipulatorDestinations.has(`${cell.q},${cell.r}`) || brawlerDestinations.has(`${cell.q},${cell.r}`) || grapplerMoveDestinations.has(`${cell.q},${cell.r}`) || innkeeperDestinations.has(`${cell.q},${cell.r}`);
 
-        // Vérifier si cette cellule contient une pièce du joueur actif
         const pieceOnCell = findPieceAtCell(cell.q, cell.r);
-        const isCurrentPlayerPiece = pieceOnCell && pieceOnCell.ownerIndex === currentPlayer;
-        const canAct = isCurrentPlayerPiece && !pieceOnCell.hasActed && phase === "ACTION";
+        const canAct = pieceOnCell?.ownerIndex === currentPlayer && !pieceOnCell.hasActed && phase === "ACTIONS" && isLocalTurn;
 
-        // Couleurs de surbrillance selon le joueur
-        const playerHighlightColor = currentPlayer === 0 ? COLORS.player1 : COLORS.player2;
-        const playerHighlightFill = currentPlayer === 0 ? "rgba(0, 245, 255, 0.1)" : "rgba(239, 68, 68, 0.1)";
+        let fill = COLORS.cellFill, stroke = COLORS.cellStroke, width = 1, filter = "";
+        if (isPlacement) { fill = "rgba(251, 191, 36, 0.2)"; stroke = "#fbbf24"; width = 3; filter = "url(#glow-amber)"; }
+        else if (isAbility) { fill = "rgba(168, 85, 247, 0.3)"; stroke = "#a855f7"; width = 3; filter = "url(#glow-ability)"; }
+        else if (isValid) { fill = "rgba(0, 245, 255, 0.15)"; stroke = COLORS.validMove; width = 2; }
+        else if (canAct) { stroke = currentPlayer === 0 ? COLORS.player1 : COLORS.player2; width = 2.5; filter = `url(#glow-player${currentPlayer + 1})`; }
 
         return (
           <polygon
             key={`${cell.q}-${cell.r}`}
             points={getHexagonPoints(cell.x, cell.y, HEX_SIZE * 0.93)}
-            fill={
-              isValid ? "rgba(0, 245, 255, 0.15)" :
-                canAct ? playerHighlightFill :
-                  isHovered ? COLORS.cellHover : COLORS.cellFill
-            }
-            stroke={
-              isValid ? COLORS.validMove :
-                canAct ? playerHighlightColor :
-                  isHovered ? "#00f5ff" : COLORS.cellStroke
-            }
-            strokeWidth={isValid ? 2 : canAct ? 2.5 : 1}
-            filter={canAct ? `url(#glow-player${currentPlayer + 1})` : undefined}
-            onMouseEnter={() => setHoveredCell(cell)}
-            onMouseLeave={() => setHoveredCell(null)}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={width}
+            filter={filter}
             onClick={() => handleCellClick(cell)}
-            className="transition-colors duration-200 cursor-pointer"
+            className={`transition-colors duration-200 cursor-pointer ${isAbility || isPlacement ? "animate-pulse" : ""}`}
           />
         );
       })}
 
-      {/* Pieces */}
-      {pieces.map((piece) => {
-        const cell = cells.find((c) => c.q === piece.q && c.r === piece.r);
+      {pieces.map(piece => {
+        const cell = cells.find(c => c.q === piece.q && c.r === piece.r);
         if (!cell) return null;
+
+        const isAbilityTarget = illusionistTargets.has(piece.id) || manipulatorTargets.has(piece.id) || brawlerTargets.has(piece.id) || grapplerTargets.has(piece.id) || innkeeperTargets.has(piece.id);
+        const targetColor = brawlerTargets.has(piece.id) ? "#f97316" : grapplerTargets.has(piece.id) ? "#06b6d4" : innkeeperTargets.has(piece.id) ? "#eab308" : "#a855f7";
+
+        const isSelected = selectedPiece?.id === piece.id || brawlerTarget?.id === piece.id || manipulatorTarget?.id === piece.id || grapplerTarget?.id === piece.id || innkeeperTarget?.id === piece.id;
+
         return (
           <PieceComponent
             key={piece.id}
             piece={piece}
             x={cell.x}
             y={cell.y}
-            isSelected={selectedPiece?.id === piece.id}
+            isSelected={isSelected}
+            isBlocked={blockedPieceIds.has(piece.id)}
+            isProtected={protectedPieceIds.has(piece.id)}
+            isAbilityTarget={isAbilityTarget}
+            targetColor={targetColor}
             onSelect={handlePieceSelect}
+            onAbilityTargetClick={() => {
+              if (illusionistTargets.has(piece.id) && selectedPiece) onAbilityUse?.(selectedPiece.id, "ILLUSIONIST_SWAP", piece.id);
+              else if (manipulatorTargets.has(piece.id)) onManipulatorTargetSelect?.(piece);
+              else if (brawlerTargets.has(piece.id)) onBrawlerTargetSelect?.(piece);
+              else if (grapplerTargets.has(piece.id)) onGrapplerTargetSelect?.(piece);
+              else if (innkeeperTargets.has(piece.id)) onInnkeeperTargetSelect?.(piece);
+            }}
           />
         );
       })}

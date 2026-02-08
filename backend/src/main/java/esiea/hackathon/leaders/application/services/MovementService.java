@@ -7,6 +7,8 @@ import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.model.VictoryCheckResult;
+import esiea.hackathon.leaders.domain.model.enums.GameStatus;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -26,7 +29,8 @@ public class MovementService {
     private final RefCharacterRepository characterRepository;
     private final MoveStrategyFactory strategyFactory;
     private final NemesisBehavior nemesisBehavior;
-    private final GameRepository gameRepository; // 1. Dépendance nécessaire
+    private final GameRepository gameRepository;
+    private final VictoryService victoryService; // 🆕 Injection du VictoryService
 
     @Transactional
     public PieceEntity movePiece(UUID pieceId, short toQ, short toR, UUID playerId) {
@@ -42,7 +46,7 @@ public class MovementService {
         System.out.println(
                 "DEBUG: Moving piece " + pieceEntity.getCharacterId() + " owned by " + pieceEntity.getOwnerIndex());
 
-        // 2. Chargement du Jeu
+        // Chargement du Jeu
         GameEntity game = gameRepository.findById(pieceEntity.getGameId())
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
@@ -73,7 +77,7 @@ public class MovementService {
             throw new IllegalArgumentException("This piece has already acted this turn.");
         }
 
-        // 5. Calcul des mouvements légaux
+        // Calcul des mouvements légaux
         List<HexCoord> legalMoves = getValidMovesForPiece(pieceId);
 
         if (!legalMoves.contains(target)) {
@@ -83,17 +87,39 @@ public class MovementService {
                             + ")");
         }
 
-        // 6. Application du déplacement
+        // Application du déplacement
         pieceEntity.setQ(toQ);
         pieceEntity.setR(toR);
         pieceEntity.setHasActedThisTurn(true);
 
         PieceEntity savedPiece = pieceRepository.save(pieceEntity);
 
-        // 7. Trigger Némésis (si un Leader a bougé)
+        // Trigger Némésis (si un Leader a bougé)
         triggerNemesisIfLeaderMoved(savedPiece, savedPiece.getGameId());
 
+        // 🆕 SCÉNARIO 7: Vérification de victoire IMMÉDIATE après chaque mouvement
+        // Cela permet à l'Assassin (seul) ou à l'Archère (à distance 2) de déclencher
+        // la victoire
+        checkAndApplyVictory(game);
+
         return savedPiece;
+    }
+
+    /**
+     * 🆕 Vérifie si une condition de victoire est remplie et termine la partie si
+     * nécessaire.
+     * Appelé après chaque mouvement et chaque action.
+     */
+    private void checkAndApplyVictory(GameEntity game) {
+        VictoryCheckResult result = victoryService.checkVictory(game.getId());
+
+        if (result.isGameOver()) {
+            game.setStatus(GameStatus.FINISHED);
+            game.setWinnerPlayerIndex(result.winnerPlayerIndex());
+            game.setWinnerVictoryType(result.victoryType());
+            game.setUpdatedAt(LocalDateTime.now());
+            gameRepository.save(game);
+        }
     }
 
     public List<HexCoord> getValidMovesForPiece(UUID pieceId) {

@@ -1,83 +1,105 @@
-import { useState, useCallback, useEffect } from "react";
-import HexBoard from "../components/HexBoard";
-import { type CharacterCard } from "../components/River";
-import VictoryScreen from "../components/VictoryScreen";
-import useSound from 'use-sound';
-import buttonClickSfx from '../sounds/buttonClick.mp3';
-import buttonHoverSfx from '../sounds/buttonHover.mp3';
-import characterSelectSfx from '../sounds/characterSelect.mp3';
-import characterHoverSfx from '../sounds/characterHover.mp3';
-
-import cogneurImg from '/image/cogneur.png';
-import rodeuseImg from '/image/rodeuse.png';
-import illusionisteImg from '/image/illusioniste.png';
-import manipulatriceImg from '/image/manipulatrice.png';
-import tavernierImg from '/image/tavernier.png';
-import gardeImg from '/image/garderoyal.png';
-
-import { getGame, endTurn as endTurnApi, recruitCharacter, movePiece, getValidMoves, type GameState, type Piece as ApiPiece } from "../api/gameApi";
-import { webSocketService } from "../services/WebSocketService";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import type { GameFrontend, PieceFrontend } from "../api/gameApi";
+import { gameApi } from "../api/gameApi";
 import { authService } from "../services/auth.service";
+import { webSocketService } from "../services/WebSocketService";
+import HexBoard from "../components/HexBoard";
+import VictoryScreen from "../components/VictoryScreen";
+import useSound from "use-sound";
 
-// === TYPES ===
-export type GamePhase = "ACTION" | "RECRUITMENT" | "COMBAT" | "BANISHMENT";
+// Sons
+import buttonClickSfx from "../sounds/buttonClick.mp3";
+import characterSelectSfx from "../sounds/characterSelect.mp3";
 
-// UI Piece extends API Piece to include UI-specific state if needed
-export interface UiPiece extends ApiPiece {
-  hasActed: boolean;
-}
-
-// === CONSTANTS ===
-const INITIAL_RIVER: CharacterCard[] = [];
-const DECK_CARDS: CharacterCard[] = [];
-
-// === MAPPING IMAGES ===
 const CHARACTER_IMAGES: Record<string, string> = {
-  COGNEUR: cogneurImg,
-  RODEUR: rodeuseImg,
-  ILLUSIONISTE: illusionisteImg,
-  MANIPULATRICE: manipulatriceImg,
-  TAVERNIER: tavernierImg,
-  GARDE: gardeImg,
-  ARCHER: rodeuseImg, // Placeholder
-  CAVALIER: gardeImg, // Placeholder
-  LEADER: gardeImg, // Placeholder
+  LEADER: "/image/garderoyal.png",
+  ARCHER: "/image/archere.png",
+  BRAWLER: "/image/cogneur.png",
+  PROWLER: "/image/rodeuse.png",
+  CAVALRY: "/image/cavalier.png",
+  ACROBAT: "/image/acrobate.png",
+  ILLUSIONIST: "/image/illusioniste.png",
+  GRAPPLER: "/image/lance-grappin.png",
+  MANIPULATOR: "/image/manipulatrice.png",
+  INNKEEPER: "/image/tavernier.png",
+  JAILER: "/image/geolier.png",
+  PROTECTOR: "/image/protecteur.png",
+  ASSASSIN: "/image/assassin.png",
+  ROYAL_GUARD: "/image/garderoyal.png",
+  VIZIER: "/image/vizir.png",
+};
+
+// mapping des noms de personnages
+const CHARACTER_NAMES: Record<string, string> = {
+  LEADER: "Leader",
+  ACROBAT: "Acrobate",
+  CAVALRY: "Cavalier",
+  ILLUSIONIST: "Illusionniste",
+  MANIPULATOR: "Manipulatrice",
+  JAILER: "Geôlier",
+  PROTECTOR: "Protecteur",
+  BRAWLER: "Cogneur",
+  GRAPPLER: "Lance-Grappin",
+  NEMESIS: "Némésis",
+  PROWLER: "Rôdeuse",
+  INNKEEPER: "Tavernier",
+  ARCHER: "Archère",
+  ASSASSIN: "Assassin",
+  ROYAL_GUARD: "Garde Royal",
+  VIZIER: "Vizir",
+  OLD_BEAR: "Vieil Ours",
+  CUB: "Ourson",
 };
 
 // === CHARACTER DATA MAPPING ===
 const CHARACTER_DATA: Record<string, { name: string; description: string; type: "ACTIVE" | "PASSIVE" | "SPECIAL" }> = {
   ARCHER: { name: "Archère", description: "Participe à la capture à 2 cases en ligne droite", type: "PASSIVE" },
-  COGNEUR: { name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
-  RODEUR: { name: "Rôdeuse", description: "Se déplace sur une case non-adjacente à un ennemi", type: "ACTIVE" },
-  CAVALIER: { name: "Cavalier", description: "Se déplace de 2 cases en ligne droite", type: "ACTIVE" },
-  ACROBAT: { name: "Acrobate", description: "Saute par-dessus un personnage adjacent", type: "ACTIVE" },
-  ILLUSIONISTE: { name: "Illusioniste", description: "Échange de position avec un personnage visible", type: "ACTIVE" },
-  LANCE_GRAPPIN: { name: "Lance-Grappin", description: "Se déplace jusqu'à un personnage visible", type: "ACTIVE" },
-  MANIPULATRICE: { name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
-  TAVERNIER: { name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
-  GEOLIER: { name: "Geôlier", description: "Les ennemis adjacents ne peuvent utiliser leur compétence", type: "PASSIVE" },
-  PROTECTEUR: { name: "Protecteur", description: "Protège les alliés adjacents des compétences ennemies", type: "PASSIVE" },
-  ASSASSIN: { name: "Assassin", description: "Capture le Leader adverse seul", type: "PASSIVE" },
-  GARDE_ROYAL: { name: "Garde Royal", description: "Se déplace près du Leader puis d'une case", type: "ACTIVE" },
-  VIZIR: { name: "Vizir", description: "Votre Leader peut se déplacer d'une case supplémentaire", type: "PASSIVE" },
-  NEMESIS: { name: "Némésis", description: "Se déplace automatiquement quand le Leader adverse bouge", type: "SPECIAL" },
-  OLD_BEAR: { name: "Vieil Ours", description: "Vient avec son Ourson (2 pièces)", type: "SPECIAL" },
-  PROWLER: { name: "Rôdeuse", description: "Se déplace sur une case non-adjacente à un ennemi", type: "ACTIVE" },
   BRAWLER: { name: "Cogneur", description: "Pousse un ennemi adjacent vers l'opposé", type: "ACTIVE" },
+  PROWLER: { name: "Rôdeuse", description: "Se déplace sur une case non-adjacente à un ennemi", type: "ACTIVE" },
   CAVALRY: { name: "Cavalier", description: "Se déplace de 2 cases en ligne droite", type: "ACTIVE" },
-  GRAPPLER: { name: "Lance-Grappin", description: "Se déplace jusqu'à un personnage visible", type: "ACTIVE" },
+  ACROBAT: { name: "Acrobate", description: "Saute par-dessus un personnage adjacent", type: "ACTIVE" },
   ILLUSIONIST: { name: "Illusioniste", description: "Échange de position avec un personnage visible", type: "ACTIVE" },
+  GRAPPLER: { name: "Lance-Grappin", description: "Se déplace jusqu'à un personnage visible", type: "ACTIVE" },
+  MANIPULATOR: { name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
   INNKEEPER: { name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
   JAILER: { name: "Geôlier", description: "Les ennemis adjacents ne peuvent utiliser leur compétence", type: "PASSIVE" },
-  MANIPULATOR: { name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
+  PROTECTOR: { name: "Protecteur", description: "Protège les alliés adjacents des compétences ennemies", type: "PASSIVE" },
+  ASSASSIN: { name: "Assassin", description: "Capture le Leader adverse seul", type: "PASSIVE" },
   ROYAL_GUARD: { name: "Garde Royal", description: "Se déplace près du Leader puis d'une case", type: "ACTIVE" },
+  VIZIER: { name: "Vizir", description: "Votre Leader peut se déplacer d'une case supplémentaire", type: "PASSIVE" },
+  NEMESIS: { name: "Némésis", description: "Se déplace automatiquement quand le Leader adverse bouge", type: "SPECIAL" },
+  OLD_BEAR: { name: "Vieil Ours", description: "Vient avec son Ourson (2 pièces)", type: "SPECIAL" },
 };
+
+interface CharacterCard {
+  id: string;
+  characterId: string;
+  name: string;
+  description?: string;
+  type?: "ACTIVE" | "PASSIVE" | "SPECIAL";
+}
 
 // === COMPOSANTS UI ===
 
 // Carte de la rivière (Sidebar gauche)
-function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: CharacterCard; onClick: () => void; onMouseEnter: () => void; disabled: boolean }) {
-  const icons: Record<string, string> = { ACTIVE: "⚡", PASSIVE: "🛡️", SPECIAL: "✨" };
+function SidebarCard({
+  card,
+  onClick,
+  onMouseEnter,
+  disabled,
+}: {
+  card: CharacterCard;
+  onClick: () => void;
+  onMouseEnter: () => void;
+  disabled: boolean;
+}) {
+  const icons: Record<string, string> = {
+    ACTIVE: "⚡",
+    PASSIVE: "🛡️",
+    SPECIAL: "✨",
+  };
+
+  const charType = card.type || "ACTIVE";
 
   return (
     <div
@@ -86,169 +108,97 @@ function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: Characte
       className={`
         group relative p-3 rounded-xl border transition-all duration-300
         ${disabled
-          ? 'bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed'
-          : 'bg-slate-800/80 border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 hover:shadow-[0_0_15px_rgba(0,245,255,0.2)] cursor-pointer'
+          ? "bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed grayscale shadow-none"
+          : "bg-slate-800/80 border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 hover:shadow-[0_0_15px_rgba(0,245,255,0.2)] cursor-pointer"
         }
       `}
     >
-      {/* Barre latérale colorée */}
-      <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-r ${card.type === 'ACTIVE' ? 'bg-amber-400' : 'bg-purple-400'}`} />
+      {disabled && (
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-xl border border-white/5">
+          <div className="flex flex-col items-center gap-1 opacity-40">
+            <span className="text-[14px]">🔒</span>
+            <span className="text-slate-400 font-bold text-[7px] tracking-[0.2em] uppercase">VERROUILLÉ</span>
+          </div>
+        </div>
+      )}
+      <div
+        className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-amber-400`}
+      />
 
       <div className="pl-3">
         <div className="flex justify-between items-start mb-1">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 relative bg-slate-900/50">
               {CHARACTER_IMAGES[card.characterId] ? (
-                <img src={CHARACTER_IMAGES[card.characterId]} alt={card.name} className="w-full h-full object-cover" />
+                <img
+                  src={CHARACTER_IMAGES[card.characterId]}
+                  alt={card.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xs">{icons[card.type]}</div>
+                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xs">
+                  {icons[charType]}
+                </div>
               )}
             </div>
-            <span className="text-white font-bold text-sm tracking-wide">{card.name}</span>
+            <span className="text-white font-bold text-sm tracking-wide">
+              {card.name}
+            </span>
           </div>
         </div>
         <p className="text-slate-500 text-[10px] leading-relaxed group-hover:text-slate-400">
-          {card.description}
+          {card.description || "Personnage du scénario"}
         </p>
       </div>
     </div>
   );
 }
 
-export default function Game({ gameId, onBackToLobby }: { gameId: string | null, onBackToLobby: () => void }) {
-  const [pieces, setPieces] = useState<UiPiece[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<0 | 1>(0);
-  const [localPlayerIndex, setLocalPlayerIndex] = useState<number | null>(null);
-  const [phase, setPhase] = useState<GamePhase>("ACTION");
-  const [turnNumber, setTurnNumber] = useState(1);
-  const [deck, setDeck] = useState<CharacterCard[]>(DECK_CARDS);
-  const [river, setRiver] = useState<CharacterCard[]>(INITIAL_RIVER);
-  const [selectedPiece, setSelectedPiece] = useState<UiPiece | null>(null);
-  const [victory, setVictory] = useState<{ winner: 0 | 1; type: "CAPTURE" | "ENCIRCLEMENT" } | null>(null);
+export default function Game({ gameId, onBackToLobby }: { gameId: string; onBackToLobby: () => void }) {
+  const [gameState, setGameState] = useState<GameFrontend | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<PieceFrontend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [validMoves, setValidMoves] = useState<{ q: number, r: number }[]>([]);
-  const [targetingState, setTargetingState] = useState<{ isActive: boolean; targetId: string | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [localPlayerIndex, setLocalPlayerIndex] = useState<number | null>(null);
+
+  // Steps
+  const [isRecruiting, setIsRecruiting] = useState(false);
+  const [placementMode, setPlacementMode] = useState<{
+    cardId: string;
+    cardName: string;
+  } | null>(null);
+
+  // Scenario-specific targeting states
+  const [manipulatorTarget, setManipulatorTarget] = useState<PieceFrontend | null>(null);
+  const [brawlerTarget, setBrawlerTarget] = useState<PieceFrontend | null>(null);
+  const [grapplerTarget, setGrapplerTarget] = useState<PieceFrontend | null>(null);
+  const [grapplerMode, setGrapplerMode] = useState<"PULL" | "MOVE" | null>(null);
+  const [showGrapplerModal, setShowGrapplerModal] = useState(false);
+  const [innkeeperTarget, setInnkeeperTarget] = useState<PieceFrontend | null>(null);
 
   // Check if it's the local player's turn
-  const isMyTurn = localPlayerIndex !== null && currentPlayer === localPlayerIndex;
-
-  // Handler for starting ability targeting
-  const handleStartAbility = useCallback(() => {
-    if (selectedPiece) {
-      setTargetingState({ isActive: true, targetId: null });
-    }
-  }, [selectedPiece]);
-
-  // Handler for canceling targeting mode
-  const cancelTargeting = useCallback(() => {
-    setTargetingState(null);
-  }, []);
-
-  // Handler for clicking on a target during ability targeting
-  const handleTargetClick = useCallback((target: { type: "PIECE" | "CELL"; id?: string; q: number; r: number }) => {
-    if (!targetingState?.isActive || !selectedPiece) return;
-
-    const { q, r, id } = target;
-
-    // If we need a second target (destination), set it
-    if (targetingState.targetId) {
-      // Execute the ability with target and destination
-      console.log(`Executing ability from ${selectedPiece.id} on target ${targetingState.targetId} to (${q}, ${r})`);
-      setTargetingState(null);
-    } else {
-      // First click: select the target (prefer piece id if available)
-      if (id) {
-        setTargetingState({ isActive: true, targetId: id });
-      } else {
-        const targetPiece = pieces.find(p => p.q === q && p.r === r);
-        if (targetPiece) {
-          setTargetingState({ isActive: true, targetId: targetPiece.id });
-        }
-      }
-    }
-  }, [targetingState, selectedPiece, pieces]);
-
-  const handlePieceSelect = useCallback(async (piece: UiPiece | null) => {
-    // Only allow selection if it's the local player's turn
-    if (!isMyTurn) {
-      console.log("Not your turn - selection blocked");
-      return;
-    }
-
-    setSelectedPiece(piece);
-    setValidMoves([]); // Reset previous moves
-
-    if (piece && piece.ownerIndex === localPlayerIndex && !piece.hasActed && phase === "ACTION") {
-      try {
-        const moves = await getValidMoves(piece.id);
-        setValidMoves(moves);
-      } catch (error) {
-        console.error("Failed to fetch valid moves:", error);
-      }
-    }
-  }, [localPlayerIndex, isMyTurn, phase]);
+  const isMyTurn = gameState && localPlayerIndex !== null && gameState.currentPlayerIndex === localPlayerIndex;
 
   // Sons
   const [playButtonClickSfx] = useSound(buttonClickSfx);
-  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
-  const [playCharacterHoverSfx] = useSound(characterHoverSfx);
   const [playCharacterSelectSfx] = useSound(characterSelectSfx);
 
-  const updateGameState = useCallback((game: GameState) => {
-    // Map backend pieces to UI pieces
-    if (game.pieces) {
-      const mappedPieces: UiPiece[] = game.pieces.map((p) => ({
-        ...p,
-        hasActed: p.hasActedThisTurn
-      }));
-      setPieces(mappedPieces);
-    }
+  const updateGameState = useCallback((game: any) => {
+    const mappedGame = gameApi.mapGameToFrontend(game);
+    setGameState(mappedGame);
+    setIsLoading(false);
 
-    // Map backend river cards to UI cards
-    if (game.river) {
-      const visibleCards = game.river
-        .filter(card => card.state === "VISIBLE")
-        .sort((a, b) => (a.visibleSlot || 0) - (b.visibleSlot || 0))
-        .map(card => {
-          const charData = CHARACTER_DATA[card.characterId] || {
-            name: card.characterId,
-            description: "Personnage mystérieux",
-            type: "ACTIVE" as const
-          };
-          return {
-            id: card.id,
-            characterId: card.characterId,
-            name: charData.name,
-            description: charData.description,
-            type: charData.type
-          };
-        });
-      setRiver(visibleCards);
-    }
-
-    // Determine local player index by matching user ID with players list
     if (game.players && game.players.length > 0) {
       const user = authService.getUser();
-      console.log(`DEBUG: Looking for user ID: ${user?.id} in players:`, game.players);
       if (user) {
-        // Use string comparison to avoid type mismatch issues
-        const localPlayer = game.players.find(p => String(p.userId) === String(user.id));
+        const localPlayer = game.players.find((p: any) => String(p.userId) === String(user.id));
         if (localPlayer !== undefined) {
           setLocalPlayerIndex(localPlayer.playerIndex);
-          console.log(`Local player index set to: ${localPlayer.playerIndex}`);
-        } else {
-          console.log(`DEBUG: User ${user.id} not found in players list`);
         }
       }
     }
 
-    setCurrentPlayer(game.currentPlayerIndex as 0 | 1);
-    setPhase(game.currentPhase as GamePhase);
-    setTurnNumber(game.turnNumber);
 
-    if (game.winnerPlayerIndex !== null) {
-      setVictory({ winner: game.winnerPlayerIndex as 0 | 1, type: game.winnerVictoryType as any });
-    }
   }, []);
 
   useEffect(() => {
@@ -256,16 +206,15 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
 
     const loadGame = async (retries = 5) => {
       try {
-        const game = await getGame(gameId);
+        const game = await gameApi.getGameState(gameId);
         updateGameState(game);
-        setIsLoading(false);
+        setError(null);
       } catch (e) {
         console.error("Failed to load game", e);
-        // Retry if game doesn't exist yet (it might still be creating)
         if (retries > 0) {
-          console.log(`Retrying game load... (${retries} attempts left)`);
           setTimeout(() => loadGame(retries - 1), 1000);
         } else {
+          setError("Impossible de charger la partie");
           setIsLoading(false);
         }
       }
@@ -274,413 +223,452 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
     loadGame();
 
     if (webSocketService.isConnected()) {
-      // Subscribe to game-specific updates
       webSocketService.subscribeToGame(gameId, (data) => {
         updateGameState(data);
-        setIsLoading(false);
       });
     }
 
-    return () => {
-      // Unsubscribe logic if implemented
-    };
-  }, [gameId, updateGameState]);
-
-
-  // === LOGIC ===
-  const endTurn = useCallback(async () => {
-    if (!gameId) return;
-
-    try {
-      // Call backend API to end turn
-      const updatedGame = await endTurnApi(gameId);
-
-      // Update local state with response
-      updateGameState(updatedGame);
-
-      setSelectedPiece(null);
-    } catch (error) {
-      console.error("Failed to end turn:", error);
-    }
-  }, [gameId, updateGameState]);
-
-  const checkPhaseTransition = useCallback((currentPieces: UiPiece[]) => {
-    const playerPieces = currentPieces.filter((p) => p.ownerIndex === currentPlayer);
-
-    if (playerPieces.every((p) => p.hasActed)) {
-      // Check if player can recruit (limit 5)
-      if (playerPieces.length >= 5) {
-        console.log("Max units reached, auto-ending turn...");
-        setTimeout(() => endTurn(), 500);
-      } else {
-        setTimeout(() => setPhase("RECRUITMENT"), 500);
+    const interval = setInterval(async () => {
+      try {
+        const game = await gameApi.getGameState(gameId);
+        updateGameState(game);
+      } catch (e) {
+        console.error("Polling error", e);
       }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [gameId, updateGameState]);
+
+  useEffect(() => {
+    if (grapplerTarget && !grapplerMode) {
+      setShowGrapplerModal(true);
     }
-  }, [currentPlayer, endTurn]);
+  }, [grapplerTarget, grapplerMode]);
+
+  const spawnCells = useMemo(() => {
+    if (!gameState) return [];
+    return gameState.currentPlayerIndex === 0
+      ? [{ q: 3, r: -2 }, { q: 2, r: -3 }, { q: 3, r: -3 }]
+      : [{ q: -3, r: 2 }, { q: -2, r: 3 }, { q: -3, r: 3 }];
+  }, [gameState?.currentPlayerIndex]);
+
+  const availableSpawnCells = useMemo(() => {
+    if (!gameState) return [];
+    return spawnCells.filter(
+      (cell) => !gameState.pieces.find((p) => p.q === cell.q && p.r === cell.r),
+    );
+  }, [gameState, spawnCells]);
+
+  const currentPlayerPieceCount = useMemo(() => {
+    if (!gameState) return 0;
+    return gameState.pieces.filter((p) => p.ownerIndex === gameState.currentPlayerIndex).length;
+  }, [gameState]);
+
+  const canRecruit = useMemo(() => {
+    const piecesOk = currentPlayerPieceCount < 5;
+
+    // Si la propriété est absente (backend non redémarré), on utilise 'false' 
+    // par défaut pour ne pas bloquer l'utilisateur.
+    if (gameState && gameState.hasRecruitedThisTurn === undefined) {
+      console.warn("DEBUG: gameState.hasRecruitedThisTurn is UNDEFINED. Make sure to restart the backend.");
+    }
+
+    const recruited = gameState?.hasRecruitedThisTurn === true;
+    return piecesOk && !recruited;
+  }, [currentPlayerPieceCount, gameState?.hasRecruitedThisTurn]);
+  const hasAvailableSpawnCells = useMemo(() => availableSpawnCells.length > 0, [availableSpawnCells]);
+
+  const allPiecesActed = useMemo(() => {
+    if (!gameState || localPlayerIndex === null) return false;
+    const myPieces = gameState.pieces.filter(p => p.ownerIndex === localPlayerIndex);
+    if (myPieces.length === 0) return false;
+    return myPieces.every(p => p.hasActed);
+  }, [gameState?.pieces, localPlayerIndex]);
+
+  const allActionsCompleted = useMemo(() => {
+    return isMyTurn && allPiecesActed && (!canRecruit || !hasAvailableSpawnCells);
+  }, [isMyTurn, allPiecesActed, canRecruit, hasAvailableSpawnCells]);
+
+  const hexDistance = (q1: number, r1: number, q2: number, r2: number): number => {
+    return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+  };
+
+  const detectAbilityMove = (piece: PieceFrontend, toQ: number, toR: number): string | null => {
+    const dist = hexDistance(piece.q, piece.r, toQ, toR);
+    if (dist <= 1) return null;
+    if (dist === 2) {
+      if (piece.characterId === "ACROBAT") return "ACROBAT_JUMP";
+      if (piece.characterId === "CAVALRY") return "CAVALRY_CHARGE";
+    }
+    if (piece.characterId === "PROWLER") return "PROWLER_STEALTH";
+    return null;
+  };
+
+  const autoEndTurnIfNeeded = useCallback(
+    async (updatedGame: GameFrontend) => {
+      const currentPieces = updatedGame.pieces.filter((p) => p.ownerIndex === updatedGame.currentPlayerIndex);
+      const piecesRemaining = currentPieces.filter((p) => !p.hasActed);
+
+      if (piecesRemaining.length === 0) {
+        // Automatically end turn if no pieces are left AND no recruitment is possible
+        if (!canRecruit || !hasAvailableSpawnCells) {
+          await gameApi.endTurn(gameId);
+          const newGame = await gameApi.getGameState(gameId);
+          updateGameState(newGame);
+        }
+      }
+    },
+    [gameId, updateGameState],
+  );
 
   const handleMove = useCallback(
     async (pieceId: string, toQ: number, toR: number) => {
-      // Optimistic update
-      setPieces((prev) => {
-        const updated = prev.map((p) =>
-          p.id === pieceId ? { ...p, q: toQ, r: toR, hasActed: true } : p,
-        );
-        checkPhaseTransition(updated);
-        return updated;
-      });
-
       try {
-        const user = authService.getUser();
-        console.log(`Sending move for ${pieceId} to (${toQ},${toR}) by player ${user?.id}`);
-        await movePiece(pieceId, toQ, toR, user?.id);
-        // Note: The websocket update will overwrite the local state eventually, ensuring synchronization
-      } catch (error) {
-        console.error("Failed to move piece:", error);
-        // Revert optimistic update on error (optional, but good practice)
-        // For now we rely on the next WebSocket update to correct the state
+        const piece = gameState?.pieces.find((p) => p.id === pieceId);
+        if (!piece) return;
+
+        const abilityId = detectAbilityMove(piece, toQ, toR);
+        if (abilityId) {
+          let targetId: string | undefined = undefined;
+          if (abilityId === "ACROBAT_JUMP") {
+            const midQ = piece.q + (toQ - piece.q) / 2;
+            const midR = piece.r + (toR - piece.r) / 2;
+            const targetPiece = gameState?.pieces.find((p) => p.q === midQ && p.r === midR);
+            if (!targetPiece) {
+              alert("Impossible de sauter : aucune pièce à survoler !");
+              return;
+            }
+            targetId = targetPiece.id;
+          }
+          await gameApi.useAbility(gameId, pieceId, abilityId, targetId, { q: toQ, r: toR });
+        } else {
+          await gameApi.movePiece(pieceId, toQ, toR);
+        }
+
+        const game = await gameApi.getGameState(gameId);
+        updateGameState(game);
+        setSelectedPiece(null);
+        setManipulatorTarget(null);
+        setBrawlerTarget(null);
+        setGrapplerTarget(null);
+        setGrapplerMode(null);
+        setInnkeeperTarget(null);
+
+        const mappedGame = gameApi.mapGameToFrontend(game);
+        await autoEndTurnIfNeeded(mappedGame);
+      } catch (err) {
+        console.error("Move error:", err);
       }
     },
-    [checkPhaseTransition],
+    [gameId, gameState, autoEndTurnIfNeeded, updateGameState],
   );
 
-  const handleRecruit = useCallback(
-    async (cardId: string) => {
-      if (!gameId) return;
-
-      // Simplify recruitment check for now
-      const playerPieceCount = pieces.filter(
-        (p) => p.ownerIndex === currentPlayer,
-      ).length;
-
-      if (playerPieceCount >= 5) {
-        console.log("Limite d'unités atteinte");
-        return;
-      }
-
-      if (phase !== "RECRUITMENT") return;
-
-      const card = river.find((c) => c.id === cardId);
-      if (!card) return;
-
-      // Define recruitment zones based on player
-      // Player 0 (top): zones around (-1, -2), (0, -2), (1, -2)
-      // Player 1 (bottom): zones around (-1, 2), (0, 2), (1, 2)
-      const recruitmentZones = currentPlayer === 0
-        ? [{ q: -1, r: -2 }, { q: 0, r: -2 }, { q: 1, r: -2 }]
-        : [{ q: -1, r: 2 }, { q: 0, r: 2 }, { q: 1, r: 2 }];
-
-      // Find first available recruitment zone
-      const availableZone = recruitmentZones.find(zone =>
-        !pieces.some(p => p.q === zone.q && p.r === zone.r)
-      );
-
-      if (!availableZone) {
-        console.log("Aucune zone de recrutement disponible");
-        return;
-      }
-
+  const handleAbilityUse = useCallback(
+    async (pieceId: string, abilityId: string, targetId?: string, destination?: { q: number; r: number }) => {
       try {
-        playCharacterSelectSfx();
-
-        // Call backend API
-        await recruitCharacter(gameId, cardId, [availableZone]);
-
-        // Auto End Turn after recruitment
-        await endTurn();
-
-        // The game state will be updated via WebSocket
-      } catch (error) {
-        console.error("Failed to recruit character:", error);
+        await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination);
+        const game = await gameApi.getGameState(gameId);
+        const mappedGame = gameApi.mapGameToFrontend(game);
+        setGameState(mappedGame);
+        setSelectedPiece(null);
+        setManipulatorTarget(null);
+        setBrawlerTarget(null);
+        setGrapplerTarget(null);
+        setGrapplerMode(null);
+        setInnkeeperTarget(null);
+        await autoEndTurnIfNeeded(mappedGame);
+      } catch (err) {
+        console.error("Ability error:", err);
       }
     },
-    [gameId, pieces, river, currentPlayer, phase, playCharacterSelectSfx, endTurn],
+    [gameId, autoEndTurnIfNeeded],
   );
 
-  const resetGame = () => {
-    // Reset local state if needed
-    setVictory(null);
+  const handleGrapplerModeChoice = (mode: "PULL" | "MOVE") => {
+    setGrapplerMode(mode);
+    setShowGrapplerModal(false);
+    playButtonClickSfx();
   };
 
+  const handleRecruit = useCallback(
+    (cardId: string) => {
+      if (!gameState) return;
+      if (isRecruiting) return;
+      if (gameState.hasRecruitedThisTurn) {
+        alert("Action impossible: Vous avez déjà recruté une unité ce tour-ci.");
+        return;
+      }
+      if (currentPlayerPieceCount >= 5) {
+        alert("Limite atteinte: Vous ne pouvez pas avoir plus de 5 personnages");
+        return;
+      }
+      if (!hasAvailableSpawnCells) {
+        alert("Aucune case de spawn disponible !");
+        return;
+      }
+
+      const card = gameState.river?.find((c) => c.id === cardId);
+      if (!card) return;
+      const cardName = CHARACTER_NAMES[card.characterId] || card.characterId;
+
+      playCharacterSelectSfx();
+      setPlacementMode({ cardId, cardName });
+    },
+    [gameState, isRecruiting, currentPlayerPieceCount, hasAvailableSpawnCells, playCharacterSelectSfx],
+  );
+
+  const confirmPlacement = useCallback(
+    async (q: number, r: number) => {
+      if (!gameState || !placementMode) return;
+      try {
+        setIsRecruiting(true);
+        await gameApi.recruitCharacter(gameId, placementMode.cardId, [{ q, r }]);
+        const game = await gameApi.getGameState(gameId);
+        updateGameState(game);
+      } catch (err) {
+        console.error("Recruitment error:", err);
+      } finally {
+        setIsRecruiting(false);
+        setPlacementMode(null);
+      }
+    },
+    [gameState, gameId, placementMode, updateGameState],
+  );
+
+  const handleEndTurn = useCallback(async () => {
+    try {
+      playButtonClickSfx();
+      await gameApi.endTurn(gameId);
+      const game = await gameApi.getGameState(gameId);
+      updateGameState(game);
+    } catch (err) {
+      console.error("End turn error:", err);
+    }
+  }, [playButtonClickSfx, canRecruit, hasAvailableSpawnCells, gameId, updateGameState]);
+
   if (isLoading) {
-    return <div className="h-screen w-screen flex items-center justify-center text-white font-cyber">CHARGEMENT DU CHAMP DE BATAILLE...</div>;
+    return (
+      <div className="h-screen w-screen bg-[#020617] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-pulse">⏳</div>
+          <p className="text-xl font-orbitron tracking-wider">CHARGEMENT DE LA PARTIE...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (victory) {
+  if (error || !gameState) {
+    return (
+      <div className="h-screen w-screen bg-[#020617] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">❌</div>
+          <p className="text-xl text-red-500 mb-4">{error || "Partie introuvable"}</p>
+          <button onClick={onBackToLobby} className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded-lg font-bold">RETOUR AU LOBBY</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (gameState.status === "FINISHED_CAPTURE" || gameState.status === "FINISHED" || (gameState.winnerPlayerIndex !== undefined && gameState.winnerPlayerIndex !== null)) {
+    const winnerIndex = gameState.winnerPlayerIndex ?? 0;
+    const loserIndex = winnerIndex === 0 ? 1 : 0;
+    const winnerPieces = gameState.pieces.filter((p) => p.ownerIndex === winnerIndex);
+    const loserPieces = gameState.pieces.filter((p) => p.ownerIndex === loserIndex);
+    const victoryType = gameState.winnerVictoryType || (gameState.status === "FINISHED_CAPTURE" ? "CAPTURE" : "ENCIRCLEMENT");
+
     return (
       <VictoryScreen
-        winner={victory.winner}
-        victoryType={victory.type}
-        onPlayAgain={resetGame}
+        winner={winnerIndex as 0 | 1}
+        victoryType={victoryType as any}
+        onPlayAgain={() => window.location.reload()}
         onBackToLobby={onBackToLobby}
+        turnNumber={gameState.turnNumber}
+        winnerPieceCount={winnerPieces.length}
+        loserPieceCount={loserPieces.length}
       />
     );
   }
 
+  const riverCards: CharacterCard[] = (gameState.river || [])
+    .filter((c) => c.state === "VISIBLE")
+    .filter((c) => c.characterId !== "LEADER")
+    .sort((a, b) => (a.visibleSlot || 0) - (b.visibleSlot || 0))
+    .map((c) => ({
+      id: c.id,
+      characterId: c.characterId,
+      name: CHARACTER_NAMES[c.characterId] || c.characterId,
+      description: CHARACTER_DATA[c.characterId]?.description,
+      type: CHARACTER_DATA[c.characterId]?.type
+    }));
+
+  const activeTarget = manipulatorTarget || brawlerTarget || innkeeperTarget || (grapplerTarget && grapplerMode === "MOVE" ? grapplerTarget : null);
+  const activeTargetName = activeTarget ? CHARACTER_NAMES[activeTarget.characterId] || activeTarget.characterId : "";
+
   return (
     <div className="h-screen w-screen bg-[#020617] text-white font-mono flex overflow-hidden relative selection:bg-cyan-500 selection:text-black">
-      {/* Dynamic Background with Grid and Vignette */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900/20 via-[#020617] to-[#020617] pointer-events-none" />
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(rgba(0, 245, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 245, 255, 0.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px',
-          maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
-        }}
-      />
-
-      {/* Ambient Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[128px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px] pointer-events-none animate-pulse delay-1000" />
-
-      {/* Cyber UI Corners */}
       <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-cyan-500 rounded-tl-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)]" />
       <div className="absolute top-6 right-6 w-8 h-8 border-t-2 border-r-2 border-cyan-500 rounded-tr-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)]" />
       <div className="absolute bottom-6 left-6 w-8 h-8 border-b-2 border-l-2 border-cyan-500 rounded-bl-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)]" />
       <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-cyan-500 rounded-br-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)]" />
 
-      {/* === HEADER === */}
+      {/* HEADER */}
       <div className="absolute top-0 left-0 right-0 h-24 z-20 flex items-center justify-center pointer-events-none">
-        <div className="relative flex items-center gap-8 bg-slate-950/80 backdrop-blur-xl px-16 py-4 rounded-b-[2rem] border-x border-b border-cyan-500/20 shadow-[0_0_40px_rgba(0,245,255,0.15)] pointer-events-auto overflow-hidden group">
-          {/* Header internal glow */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-
+        <div className="relative flex items-center gap-8 bg-slate-950/80 backdrop-blur-xl px-16 py-4 rounded-b-[2rem] border-x border-b border-cyan-500/20 shadow-[0_0_40px_rgba(0,245,255,0.15)] pointer-events-auto">
           <div className="flex items-center gap-4">
-            <span className="text-2xl animate-spin-slow">💠</span>
-            <h1
-              className="font-cyber text-5xl font-bold italic tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-100 to-cyan-300 drop-shadow-[0_0_10px_rgba(0,245,255,0.4)]"
-            >
-              {phase === 'RECRUITMENT' ? 'RENFORTS' : 'COMBAT'}
+            <span className="text-2xl">💠</span>
+            <h1 className="font-cyber text-5xl font-bold italic tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-100 to-cyan-300">
+              {isMyTurn ? "VOTRE TOUR" : "TOUR ADVERSE"}
             </h1>
           </div>
-
-          <div className="w-px h-10 bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
-
           <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest">
-            <span className="text-slate-500">TOUR <span className="text-cyan-50 text-base ml-1">{turnNumber}</span></span>
-            <div className={`
-              px-6 py-2 rounded-full border shadow-[0_0_15px_inset] transition-all duration-300
-              ${currentPlayer === 0
-                ? 'border-cyan-500 text-cyan-400 bg-cyan-950/30 shadow-cyan-500/20'
-                : 'border-rose-500 text-rose-400 bg-rose-950/30 shadow-rose-500/20'
+            <span className="text-slate-500">TOUR <span className="text-cyan-50 text-base ml-1">{gameState.turnNumber}</span></span>
+            <div className={`px-6 py-2 rounded-full border shadow-[0_0_15px_inset] transition-all duration-300 ${gameState.currentPlayerIndex === 0 ? "border-cyan-500 text-cyan-400 bg-cyan-950/30" : "border-rose-500 text-rose-400 bg-rose-950/30"}`}>
+              JOUEUR {gameState.currentPlayerIndex + 1} {gameState.currentPlayerIndex === localPlayerIndex ? "(VOUS)" : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MODALS */}
+      {placementMode && (
+        <div className="absolute top-32 left-1/2 transform -translate-x-1/2 z-40 px-8 py-4 bg-amber-950/90 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl animate-pulse">
+          <p className="text-amber-400 font-bold text-sm uppercase tracking-wider">📍 Placez {placementMode.cardName} sur une case dorée</p>
+          <button onClick={() => setPlacementMode(null)} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">✖ ANNULER</button>
+        </div>
+      )}
+
+      {activeTarget && !showGrapplerModal && (
+        <div className="absolute top-32 left-1/2 transform -translate-x-1/2 z-40 px-8 py-4 bg-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/50 rounded-2xl animate-pulse">
+          <p className="text-cyan-400 font-bold text-sm uppercase tracking-wider">🎯 {activeTargetName}: Choisissez la destination</p>
+          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">✖ ANNULER</button>
+        </div>
+      )}
+
+      {showGrapplerModal && grapplerTarget && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900/95 border-2 border-cyan-500/50 rounded-2xl p-8 max-w-md">
+            <h3 className="text-cyan-400 font-bold text-xl uppercase tracking-wider text-center mb-6">🪝 Lance-Grappin</h3>
+            <div className="flex flex-col gap-4">
+              <button onClick={() => handleGrapplerModeChoice("PULL")} className="px-6 py-4 bg-cyan-600/20 text-cyan-400 border border-cyan-500/50 rounded-xl hover:bg-cyan-500 hover:text-white transition-all font-bold">🎣 ATTIRER</button>
+              <button onClick={() => handleGrapplerModeChoice("MOVE")} className="px-6 py-4 bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 rounded-xl hover:bg-emerald-500 hover:text-white transition-all font-bold">🏃 SE DÉPLACER</button>
+              <button onClick={() => { setShowGrapplerModal(false); setGrapplerTarget(null); }} className="px-6 py-3 bg-slate-800 rounded-xl font-bold">✖ ANNULER</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RIVIÈRE */}
+      <div className="absolute top-24 left-10 w-72 h-[calc(100vh-12rem)] flex flex-col gap-5 z-10">
+        <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-white/5">
+          <h2 className="font-cyber font-bold text-xl text-white mb-2 underline decoration-cyan-500 py-1">RIVIÈRE</h2>
+          <p className="text-[10px] text-slate-500 uppercase">Unités: {currentPlayerPieceCount}/5 | Cases: {availableSpawnCells.length}/3</p>
+          {isMyTurn && (
+            <div className="mt-2 flex flex-col gap-1">
+              {(!canRecruit || !hasAvailableSpawnCells) ? (
+                <p className="text-[10px] text-rose-500 font-bold uppercase tracking-tighter shadow-sm">⚠️ RECRUTEMENT TERMINÉ</p>
+              ) : (
+                <p className="text-[10px] text-amber-500 animate-pulse uppercase tracking-tighter">UNITÉS DISPONIBLES</p>
+              )}
+              {allPiecesActed ? (
+                <p className="text-[10px] text-rose-500 font-bold uppercase tracking-tighter shadow-sm">⚠️ MOUVEMENTS TERMINÉS</p>
+              ) : (
+                <p className="text-[10px] text-cyan-500 animate-pulse uppercase tracking-tighter">MOUVEMENTS DISPONIBLES</p>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-cyan-500/20">
+          {riverCards.map((card) => (
+            <SidebarCard
+              key={card.id}
+              card={card}
+              onClick={() => handleRecruit(card.id)}
+              onMouseEnter={() => { }}
+              disabled={!isMyTurn || isRecruiting || !!placementMode || !canRecruit || !hasAvailableSpawnCells}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* HEXBOARD */}
+      <div className="flex-1 flex items-center justify-center p-20">
+        <HexBoard
+          pieces={gameState.pieces}
+          currentPlayer={gameState.currentPlayerIndex}
+          phase={"ACTIONS" as "ACTIONS" | "RECRUITMENT"}
+          turnNumber={gameState.turnNumber}
+          onMove={handleMove}
+          selectedPiece={selectedPiece}
+          onSelectPiece={setSelectedPiece}
+          placementMode={placementMode}
+          availablePlacementCells={availableSpawnCells}
+          onPlacementConfirm={confirmPlacement}
+          onAbilityUse={handleAbilityUse}
+          manipulatorTarget={manipulatorTarget}
+          onManipulatorTargetSelect={setManipulatorTarget}
+          brawlerTarget={brawlerTarget}
+          onBrawlerTargetSelect={setBrawlerTarget}
+          grapplerTarget={grapplerTarget}
+          onGrapplerTargetSelect={setGrapplerTarget}
+          grapplerMode={grapplerMode}
+          onGrapplerModeSelect={setGrapplerMode}
+          innkeeperTarget={innkeeperTarget}
+          onInnkeeperTargetSelect={setInnkeeperTarget}
+          isLocalTurn={!!isMyTurn}
+        />
+      </div>
+
+      {/* SIDEBAR RIGHT: SCANNER */}
+      <div className="absolute top-24 right-10 w-72 h-[72] z-10">
+        <div className={`h-full w-full rounded-2xl border p-6 bg-slate-900/40 backdrop-blur-sm transition-all ${selectedPiece ? "border-amber-500/50" : "border-white/10"}`}>
+          {selectedPiece ? (
+            <div className="flex flex-col items-center">
+              <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-amber-500/50 mb-4 bg-slate-900/80">
+                {CHARACTER_IMAGES[selectedPiece.characterId] ? (
+                  <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-4xl">{selectedPiece.characterId === "LEADER" ? "👑" : "⚔️"}</div>
+                )}
+              </div>
+              <h3 className="font-cyber text-2xl font-bold text-amber-400 mb-2">{CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}</h3>
+              <p className="text-[10px] text-slate-500 mb-4 tracking-widest uppercase">COORD: [{selectedPiece.q}, {selectedPiece.r}]</p>
+              <div className={`px-4 py-1 rounded-full border text-[10px] font-bold ${selectedPiece.hasActed ? "border-rose-500/30 text-rose-400" : "border-emerald-500/30 text-emerald-400"}`}>
+                {selectedPiece.hasActed ? "ÉPUISÉ" : "PRÊT"}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full opacity-30">
+              <span className="text-4xl mb-4">⌖</span>
+              <p className="font-cyber text-xs tracking-widest">SCANNER ACTIF</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ACTION BAR */}
+      <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-20 flex gap-4">
+        {isMyTurn && (
+          <button
+            onClick={handleEndTurn}
+            className={`
+              px-10 py-4 font-bold rounded-2xl shadow-xl transition-all uppercase tracking-widest text-lg border-2
+              ${allActionsCompleted
+                ? "bg-amber-600 border-amber-400 text-white animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-110"
+                : "bg-cyan-600 border-cyan-400/50 text-white hover:bg-cyan-500"
               }
-            `}>
-              JOUEUR {currentPlayer + 1} EN LIGNE
-            </div>
-          </div>
-
-          {/* End Turn Button REMOVED */}
-        </div>
+            `}
+          >
+            Terminer le tour
+          </button>
+        )}
+        <button onClick={() => { onBackToLobby(); playButtonClickSfx(); }} className="px-8 py-3 bg-rose-900/40 border border-rose-500/50 text-rose-500 font-bold rounded-xl hover:bg-rose-500 hover:text-white transition-all uppercase tracking-widest">Quitter</button>
       </div>
 
-      {/* Quit Button */}
-      <button
-        onClick={() => {
-          onBackToLobby();
-          playButtonClickSfx();
-        }}
-        onMouseEnter={() => playButtonHoverSfx()}
-        className="absolute top-8 right-10 z-30 flex items-center gap-2 px-5 py-2.5 bg-rose-950/20 text-rose-500 border border-rose-500/30 rounded-lg hover:bg-rose-500 hover:text-white hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all uppercase text-[10px] font-bold tracking-[0.2em]"
-      >
-        <span>↪ QUITTER</span>
-      </button>
-
-      {/* === MAIN LAYOUT === */}
-      <div className="flex-1 flex items-center justify-between px-10 pt-24 pb-10 w-full z-10 gap-10">
-
-        {/* LEFT: RIVIÈRE */}
-        <div className="w-80 h-full flex flex-col gap-5 animate-in slide-in-from-left duration-500 fade-in">
-          {/* River Header */}
-          <div className="relative overflow-hidden bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-white/5 shadow-2xl group">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-            <div className="relative flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(8,145,178,0.5)]">🌊</div>
-              <div>
-                <h2 className="font-cyber font-bold text-xl text-white tracking-wide">RIVIÈRE</h2>
-                <p className="text-[10px] text-cyan-400 uppercase tracking-widest font-semibold">Renforts Tactiques</p>
-              </div>
-            </div>
-
-            <button
-              disabled
-              className={`relative w-full py-3 rounded-xl font-bold text-xs uppercase tracking-[0.15em] transition-all overflow-hidden cursor-default
-                ${phase === "RECRUITMENT"
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-pulse'
-                  : 'bg-slate-800/50 text-slate-600 border border-slate-800'
-                }
-              `}
-            >
-              <div className="absolute inset-0 bg-cyan-500/5 translate-y-full transition-transform duration-300" />
-              <span className="relative z-10">{phase === "RECRUITMENT" ? "⚠️ RECRUTEMENT REQUIS" : "🔒 RIVIÈRE VERROUILLÉE"}</span>
-            </button>
-          </div>
-
-          {/* Cards List */}
-          <div className="flex-1 overflow-y-auto pr-3 space-y-3 custom-scrollbar">
-            {river.map((card) => (
-              <SidebarCard
-                key={card.id}
-                card={card}
-                onClick={() => {
-                  handleRecruit(card.id);
-                  playCharacterSelectSfx();
-                }}
-                onMouseEnter={() => {
-                  if (phase == "RECRUITMENT") {
-                    playCharacterHoverSfx();
-                  }
-                }}
-                disabled={phase !== "RECRUITMENT"}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* CENTER: HEXBOARD */}
-        <div className="flex-1 flex items-center justify-center relative z-0">
-          {/* Holographic Base */}
-          <div className="relative p-14 group">
-            {/* Rotating Rings */}
-            <div className="absolute inset-0 border border-cyan-500/20 rounded-full animate-[spin_20s_linear_infinite]" />
-            <div className="absolute inset-8 border border-dashed border-cyan-500/20 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
-
-            {/* Glow source */}
-            <div className="absolute inset-0 bg-cyan-500/5 blur-3xl rounded-full" />
-
-            {/* Board Render */}
-            <div className="relative scale-90 xl:scale-105 transition-transform duration-500 filter drop-shadow-[0_0_40px_rgba(6,182,212,0.2)]">
-              {/* Cast pieces to any if HexBoard types are strict or ensure HexBoard accepts UiPiece */}
-              <HexBoard
-                pieces={pieces as any}
-                currentPlayer={currentPlayer}
-                phase={phase}
-                turnNumber={turnNumber}
-                onMove={handleMove}
-                selectedPiece={selectedPiece as any}
-                onSelectPiece={handlePieceSelect as any}
-                validMoves={validMoves}
-                isTargeting={!!targetingState?.isActive}
-                onTargetClick={handleTargetClick}
-              />
-
-            // ...
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: SCANNER */}
-        <div className="w-80 h-72 animate-in slide-in-from-right duration-500 fade-in">
-          <div className={`
-             h-full w-full rounded-2xl border transition-all duration-300 relative overflow-hidden group bg-slate-900/40 backdrop-blur-sm
-             ${selectedPiece
-              ? 'border-amber-500/50 shadow-[0_0_30px_inset_rgba(245,158,11,0.1)]'
-              : 'border-white/10 border-dashed hover:border-cyan-500/30'
-            }
-           `}>
-            {/* Scanline Overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px] pointer-events-none opacity-20" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-1/4 animate-[scan_2s_linear_infinite] opacity-30 pointer-events-none" />
-
-            {selectedPiece ? (
-              <div className="relative z-10 p-8 h-full flex flex-col items-center justify-center text-center">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-amber-500/50 mb-4 shadow-[0_0_25px_rgba(251,191,36,0.5)] relative bg-slate-900/80">
-                  {CHARACTER_IMAGES[selectedPiece.characterId] ? (
-                    <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-amber-400 to-orange-600">
-                      {selectedPiece.characterId === 'LEADER' ? '👑' : '⚔️'}
-                    </div>
-                  )}
-                </div>
-                <h3 className="font-cyber text-3xl font-bold text-amber-400 tracking-wider mb-2 drop-shadow-md">{selectedPiece.characterId}</h3>
-
-                <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent my-3" />
-
-                <div className="text-xs font-mono space-y-1.5 uppercase tracking-wide mb-4">
-                  <p className="text-slate-400">COORD : <span className="text-white font-bold ml-1">[{selectedPiece.q}, {selectedPiece.r}]</span></p>
-                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded border overflow-hidden relative ${selectedPiece.hasActed ? "border-rose-500/30 text-rose-400" : "border-emerald-500/30 text-emerald-400"}`}>
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${selectedPiece.hasActed ? "bg-rose-500" : "bg-emerald-500"}`} />
-                    {selectedPiece.hasActed ? "SYSTÈME : ÉPUISÉ" : "SYSTÈME : PRÊT"}
-                  </div>
-                </div>
-
-                {/* ABILITY BUTTON */}
-                {CHARACTER_DATA[selectedPiece.characterId]?.type === "ACTIVE" &&
-                  selectedPiece.ownerIndex === currentPlayer &&
-                  !selectedPiece.hasActed &&
-                  phase === "ACTION" && (
-                    <div className="w-full flex flex-col gap-2">
-                      {targetingState?.isActive ? (
-                        <div className="flex flex-col gap-2 animate-pulse">
-                          <span className="text-cyan-400 font-bold text-xs">
-                            {targetingState.targetId ? "CHOISIR DESTINATION" : "CHOISIR CIBLE"}
-                          </span>
-                          <button
-                            onClick={cancelTargeting}
-                            className="px-4 py-2 bg-rose-500/20 border border-rose-500 text-rose-400 rounded hover:bg-rose-500 hover:text-white transition-colors text-xs font-bold"
-                          >
-                            ANNULER
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={handleStartAbility}
-                          className="px-4 py-2 bg-cyan-500/20 border border-cyan-500 text-cyan-400 rounded hover:bg-cyan-500 hover:text-black transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] text-xs font-bold"
-                        >
-                          ACTIVER COMPÉTENCE
-                        </button>
-                      )}
-                    </div>
-                  )}
-              </div>
-            ) : (
-              <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="w-20 h-20 border border-dashed border-cyan-500/30 rounded-xl mb-6 flex items-center justify-center text-3xl text-cyan-500/30 animate-pulse">
-                  ⌖
-                </div>
-                <p className="font-cyber text-cyan-400 font-bold tracking-[0.3em] uppercase text-xs animate-pulse">ANALYSE MATRICE</p>
-                <p className="text-slate-600 text-[10px] mt-2 uppercase tracking-widest">ATTENTE SÉLECTION CIBLE...</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* Footer Status */}
-      <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
-        <div className="flex justify-center items-center gap-6 opacity-60">
-          <span className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
-            <p className="font-cyber text-[10px] font-medium text-cyan-400 tracking-[0.4em] uppercase drop-shadow-[0_0_5px_rgba(0,245,255,0.8)]">
-              CONNEXION SÉCURISÉE ÉTABLIE
-            </p>
-            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
-          </div>
-          <span className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-        </div>
-      </div>
-
-      {/* Custom Styles Injection */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap');
-        
-        @keyframes scan {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(400%); }
-        }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.3); border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(6,182,212,0.6); }
-        .text-shadow-glow { text-shadow: 0 0 10px rgba(6,182,212,0.5); }
-        
-        .font-cyber { 
-          font-family: 'Chakra Petch', sans-serif; 
-          font-feature-settings: "smcp", "c2sc"; /* Small Caps simulation */
-        }
+        .font-cyber { font-family: 'Chakra Petch', sans-serif; }
       `}</style>
     </div>
   );
