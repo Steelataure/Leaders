@@ -29,7 +29,7 @@ public class MovementService {
     private final GameRepository gameRepository; // 1. Dépendance nécessaire
 
     @Transactional
-    public PieceEntity movePiece(UUID pieceId, short toQ, short toR) {
+    public PieceEntity movePiece(UUID pieceId, short toQ, short toR, UUID playerId) {
         // Validation basique des coordonnées
         HexCoord target = new HexCoord(toQ, toR);
         if (!target.isValid()) {
@@ -46,12 +46,26 @@ public class MovementService {
         GameEntity game = gameRepository.findById(pieceEntity.getGameId())
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
-        // 3. 🛑 SÉCURITÉ : Vérification du tour
+        // 3. 🛑 SÉCURITÉ : Vérification du tour et de l'identité
         // On compare l'index du propriétaire de la pièce avec l'index du joueur courant
         if (pieceEntity.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
             System.err.println("DEBUG: Not your turn! PieceOwner=" + pieceEntity.getOwnerIndex() + ", CurrentPlayer="
                     + game.getCurrentPlayerIndex());
             throw new IllegalStateException("Action refusée : Ce n'est pas votre tour !");
+        }
+
+        // Vérification de l'identité du joueur (empêche de jouer pour l'adversaire même
+        // si c'est son tour)
+        // On récupère le joueur correspondant à l'index courant
+        var currentPlayer = game.getPlayers().stream()
+                .filter(p -> p.getPlayerIndex() == game.getCurrentPlayerIndex())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Current player not found in game"));
+
+        if (playerId != null && !playerId.equals(currentPlayer.getUserId())) {
+            System.err.println(
+                    "SECURITY ALERT: Player " + playerId + " tried to move piece of " + currentPlayer.getUserId());
+            throw new IllegalStateException("Action refusée : Vous n'êtes pas le joueur actif !");
         }
 
         // 4. Vérification si la pièce a déjà agi

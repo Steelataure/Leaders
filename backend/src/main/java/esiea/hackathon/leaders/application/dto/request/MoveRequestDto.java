@@ -4,6 +4,7 @@ import esiea.hackathon.leaders.domain.model.HexCoord;
 import java.util.UUID;
 
 public record MoveRequestDto(
-        UUID pieceId,
-        HexCoord destination
-) {}
+                UUID pieceId,
+                HexCoord destination,
+                UUID playerId) {
+}

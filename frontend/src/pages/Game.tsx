@@ -17,6 +17,7 @@ import gardeImg from '/image/garderoyal.png';
 
 import { getGame, endTurn as endTurnApi, recruitCharacter, movePiece, getValidMoves, type GameState, type Piece as ApiPiece } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
+import { authService } from "../services/auth.service";
 
 // === TYPES ===
 export type GamePhase = "ACTION" | "RECRUITMENT" | "COMBAT" | "BANISHMENT";
@@ -117,6 +118,7 @@ function SidebarCard({ card, onClick, onMouseEnter, disabled }: { card: Characte
 export default function Game({ gameId, onBackToLobby }: { gameId: string | null, onBackToLobby: () => void }) {
   const [pieces, setPieces] = useState<UiPiece[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<0 | 1>(0);
+  const [localPlayerIndex, setLocalPlayerIndex] = useState<number | null>(null);
   const [phase, setPhase] = useState<GamePhase>("ACTION");
   const [turnNumber, setTurnNumber] = useState(1);
   const [deck, setDeck] = useState<CharacterCard[]>(DECK_CARDS);
@@ -126,6 +128,9 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
   const [isLoading, setIsLoading] = useState(true);
   const [validMoves, setValidMoves] = useState<{ q: number, r: number }[]>([]);
   const [targetingState, setTargetingState] = useState<{ isActive: boolean; targetId: string | null } | null>(null);
+
+  // Check if it's the local player's turn
+  const isMyTurn = localPlayerIndex !== null && currentPlayer === localPlayerIndex;
 
   // Handler for starting ability targeting
   const handleStartAbility = useCallback(() => {
@@ -164,10 +169,16 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
   }, [targetingState, selectedPiece, pieces]);
 
   const handlePieceSelect = useCallback(async (piece: UiPiece | null) => {
+    // Only allow selection if it's the local player's turn
+    if (!isMyTurn) {
+      console.log("Not your turn - selection blocked");
+      return;
+    }
+
     setSelectedPiece(piece);
     setValidMoves([]); // Reset previous moves
 
-    if (piece && piece.ownerIndex === currentPlayer && !piece.hasActed && phase === "ACTION") {
+    if (piece && piece.ownerIndex === localPlayerIndex && !piece.hasActed && phase === "ACTION") {
       try {
         const moves = await getValidMoves(piece.id);
         setValidMoves(moves);
@@ -175,7 +186,7 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
         console.error("Failed to fetch valid moves:", error);
       }
     }
-  }, [currentPlayer, phase]);
+  }, [localPlayerIndex, isMyTurn, phase]);
 
   // Sons
   const [playButtonClickSfx] = useSound(buttonClickSfx);
@@ -213,6 +224,22 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
           };
         });
       setRiver(visibleCards);
+    }
+
+    // Determine local player index by matching user ID with players list
+    if (game.players && game.players.length > 0) {
+      const user = authService.getUser();
+      console.log(`DEBUG: Looking for user ID: ${user?.id} in players:`, game.players);
+      if (user) {
+        // Use string comparison to avoid type mismatch issues
+        const localPlayer = game.players.find(p => String(p.userId) === String(user.id));
+        if (localPlayer !== undefined) {
+          setLocalPlayerIndex(localPlayer.playerIndex);
+          console.log(`Local player index set to: ${localPlayer.playerIndex}`);
+        } else {
+          console.log(`DEBUG: User ${user.id} not found in players list`);
+        }
+      }
     }
 
     setCurrentPlayer(game.currentPlayerIndex as 0 | 1);
@@ -303,8 +330,9 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string | null,
       });
 
       try {
-        console.log(`Sending move for ${pieceId} to (${toQ},${toR})`);
-        await movePiece(pieceId, toQ, toR);
+        const user = authService.getUser();
+        console.log(`Sending move for ${pieceId} to (${toQ},${toR}) by player ${user?.id}`);
+        await movePiece(pieceId, toQ, toR, user?.id);
         // Note: The websocket update will overwrite the local state eventually, ensuring synchronization
       } catch (error) {
         console.error("Failed to move piece:", error);

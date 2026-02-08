@@ -53,4 +53,8 @@ public class GameJpaEntity {
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     @ToString.Exclude
     private List<PieceJpaEntity> pieces;
+
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<GamePlayerJpaEntity> players;
 }

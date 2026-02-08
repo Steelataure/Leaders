@@ -1,0 +1,20 @@
+export const CHARACTER_IMAGES: Record<string, string> = {
+    COGNEUR: "/image/cogneur.png",
+    RODEUR: "/image/rodeuse.png",
+    RODEUSE: "/image/rodeuse.png",
+    ILLUSIONISTE: "/image/illusioniste.png",
+    MANIPULATRICE: "/image/manipulatrice.png",
+    TAVERNIER: "/image/tavernier.png",
+    GARDE: "/image/garderoyal.png",
+    ARCHER: "/image/archere.png",
+    ARCHERE: "/image/archere.png",
+    CAVALIER: "/image/cavalier.png",
+    LEADER: "/image/vizir.png",
+    ASSASSIN: "/image/assassin.png",
+    ACROBATE: "/image/acrobate.png",
+    GEOLIER: "/image/geolier.png",
+    PROTECTEUR: "/image/protecteur.png",
+    NEMESIS: "/image/nemesis.png",
+    VIEILOURS: "/image/vieilours_ourson.png",
+    LANCE_GRAPPIN: "/image/lance-grappin.png", // Added based on file list
+};

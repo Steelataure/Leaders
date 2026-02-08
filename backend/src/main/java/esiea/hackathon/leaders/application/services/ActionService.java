@@ -30,7 +30,7 @@ public class ActionService {
     private final GameRepository gameRepository;
 
     @Transactional
-    public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination) {
+    public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination, UUID playerId) {
         // 1. Chargement de la source
         PieceEntity source = pieceRepository.findById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Source piece not found"));
@@ -43,6 +43,16 @@ public class ActionService {
         if (source.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
             System.err.println("DEBUG: Not your turn to use ability!");
             throw new IllegalStateException("Action refusée : Ce n'est pas votre tour !");
+        }
+
+        // Vérification identité
+        var currentPlayer = game.getPlayers().stream()
+                .filter(p -> p.getPlayerIndex() == game.getCurrentPlayerIndex())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Current player not found in game"));
+
+        if (playerId != null && !playerId.equals(currentPlayer.getUserId())) {
+            throw new IllegalStateException("Action refusée : Vous n'êtes pas le joueur actif !");
         }
 
         if (source.getHasActedThisTurn()) {

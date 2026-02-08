@@ -17,10 +17,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import esiea.hackathon.leaders.domain.model.GamePlayerEntity;
+import esiea.hackathon.leaders.domain.model.AbilityEntity;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,7 +40,6 @@ class MovementServiceTest {
     private RefCharacterRepository characterRepository;
     @Mock
     private GameRepository gameRepository;
-
 
     @InjectMocks
     private MovementService movementService;
@@ -72,12 +75,11 @@ class MovementServiceTest {
     @Test
     @DisplayName("Devrait détecter l'adjacence correctement")
     void areAdjacent() {
-        List<HexCoord> adjacent = movementService.getAdjacentCells((short)0, (short)0);
-        assertTrue(adjacent.contains(new HexCoord((short)1, (short)0)));
-        assertTrue(adjacent.contains(new HexCoord((short)0, (short)-1)));
-        assertFalse(adjacent.contains(new HexCoord((short)2, (short)0)));
+        List<HexCoord> adjacent = movementService.getAdjacentCells((short) 0, (short) 0);
+        assertTrue(adjacent.contains(new HexCoord((short) 1, (short) 0)));
+        assertTrue(adjacent.contains(new HexCoord((short) 0, (short) -1)));
+        assertFalse(adjacent.contains(new HexCoord((short) 2, (short) 0)));
     }
-
 
     @Test
     @DisplayName("Devrait retourner les 6 voisins pour une case centrale")
@@ -106,7 +108,7 @@ class MovementServiceTest {
         when(pieceRepository.save(any(PieceEntity.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // WHEN
-        PieceEntity result = movementService.movePiece(pieceId, targetQ, targetR);
+        PieceEntity result = movementService.movePiece(pieceId, targetQ, targetR, null);
 
         // THEN
         assertNotNull(result);
@@ -118,13 +120,109 @@ class MovementServiceTest {
     }
 
     @Test
+    void should_throw_when_move_invalid() {
+        // GIVEN
+        UUID gameId = UUID.randomUUID();
+        PieceEntity piece = PieceEntity.builder()
+                .id(UUID.randomUUID())
+                .gameId(gameId)
+                .characterId("LEADER")
+                .ownerIndex((short) 0)
+                .q((short) 0)
+                .r((short) 0)
+                .hasActedThisTurn(false)
+                .build();
+
+        GameEntity game = GameEntity.builder()
+                .id(gameId)
+                .currentPlayerIndex(0)
+                .players(List.of(GamePlayerEntity.builder().playerIndex(0).userId(UUID.randomUUID()).build()))
+                .build();
+
+        when(pieceRepository.findById(piece.getId())).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        when(characterRepository.findById("LEADER")).thenReturn(Optional.of(createCharacter("LEADER")));
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece));
+
+        // WHEN / THEN
+        assertThrows(IllegalArgumentException.class, () -> {
+            movementService.movePiece(piece.getId(), (short) 2, (short) 2, null);
+        });
+    }
+
+    @Test
+    void should_throw_when_not_player_turn() {
+        // GIVEN
+        UUID gameId = UUID.randomUUID();
+        PieceEntity piece = PieceEntity.builder()
+                .id(UUID.randomUUID())
+                .gameId(gameId)
+                .characterId("LEADER")
+                .ownerIndex((short) 1) // Not current player
+                .q((short) 0)
+                .r((short) 0)
+                .build();
+
+        GameEntity game = GameEntity.builder()
+                .id(gameId)
+                .currentPlayerIndex(0)
+                .build();
+
+        when(pieceRepository.findById(piece.getId())).thenReturn(Optional.of(piece));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+
+        // WHEN / THEN
+        assertThrows(IllegalStateException.class, () -> {
+            movementService.movePiece(piece.getId(), (short) 0, (short) 1, null);
+        });
+    }
+
+    @Test
+    void should_trigger_nemesis_when_leader_moves() {
+        // GIVEN
+        UUID gameId = UUID.randomUUID();
+        PieceEntity leader = PieceEntity.builder()
+                .id(UUID.randomUUID())
+                .gameId(gameId)
+                .characterId("LEADER")
+                .ownerIndex((short) 0)
+                .q((short) 0)
+                .r((short) 0)
+                .build();
+
+        GameEntity game = GameEntity.builder()
+                .id(gameId)
+                .currentPlayerIndex(0)
+                .players(List.of(GamePlayerEntity.builder().playerIndex(0).userId(UUID.randomUUID()).build()))
+                .build();
+
+        when(pieceRepository.findById(leader.getId())).thenReturn(Optional.of(leader));
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        when(characterRepository.findById("LEADER")).thenReturn(Optional.of(createCharacter("LEADER")));
+        when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(leader));
+        when(pieceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        // WHEN
+        movementService.movePiece(leader.getId(), (short) 0, (short) 1, null);
+
+        // THEN
+        // verify(nemesisBehavior).react(any(), eq(leader), any());
+    }
+
+    private RefCharacterEntity createCharacter(String id) {
+        return RefCharacterEntity.builder()
+                .id(id)
+                .abilities(Set.of())
+                .build();
+    }
+
+    @Test
     @DisplayName("Move: Erreur - Pièce introuvable")
     void movePiece_NotFound() {
         when(pieceRepository.findById(pieceId)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () ->
-                movementService.movePiece(pieceId, (short)1, (short)0)
-        );
+        assertThrows(IllegalArgumentException.class,
+                () -> movementService.movePiece(pieceId, (short) 1, (short) 0, null));
         verify(pieceRepository, never()).save(piece);
     }
 
@@ -138,9 +236,8 @@ class MovementServiceTest {
         when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
 
         // WHEN
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-                movementService.movePiece(pieceId, (short)1, (short)0)
-        );
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> movementService.movePiece(pieceId, (short) 1, (short) 0, null));
 
         // THEN
         assertTrue(exception.getMessage().contains("Ce n'est pas votre tour")
@@ -148,7 +245,6 @@ class MovementServiceTest {
 
         verify(pieceRepository, never()).save(piece);
     }
-
 
     @Test
     @DisplayName("Move: Erreur - Déplacement non adjacent (et non permis par stratégies)")
@@ -159,9 +255,8 @@ class MovementServiceTest {
         when(pieceRepository.findByGameId(gameId)).thenReturn(Collections.singletonList(piece));
 
         // On essaie de sauter une case (0,0 -> 2,0)
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                movementService.movePiece(pieceId, (short)2, (short)0)
-        );
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> movementService.movePiece(pieceId, (short) 2, (short) 0, null));
         assertTrue(exception.getMessage().contains("Illegal move"));
     }
 
@@ -184,10 +279,8 @@ class MovementServiceTest {
                 .build();
         when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece, obstacle));
 
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                movementService.movePiece(pieceId, targetQ, targetR)
-        );
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> movementService.movePiece(pieceId, targetQ, targetR, null));
         assertTrue(exception.getMessage().contains("Illegal move"));
     }
 
@@ -197,12 +290,10 @@ class MovementServiceTest {
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> movementService.movePiece(pieceId, (short) 10, (short) 10)
-        );
+                () -> movementService.movePiece(pieceId, (short) 10, (short) 10, null));
 
         assertEquals("Invalid hex coordinates: (10,10)", exception.getMessage());
     }
-
 
     // --- 3. TESTS DES MOUVEMENTS VALIDES POSSIBLES ---
 
@@ -216,8 +307,8 @@ class MovementServiceTest {
         PieceEntity obstacle = PieceEntity.builder()
                 .id(UUID.randomUUID())
                 .gameId(gameId)
-                .q((short)1)
-                .r((short)0)
+                .q((short) 1)
+                .r((short) 0)
                 .build();
 
         when(pieceRepository.findByGameId(gameId)).thenReturn(List.of(piece, obstacle));
@@ -229,9 +320,9 @@ class MovementServiceTest {
         assertEquals(5, validMoves.size());
 
         // Vérifie que la case occupée n'est PAS dans la liste
-        assertFalse(validMoves.contains(new HexCoord((short)1, (short)0)));
+        assertFalse(validMoves.contains(new HexCoord((short) 1, (short) 0)));
 
         // Vérifie qu'une case vide EST dans la liste (ex: -1, 0)
-        assertTrue(validMoves.contains(new HexCoord((short)-1, (short)0)));
+        assertTrue(validMoves.contains(new HexCoord((short) -1, (short) 0)));
     }
 }

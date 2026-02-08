@@ -24,6 +24,11 @@ export interface RecruitmentCard {
   visibleSlot: number | null;
 }
 
+export interface Player {
+  userId: string;
+  playerIndex: number;
+}
+
 export interface GameState {
   gameId: string;
   status: "WAITING" | "IN_PROGRESS" | "FINISHED_CAPTURE" | "FINISHED";
@@ -34,6 +39,7 @@ export interface GameState {
   winnerVictoryType: "CAPTURE" | "ENCIRCLEMENT" | null;
   pieces: Piece[];
   river: RecruitmentCard[];
+  players: Player[];
 }
 
 export interface Session {
@@ -109,11 +115,12 @@ export async function movePiece(
   pieceId: string,
   toQ: number,
   toR: number,
+  playerId?: string
 ): Promise<Piece> {
   const res = await fetch(`${BASE_URL}/pieces/${pieceId}/move`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ toQ, toR }),
+    body: JSON.stringify({ toQ, toR, playerId }),
   });
   if (!res.ok) throw new Error("Failed to move piece");
   return res.json();
@@ -124,12 +131,13 @@ export async function performAction(
   sourceId: string,
   abilityId: string,
   targetId?: string,
-  destination?: { q: number; r: number }
+  destination?: { q: number; r: number },
+  playerId?: string
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/games/${gameId}/action`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceId, abilityId, targetId, destination }),
+    body: JSON.stringify({ sourceId, abilityId, targetId, destination, playerId }),
   });
   if (!res.ok) throw new Error("Failed to perform action");
 }

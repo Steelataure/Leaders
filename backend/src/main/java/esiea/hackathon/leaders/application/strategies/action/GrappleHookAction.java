@@ -1,4 +1,4 @@
-package esiea.hackathon.leaders.application.strategies.actions;
+package esiea.hackathon.leaders.application.strategies.action;
 
 import esiea.hackathon.leaders.application.strategies.ActionAbilityStrategy;
 import esiea.hackathon.leaders.domain.model.HexCoord;
@@ -17,7 +17,8 @@ public class GrappleHookAction implements ActionAbilityStrategy {
 
     @Override
     public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
-        if (target == null) throw new IllegalArgumentException("Target required for Grapple");
+        if (target == null)
+            throw new IllegalArgumentException("Target required for Grapple");
 
         // 1. Calcul du vecteur inverse (Target -> Source)
         int dq = source.getQ() - target.getQ();
@@ -29,12 +30,15 @@ public class GrappleHookAction implements ActionAbilityStrategy {
         }
 
         // 2. Trouver la case adjacente à la Source, en direction de la Target.
-        // On divise le vecteur par la distance pour obtenir une direction unitaire (approximative sur grille hex)
+        // On divise le vecteur par la distance pour obtenir une direction unitaire
+        // (approximative sur grille hex)
         int dirQ = dq / dist;
         int dirR = dr / dist;
 
-        // La case d'arrivée est "Source - 1 pas vers Target" ? Non, c'est "Source + 1 pas vers Target"
-        // Le vecteur dq allait de Target à Source. Donc on recule de Source vers Target.
+        // La case d'arrivée est "Source - 1 pas vers Target" ? Non, c'est "Source + 1
+        // pas vers Target"
+        // Le vecteur dq allait de Target à Source. Donc on recule de Source vers
+        // Target.
         short destQ = (short) (source.getQ() - dirQ);
         short destR = (short) (source.getR() - dirR);
 

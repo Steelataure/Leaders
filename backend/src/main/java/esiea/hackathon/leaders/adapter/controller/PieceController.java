@@ -54,7 +54,8 @@ public class PieceController {
         try {
             System.out.println("DEBUG: Received move request for piece " + pieceId + " to (" + request.toQ() + ","
                     + request.toR() + ")");
-            PieceEntity movedPiece = movementService.movePiece(pieceId, request.toQ(), request.toR());
+            PieceEntity movedPiece = movementService.movePiece(pieceId, request.toQ(), request.toR(),
+                    request.playerId());
 
             // Broadcast update
             esiea.hackathon.leaders.application.dto.response.GameStateDto gameState = gameQueryService
@@ -81,7 +82,7 @@ public class PieceController {
 
     // --- DTOs INTERNES ---
 
-    public record MoveRequest(short toQ, short toR) {
+    public record MoveRequest(short toQ, short toR, UUID playerId) {
     }
 
     public record ErrorResponse(String message) {

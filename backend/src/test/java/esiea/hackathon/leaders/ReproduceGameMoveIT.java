@@ -74,8 +74,11 @@ class ReproduceGameMoveIT {
                 .build();
         PieceEntity savedPiece = pieceRepository.save(piece);
 
-        // 2. Perform Move
-        pieceController.movePiece(savedPiece.getId(), new PieceController.MoveRequest((short) 0, (short) 1));
+        // 2. Tenter de bouger une pièce (on suppose qu'on connait son ID, ou on le
+        // récupère via API)
+        PieceController.MoveRequest moveRequest = new PieceController.MoveRequest((short) 0, (short) 1,
+                UUID.randomUUID());
+        pieceController.movePiece(savedPiece.getId(), moveRequest);
 
         // 3. Verify Websocket Broadcast
         verify(messagingTemplate).convertAndSend(eq("/topic/game/" + gameId), any(Object.class));

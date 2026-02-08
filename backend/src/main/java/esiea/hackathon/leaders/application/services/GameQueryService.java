@@ -3,6 +3,7 @@ package esiea.hackathon.leaders.application.services;
 import esiea.hackathon.leaders.application.dto.response.CardDto;
 import esiea.hackathon.leaders.application.dto.response.GameStateDto;
 import esiea.hackathon.leaders.application.dto.response.PieceDto;
+import esiea.hackathon.leaders.application.dto.response.PlayerDto;
 import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.enums.CardState;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
@@ -55,7 +56,14 @@ public class GameQueryService {
                                                 c.getVisibleSlot()))
                                 .toList();
 
-                // 4. DTO final
+                // 4. Joueurs
+                List<PlayerDto> players = game.getPlayers() != null
+                                ? game.getPlayers().stream()
+                                                .map(p -> new PlayerDto(p.getUserId(), p.getPlayerIndex()))
+                                                .toList()
+                                : List.of();
+
+                // 5. DTO final
                 return new GameStateDto(
                                 game.getId(),
                                 game.getStatus(),
@@ -65,6 +73,7 @@ public class GameQueryService {
                                 game.getWinnerPlayerIndex(),
                                 game.getWinnerVictoryType(),
                                 pieces,
-                                river);
+                                river,
+                                players);
         }
 }

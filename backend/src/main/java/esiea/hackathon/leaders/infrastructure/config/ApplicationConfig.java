@@ -6,6 +6,8 @@ import esiea.hackathon.leaders.usecase.CreateGameSessionUseCase;
 import esiea.hackathon.leaders.usecase.MatchmakingUseCase;
 import esiea.hackathon.leaders.usecase.JoinPrivateSessionUseCase;
 import esiea.hackathon.leaders.application.services.GameSetupService;
+import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGamePlayerRepository;
+import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGameRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -35,7 +37,10 @@ public class ApplicationConfig {
     public ConnectPlayerUseCase connectPlayerUseCase(SessionRepository sessionRepository,
             GameSetupService gameSetupService,
             esiea.hackathon.leaders.application.services.GameQueryService gameQueryService,
-            org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
-        return new ConnectPlayerUseCase(sessionRepository, gameSetupService, gameQueryService, messagingTemplate);
+            org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
+            SpringGamePlayerRepository gamePlayerRepository,
+            SpringGameRepository springGameRepository) {
+        return new ConnectPlayerUseCase(sessionRepository, gameSetupService, gameQueryService, messagingTemplate,
+                gamePlayerRepository, springGameRepository);
     }
 }

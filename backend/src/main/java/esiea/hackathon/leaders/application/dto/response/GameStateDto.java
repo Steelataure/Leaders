@@ -7,14 +7,15 @@ import java.util.List;
 import java.util.UUID;
 
 public record GameStateDto(
-        UUID gameId,
-        GameStatus status,
-        GamePhase currentPhase,
-        int currentPlayerIndex,
-        int turnNumber,
-        Integer winnerPlayerIndex,
-        VictoryType winnerVictoryType,
+                UUID gameId,
+                GameStatus status,
+                GamePhase currentPhase,
+                int currentPlayerIndex,
+                int turnNumber,
+                Integer winnerPlayerIndex,
+                VictoryType winnerVictoryType,
 
-        List<PieceDto> pieces,
-        List<CardDto> river
-) {}
+                List<PieceDto> pieces,
+                List<CardDto> river,
+                List<PlayerDto> players) {
+}

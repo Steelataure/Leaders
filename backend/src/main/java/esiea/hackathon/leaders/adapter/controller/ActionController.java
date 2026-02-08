@@ -33,7 +33,8 @@ public class ActionController {
         // Note: Idéalement, on vérifierait ici si la pièce appartient bien au joueur
         // courant via gameId
         System.out.println("DEBUG: ActionController move " + request.pieceId());
-        movementService.movePiece(request.pieceId(), request.destination().q(), request.destination().r());
+        movementService.movePiece(request.pieceId(), request.destination().q(), request.destination().r(),
+                request.playerId());
 
         broadcastUpdate(gameId);
         return ResponseEntity.ok().build();
@@ -48,7 +49,8 @@ public class ActionController {
                 request.sourceId(),
                 request.targetId(),
                 request.abilityId(),
-                request.destination());
+                request.destination(),
+                request.playerId());
 
         broadcastUpdate(gameId);
         return ResponseEntity.ok().build();
