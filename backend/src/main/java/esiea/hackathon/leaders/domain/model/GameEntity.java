@@ -27,7 +27,7 @@ public class GameEntity {
     private Integer winnerPlayerIndex;
     private VictoryType winnerVictoryType;
     private int banishmentCount;
-    private boolean hasRecruitedThisTurn;
+    private int recruitmentCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<GamePlayerEntity> players;

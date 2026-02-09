@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { GameFrontend, PieceFrontend } from "../api/gameApi";
 import { gameApi } from "../api/gameApi";
 import { authService } from "../services/auth.service";
@@ -17,6 +16,8 @@ import buttonClickSfx from "../sounds/buttonClick.mp3";
 import characterSelectSfx from "../sounds/characterSelect.mp3";
 import mainMusic from "../sounds/mainMenu.mp3";
 
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+
 const CHARACTER_IMAGES: Record<string, string> = {
   LEADER: "/image/garderoyal.png",
   ARCHER: "/image/archere.png",
@@ -33,6 +34,7 @@ const CHARACTER_IMAGES: Record<string, string> = {
   ASSASSIN: "/image/assassin.png",
   ROYAL_GUARD: "/image/garderoyal.png",
   VIZIER: "/image/vizir.png",
+  NEMESIS: "/image/nemesis.png",
 };
 
 // mapping des noms de personnages
@@ -194,6 +196,21 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   const [sfxEnabled, setSfxEnabled] = useState(true);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
+  // === GESTION DES MODES D'ACTION (Move vs Ability) ===
+  const [actionMode, setActionMode] = useState<"MOVE" | "ABILITY">("MOVE");
+
+  // Reset du mode quand on change de pièce
+  useEffect(() => {
+    setActionMode("MOVE");
+  }, [selectedPiece]);
+
+  // Détermine si la pièce sélectionnée a une capacité ACTIVE qui nécessite un ciblage
+  const hasActiveAbility = useMemo(() => {
+    if (!selectedPiece) return false;
+    const charId = selectedPiece.characterId;
+    return ["BRAWLER", "MANIPULATOR", "GRAPPLER", "INNKEEPER", "ILLUSIONIST"].includes(charId);
+  }, [selectedPiece]);
+
   // Music Hook
   const [playMusic, { stop: stopMusic }] = useSound(mainMusic, {
     volume: volume,
@@ -341,11 +358,22 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
 
   const spawnCells = useMemo(() => {
     if (!gameState) return [];
-    // P0 (Bleu) est maintenant en BAS -> Spawn zones du BAS (q négatif, r positif)
-    // P1 (Rouge) est maintenant en HAUT -> Spawn zones du HAUT (q positif, r négatif)
-    return gameState.currentPlayerIndex === 0
-      ? [{ q: -3, r: 2 }, { q: -2, r: 3 }, { q: -3, r: 3 }]
-      : [{ q: 3, r: -2 }, { q: 2, r: -3 }, { q: 3, r: -3 }];
+
+    // Définition : Les 2 bordures qui se rejoignent au spawn du leader (V-shape, 7 cases)
+    // P0 (Bas/Bleu) : Leader (0,3). Bordures r=3 (q in 0..-3) et q+r=3 (q in 0..3)
+    // P1 (Haut/Rouge) : Leader (0,-3). Bordures r=-3 (q in 0..3) et q+r=-3 (q in 0..-3)
+
+    if (gameState.currentPlayerIndex === 0) {
+      return [
+        { q: 0, r: 3 }, { q: -1, r: 3 }, { q: -2, r: 3 }, { q: -3, r: 3 },
+        { q: 1, r: 2 }, { q: 2, r: 1 }, { q: 3, r: 0 }
+      ];
+    } else {
+      return [
+        { q: 0, r: -3 }, { q: 1, r: -3 }, { q: 2, r: -3 }, { q: 3, r: -3 },
+        { q: -1, r: -2 }, { q: -2, r: -1 }, { q: -3, r: 0 }
+      ];
+    }
   }, [gameState?.currentPlayerIndex]);
 
   const availableSpawnCells = useMemo(() => {
@@ -479,6 +507,21 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     },
     [gameId, autoEndTurnIfNeeded],
   );
+
+  // Filtrage des interactions du plateau selon le mode
+  const handleBoardAbilityUse = (pid: string, aid: string, tid: string, dest?: { q: number; r: number }) => {
+    // On ne permet l'usage de compétence que si on est en mode ABILITY
+    if (actionMode === "ABILITY") {
+      handleAbilityUse(pid, aid, tid, dest);
+    }
+  };
+
+  const handleBoardMove = (pid: string, q: number, r: number) => {
+    // On ne permet le mouvement que si on est en mode MOVE
+    if (actionMode === "MOVE") {
+      handleMove(pid, q, r);
+    }
+  };
 
   const handleGrapplerModeChoice = (mode: "PULL" | "MOVE") => {
     setGrapplerMode(mode);
@@ -762,30 +805,55 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         </div>
       </div>
 
-      {/* HEXBOARD */}
-      <div className="flex-1 flex items-center justify-center p-20">
+      {/* HEXBOARD w/ ACTION MODE TOGGLE */}
+      <div className="flex-1 flex flex-col items-center justify-center relative p-20">
+
+        {/* ACTION MODE TOGGLE (Flottant au-dessus du plateau) */}
+        {selectedPiece && hasActiveAbility && isMyTurn && (
+          <div className="absolute top-20 z-50 flex gap-4 bg-slate-900/80 p-2 rounded-xl border border-slate-700 backdrop-blur-md left-1/2 transform -translate-x-1/2">
+            <button
+              onClick={() => setActionMode("MOVE")}
+              className={`px-6 py-2 rounded-lg font-bold transition-all ${actionMode === "MOVE"
+                ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                }`}
+            >
+              DÉPLACEMENT
+            </button>
+            <button
+              onClick={() => setActionMode("ABILITY")}
+              className={`px-6 py-2 rounded-lg font-bold transition-all ${actionMode === "ABILITY"
+                ? "bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                }`}
+            >
+              COMPÉTENCE
+            </button>
+          </div>
+        )}
+
         <HexBoard
           pieces={gameState.pieces}
           currentPlayer={gameState.currentPlayerIndex}
           phase={"ACTIONS" as "ACTIONS" | "RECRUITMENT"}
           turnNumber={gameState.turnNumber}
-          onMove={handleMove}
+          onMove={handleBoardMove}
           selectedPiece={selectedPiece}
           onSelectPiece={setSelectedPiece}
           placementMode={placementMode}
           availablePlacementCells={availableSpawnCells}
           onPlacementConfirm={confirmPlacement}
-          onAbilityUse={handleAbilityUse}
-          manipulatorTarget={manipulatorTarget}
-          onManipulatorTargetSelect={setManipulatorTarget}
-          brawlerTarget={brawlerTarget}
-          onBrawlerTargetSelect={setBrawlerTarget}
-          grapplerTarget={grapplerTarget}
-          onGrapplerTargetSelect={setGrapplerTarget}
+          onAbilityUse={handleBoardAbilityUse}
+          manipulatorTarget={actionMode === "ABILITY" ? manipulatorTarget : null}
+          onManipulatorTargetSelect={actionMode === "ABILITY" ? setManipulatorTarget : undefined}
+          brawlerTarget={actionMode === "ABILITY" ? brawlerTarget : null}
+          onBrawlerTargetSelect={actionMode === "ABILITY" ? setBrawlerTarget : undefined}
+          grapplerTarget={actionMode === "ABILITY" ? grapplerTarget : null}
+          onGrapplerTargetSelect={actionMode === "ABILITY" ? setGrapplerTarget : undefined}
           grapplerMode={grapplerMode}
           onGrapplerModeSelect={setGrapplerMode}
-          innkeeperTarget={innkeeperTarget}
-          onInnkeeperTargetSelect={setInnkeeperTarget}
+          innkeeperTarget={actionMode === "ABILITY" ? innkeeperTarget : null}
+          onInnkeeperTargetSelect={actionMode === "ABILITY" ? setInnkeeperTarget : undefined}
           isLocalTurn={!!isMyTurn}
           volume={volume}
         />

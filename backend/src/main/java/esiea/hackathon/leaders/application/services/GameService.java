@@ -59,8 +59,8 @@ public class GameService {
             // C. Réinitialiser les actions des pièces pour le prochain tour
             resetPiecesActions(gameId);
 
-            // D. Réinitialiser le flag de recrutement
-            game.setHasRecruitedThisTurn(false);
+            // D. Réinitialiser le compteur de recrutement
+            game.setRecruitmentCount(0);
         }
 
         // 3. Mise à jour timestamp et sauvegarde

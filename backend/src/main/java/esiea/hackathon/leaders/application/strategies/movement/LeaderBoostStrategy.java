@@ -33,27 +33,62 @@ public class LeaderBoostStrategy implements MoveAbilityStrategy {
             return Collections.emptyList();
         }
 
-        // 3. Calculer les cases à distance 2 (Bonus)
-        // (Les cases à distance 1 sont déjà gérées par le mouvement standard)
+        // 3. Calculer les cases à distance 2 ACCESSIBLES (Chemin libre)
         List<HexCoord> moves = new ArrayList<>();
-        int currentQ = piece.getQ();
-        int currentR = piece.getR();
+        int q1 = piece.getQ();
+        int r1 = piece.getR();
 
-        // On parcourt un anneau de rayon 2
-        for (int q = -2; q <= 2; q++) {
-            for (int r = -2; r <= 2; r++) {
-                // Formule de distance hexagonale : (|q| + |r| + |q+r|) / 2
-                if ((Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2 == 2) {
+        // On cherche toutes les cases à distance 2
+        for (int dq = -2; dq <= 2; dq++) {
+            for (int dr = -2; dr <= 2; dr++) {
+                if ((Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2 == 2) {
+                    short targetQ = (short) (q1 + dq);
+                    short targetR = (short) (r1 + dr);
+                    HexCoord target = new HexCoord(targetQ, targetR);
 
-                    HexCoord target = new HexCoord((short)(currentQ + q), (short)(currentR + r));
-
+                    // La case cible doit être valid et vide
                     if (target.isValid() && isFree(target, allPieces)) {
-                        moves.add(target);
+                        // VERIFICATION DU CHEMIN : Existe-t-il une case intermédiaire libre ?
+                        if (hasPathTo(q1, r1, targetQ, targetR, allPieces)) {
+                            moves.add(target);
+                        }
                     }
                 }
             }
         }
         return moves;
+    }
+
+    // Vérifie si une des cases adjacentes communes est libre pour passer
+    private boolean hasPathTo(int startQ, int startR, int destQ, int destR, List<PieceEntity> allPieces) {
+        // Les cases intermédiaires sont les voisins communs à Start et Dest
+        // Pour distance 2, il y a exactement 1 case intermédiaire si c'est une ligne
+        // droite,
+        // ou 2 voisins communs si c'est un "coin".
+
+        // On teste tous les voisins de Start
+        int[][] directions = {
+                { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, -1 }, { -1, 1 }
+        };
+
+        for (int[] dir : directions) {
+            int midQ = startQ + dir[0];
+            int midR = startR + dir[1];
+
+            // Si ce voisin est adjacent à la destination
+            if (areAdjacent(midQ, midR, destQ, destR)) {
+                // Et qu'il est libre
+                HexCoord mid = new HexCoord((short) midQ, (short) midR);
+                if (mid.isValid() && isFree(mid, allPieces)) {
+                    return true; // Chemin trouvé
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean areAdjacent(int q1, int r1, int q2, int r2) {
+        return (Math.abs(q1 - q2) + Math.abs(r1 - r2) + Math.abs(q1 + r1 - (q2 + r2))) / 2 == 1;
     }
 
     private boolean isFree(HexCoord coord, List<PieceEntity> pieces) {

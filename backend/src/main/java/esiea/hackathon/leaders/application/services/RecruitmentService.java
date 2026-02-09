@@ -37,8 +37,19 @@ public class RecruitmentService {
         }
 
         // 2b. SÉCURITÉ : Limite de recrutement par tour
-        if (game.isHasRecruitedThisTurn()) {
-            throw new IllegalStateException("Recrutement impossible : Vous avez déjà recruté ce tour-ci.");
+        int maxRecruitments = 1;
+
+        // RÈGLE : Compensation 2ème joueur (Index 1) au Tour 2 (son premier tour)
+        // Note sur turnNumber: J1 joue T1, J2 joue T2, J1 joue T3...
+        // Donc si playerIndex == 1 (Joueur 2) et turnNumber <= 2 (son premier tour est
+        // le 2eme du jeu global)
+        if (playerIndex == 1 && game.getTurnNumber() <= 2) {
+            maxRecruitments = 2;
+        }
+
+        if (game.getRecruitmentCount() >= maxRecruitments) {
+            throw new IllegalStateException("Recrutement impossible : Vous avez atteint la limite de "
+                    + maxRecruitments + " recrutement(s) pour ce tour.");
         }
 
         RecruitmentCardEntity card = cardRepository.findById(cardId)
@@ -52,14 +63,38 @@ public class RecruitmentService {
             throw new IllegalArgumentException("Card is not visible in the river (State: " + card.getState() + ")");
         }
 
+        // 3b. VALIDATION ZONE DE RECRUTEMENT (7-Cell V-shape Edge)
+        for (HexCoord pos : placements) {
+            int q = pos.q();
+            int r = pos.r();
+            boolean valid = false;
+
+            if (playerIndex == 0) {
+                // P0 (Bas/Bleu) : Leader at (0,3). Bordures r=3 et q+r=3
+                if ((r == 3 && q <= 0 && q >= -3) || (q + r == 3 && q >= 0 && q <= 3)) {
+                    valid = true;
+                }
+            } else {
+                // P1 (Haut/Rouge) : Leader at (0,-3). Bordures r=-3 et q+r=-3
+                if ((r == -3 && q >= 0 && q <= 3) || (q + r == -3 && q <= 0 && q >= -3)) {
+                    valid = true;
+                }
+            }
+
+            if (!valid) {
+                throw new IllegalArgumentException(
+                        "Invalid recruitment zone for Player " + playerIndex + " at (" + q + ", " + r
+                                + "). Must be on the board edges meeting at the Leader spawn.");
+            }
+        }
+
         // ==================================================================================
         // 4. 👇 VERIFICATION DE LA LIMITE (Max 5 pièces) - AJOUT IMPORTANT 👇
         // ==================================================================================
 
-        // A. Combien de pièces cette carte va-t-elle ajouter ? (1 normalement, 2 pour
-        // l'Ours)
+        // A. Combien de pièces cette carte va-t-elle ajouter ? (Toujours 1 maintenant)
         String characterId = card.getCharacter().getId();
-        int piecesToAdd = "OLD_BEAR".equals(characterId) ? 2 : 1;
+        int piecesToAdd = 1;
 
         // B. Combien de pièces le joueur possède-t-il DÉJÀ sur le plateau ?
         long currentPieceCount = pieceRepository.findByGameId(gameId).stream()
@@ -75,16 +110,9 @@ public class RecruitmentService {
         // 5. Logique de Création des Pièces
         List<PieceEntity> createdPieces = new ArrayList<>();
 
-        if ("OLD_BEAR".equals(characterId)) {
-            // Cas Spécial : L'Ours vient avec son Ourson
-            validatePlacementCount(placements, 2);
-            createdPieces.add(createPiece(gameId, "OLD_BEAR", playerIndex, placements.get(0)));
-            createdPieces.add(createPiece(gameId, "CUB", playerIndex, placements.get(1)));
-        } else {
-            // Cas Standard
-            validatePlacementCount(placements, 1);
-            createdPieces.add(createPiece(gameId, characterId, playerIndex, placements.get(0)));
-        }
+        // Cas Standard
+        validatePlacementCount(placements, 1);
+        createdPieces.add(createPiece(gameId, characterId, playerIndex, placements.get(0)));
 
         // 6. Mise à jour de la carte recrutée
         Integer emptySlot = card.getVisibleSlot();
@@ -93,8 +121,8 @@ public class RecruitmentService {
         card.setVisibleSlot(null);
         cardRepository.save(card);
 
-        // 6b. Marquer que le joueur a recruté ce tour-ci
-        game.setHasRecruitedThisTurn(true);
+        // 6b. Marquer que le joueur a recruté
+        game.setRecruitmentCount(game.getRecruitmentCount() + 1);
         gameRepository.save(game);
 
         // 7. Remplissage de la rivière

@@ -71,7 +71,7 @@ public class GameSetupService {
         List<String> allCharacters = new ArrayList<>(List.of(
                 "ACROBAT", "ARCHER", "ASSASSIN", "BRAWLER", "CAVALRY",
                 "GRAPPLER", "ILLUSIONIST", "INNKEEPER", "JAILER",
-                "MANIPULATOR", "NEMESIS", "OLD_BEAR", "PROTECTOR",
+                "MANIPULATOR", "NEMESIS", "PROTECTOR",
                 "PROWLER", "ROYAL_GUARD", "VIZIER"));
 
         List<String> finalDeckOrder = new ArrayList<>();

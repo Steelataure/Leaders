@@ -83,8 +83,6 @@ const CHARACTER_IMAGES: Record<string, string> = {
   ROYAL_GUARD: "/image/garderoyal.png",
   VIZIER: "/image/vizir.png",
   NEMESIS: "/image/nemesis.png",
-  OLD_BEAR: "/image/vieilours_ourson.png",
-  CUB: "/image/vieilours_ourson.png",
 };
 
 // === SOUS-COMPOSANTS ===
@@ -118,7 +116,7 @@ function LockIcon() {
 function ShieldIcon() {
   return (
     <g transform="translate(-8, -8) scale(0.7)">
-      <path d="M12 2L4 6v6c0 5.5 3.5 10 8 11 4.5-1 8-5.5 8-11V6l-8-4z" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+      <path d="M12 2L4 6v6c0 5.5 3.5 10 8 11 4.5-1 8-5.5 8-11V6l-8-4z" fill="#f59e0b" stroke="#fff" strokeWidth="1.5" />
       <path d="M9 12l2 2 4-4" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </g>
   );
@@ -209,7 +207,7 @@ function PieceComponent({
       )}
 
       {isProtected && !isProtector && (
-        <circle cx={x} cy={y} r={radius + 5} fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 2">
+        <circle cx={x} cy={y} r={radius + 5} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="4 2">
           <animate attributeName="stroke-opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
         </circle>
       )}
@@ -219,7 +217,7 @@ function PieceComponent({
         cy={y}
         r={radius}
         fill="#1a1a2e"
-        stroke={isAbilityTarget ? targetColor : isBlocked ? "#ef4444" : isProtected ? "#22c55e" : color}
+        stroke={isAbilityTarget ? targetColor : isBlocked ? "#ef4444" : isProtected ? "#f59e0b" : color}
         strokeWidth={isAbilityTarget ? 4 : isLeader ? 4 : 3}
         filter={`url(#${glowId})`}
         opacity={piece.hasActed ? 0.6 : 1}
@@ -551,17 +549,34 @@ export default function HexBoard(props: HexBoardProps) {
         else if (isValid) { fill = "rgba(0, 245, 255, 0.15)"; stroke = COLORS.validMove; width = 2; }
         else if (canAct) { stroke = currentPlayer === 0 ? COLORS.player1 : COLORS.player2; width = 2.5; filter = `url(#glow-player${currentPlayer + 1})`; }
 
+        const isRecruitmentP0 = (cell.r === 3 && cell.q <= 0 && cell.q >= -3) || (cell.q + cell.r === 3 && cell.q >= 0 && cell.q <= 3);
+        const isRecruitmentP1 = (cell.r === -3 && cell.q >= 0 && cell.q <= 3) || (cell.q + cell.r === -3 && cell.q <= 0 && cell.q >= -3);
+        const isPermanentRecruitment = isRecruitmentP0 || isRecruitmentP1;
+
         return (
-          <polygon
-            key={`${cell.q}-${cell.r}`}
-            points={getHexagonPoints(cell.x, cell.y, HEX_SIZE * 0.93)}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={width}
-            filter={filter}
-            onClick={() => handleCellClick(cell)}
-            className={`transition-colors duration-200 cursor-pointer ${isAbility || isPlacement ? "animate-pulse" : ""}`}
-          />
+          <g key={`${cell.q}-${cell.r}`}>
+            <polygon
+              points={getHexagonPoints(cell.x, cell.y, HEX_SIZE * 0.93)}
+              fill={fill}
+              stroke={stroke}
+              strokeWidth={width}
+              filter={filter}
+              onClick={() => handleCellClick(cell)}
+              className={`transition-colors duration-200 cursor-pointer ${isAbility || isPlacement ? "animate-pulse" : ""}`}
+            />
+            {/* Indicateur permanent de zone de recrutement (Subtile bordure en pointillés dorés) */}
+            {isPermanentRecruitment && !isPlacement && !isAbility && !isValid && (
+              <polygon
+                points={getHexagonPoints(cell.x, cell.y, HEX_SIZE * 0.85)}
+                fill="none"
+                stroke="#fbbf24"
+                strokeWidth="1.5"
+                strokeDasharray="3 3"
+                opacity="0.4"
+                pointerEvents="none"
+              />
+            )}
+          </g>
         );
       })}
 

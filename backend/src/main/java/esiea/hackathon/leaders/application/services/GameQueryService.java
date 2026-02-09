@@ -70,7 +70,10 @@ public class GameQueryService {
                                 game.getPhase(),
                                 game.getCurrentPlayerIndex(),
                                 game.getTurnNumber(),
-                                game.isHasRecruitedThisTurn(),
+                                // LOGIQUE DTO: hasRecruitedThisTurn = true SI on a atteint la limite
+                                // Limite = 2 pour J2 au Tour 2, sinon 1
+                                game.getRecruitmentCount() >= ((game.getCurrentPlayerIndex() == 1
+                                                && game.getTurnNumber() <= 2) ? 2 : 1),
                                 game.getWinnerPlayerIndex(),
                                 game.getWinnerVictoryType(),
                                 pieces,

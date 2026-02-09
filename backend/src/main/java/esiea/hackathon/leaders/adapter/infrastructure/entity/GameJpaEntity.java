@@ -39,8 +39,8 @@ public class GameJpaEntity {
     @Column(name = "banishment_count")
     private int banishmentCount;
 
-    @Column(name = "has_recruited_this_turn")
-    private boolean hasRecruitedThisTurn;
+    @Column(name = "recruitment_count")
+    private int recruitmentCount;
 
     @Column(name = "winner_player_index")
     private Integer winnerPlayerIndex;
