@@ -55,6 +55,15 @@ public class ActionController {
         return ResponseEntity.ok().build();
     }
 
+    // 2b. Passer la phase d'action
+    @PostMapping("/skip-actions")
+    public ResponseEntity<Void> skipActions(@PathVariable UUID gameId, @RequestBody ActionRequestDto request) {
+        System.out.println("DEBUG: ActionController skipActions for player " + request.playerId());
+        actionService.skipActions(gameId, request.playerId());
+        broadcastUpdate(gameId);
+        return ResponseEntity.ok().build();
+    }
+
     // 3. Recruter un personnage
     @PostMapping("/recruit")
     public ResponseEntity<Void> recruit(@PathVariable UUID gameId, @RequestBody RecruitmentRequestDto request) {

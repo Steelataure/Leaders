@@ -248,9 +248,20 @@ export async function useAbility(
   }
 }
 
-/** Legacy alias if needed */
 export const performAction = useAbility;
 
+export async function skipActions(gameId: string, playerId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/games/${gameId}/skip-actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ playerId }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to skip actions: ${errorText}`);
+  }
+}
 
 // --- Session API ---
 
@@ -320,6 +331,7 @@ export const gameApi = {
   movePiece,
   useAbility,
   performAction,
+  skipActions,
   leaveSession,
   mapPieceToFrontend,
   mapGameToFrontend,

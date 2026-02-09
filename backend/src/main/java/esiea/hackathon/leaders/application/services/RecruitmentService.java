@@ -35,9 +35,20 @@ public class RecruitmentService {
         // 1b. Update Timer
         gameService.updateTimer(game);
 
-        // 2. SÉCURITÉ : Vérification du tour
         if (game.getCurrentPlayerIndex() != playerIndex.intValue()) {
             throw new IllegalStateException("Action refusée : Ce n'est pas le tour du joueur " + playerIndex);
+        }
+
+        // 2a. SÉCURITÉ : Vérification que TOUTES les pièces ont agi (Phase d'actions
+        // terminée)
+        List<PieceEntity> playerPieces = pieceRepository.findByGameId(gameId).stream()
+                .filter(p -> p.getOwnerIndex().equals(playerIndex))
+                .toList();
+
+        boolean allPiecesActed = playerPieces.stream().allMatch(PieceEntity::getHasActedThisTurn);
+        if (!allPiecesActed) {
+            throw new IllegalStateException(
+                    "Action refusée : Vous devez terminer vos actions (ou les passer) avant de recruter.");
         }
 
         // 2b. SÉCURITÉ : Limite de recrutement par tour

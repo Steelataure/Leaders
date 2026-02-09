@@ -417,6 +417,13 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     return gameState.pieces.filter((p) => p.ownerIndex === gameState.currentPlayerIndex).length;
   }, [gameState]);
 
+  const allPiecesActed = useMemo(() => {
+    if (!gameState || localPlayerIndex === null) return false;
+    const myPieces = gameState.pieces.filter(p => p.ownerIndex === localPlayerIndex);
+    if (myPieces.length === 0) return false;
+    return myPieces.every(p => p.hasActed);
+  }, [gameState?.pieces, localPlayerIndex]);
+
   const canRecruit = useMemo(() => {
     const piecesOk = currentPlayerPieceCount < 5;
 
@@ -427,16 +434,10 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     }
 
     const recruited = gameState?.hasRecruitedThisTurn === true;
-    return piecesOk && !recruited;
-  }, [currentPlayerPieceCount, gameState?.hasRecruitedThisTurn]);
-  const hasAvailableSpawnCells = useMemo(() => availableSpawnCells.length > 0, [availableSpawnCells]);
+    return piecesOk && !recruited && allPiecesActed;
+  }, [currentPlayerPieceCount, gameState?.hasRecruitedThisTurn, allPiecesActed]);
 
-  const allPiecesActed = useMemo(() => {
-    if (!gameState || localPlayerIndex === null) return false;
-    const myPieces = gameState.pieces.filter(p => p.ownerIndex === localPlayerIndex);
-    if (myPieces.length === 0) return false;
-    return myPieces.every(p => p.hasActed);
-  }, [gameState?.pieces, localPlayerIndex]);
+  const hasAvailableSpawnCells = useMemo(() => availableSpawnCells.length > 0, [availableSpawnCells]);
 
   const allActionsCompleted = useMemo(() => {
     return isMyTurn && allPiecesActed && (!canRecruit || !hasAvailableSpawnCells);
@@ -522,6 +523,17 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     },
     [gameId],
   );
+
+  const handleSkipActions = useCallback(async () => {
+    if (!gameId || !user?.id) return;
+    try {
+      await gameApi.skipActions(gameId, user.id);
+      const game = await gameApi.getGameState(gameId);
+      updateGameState(game);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }, [gameId, user?.id, updateGameState]);
 
   // Filtrage des interactions du plateau selon le mode
   const handleBoardAbilityUse = (pid: string, aid: string, tid: string, dest?: { q: number; r: number }) => {
@@ -842,6 +854,41 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
                 <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase">
                   <span>⚡</span> ACTIONS POSSIBLES
                 </div>
+              )}
+
+              {!allPiecesActed && (
+                <button
+                  onClick={handleSkipActions}
+                  className="relative group mt-4 w-full py-3 px-6 bg-slate-900 overflow-hidden rounded-sm border-l-4 border-indigo-500 transition-all active:scale-95 shadow-lg"
+                >
+                  {/* Glitch Overlay Effect */}
+                  <div className="absolute inset-0 bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-[linear-gradient(45deg,transparent_25%,rgba(99,102,241,0.1)_50%,transparent_75%)] bg-[size:200%_200%] animate-scan-fast pointer-events-none" />
+
+                  {/* Button Content */}
+                  <div className="relative flex items-center justify-between pointer-events-none">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-indigo-500 animate-pulse rounded-full shadow-[0_0_8px_#6366f1]" />
+                      <span className="font-cyber text-[10px] font-black tracking-[0.2em] text-white uppercase italic">
+                        Phase d'Action
+                      </span>
+                    </div>
+                    <span className="text-indigo-400 group-hover:text-white group-hover:translate-x-1 transition-all">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
+
+                  {/* Corner Decoration */}
+                  <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-indigo-400 opacity-50" />
+                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-indigo-400 opacity-50" />
+
+                  {/* Supplemental text below main label */}
+                  <div className="absolute bottom-1 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[7px] font-mono text-indigo-300 uppercase tracking-tighter">Skip remaining pulses</span>
+                  </div>
+                </button>
               )}
             </div>
           )}

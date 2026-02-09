@@ -152,6 +152,32 @@ public class ActionService {
      * - Assassin adjacent au Leader = 2 points (capture solo immédiate)
      * - Archère à distance 2 du Leader = 1 point (aide à la capture)
      */
+    @Transactional
+    public void skipActions(UUID gameId, UUID playerId) {
+        GameEntity game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        // 1. Vérification du tour
+        var currentPlayer = game.getPlayers().stream()
+                .filter(p -> p.getPlayerIndex() == game.getCurrentPlayerIndex())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Current player not found"));
+
+        if (!playerId.equals(currentPlayer.getUserId())) {
+            throw new IllegalStateException("Not your turn!");
+        }
+
+        // 2. Marquer toutes les pièces du joueur comme ayant agi
+        List<PieceEntity> playerPieces = pieceRepository.findByGameId(gameId).stream()
+                .filter(p -> p.getOwnerIndex().equals((short) game.getCurrentPlayerIndex()))
+                .toList();
+
+        for (PieceEntity p : playerPieces) {
+            p.setHasActedThisTurn(true);
+        }
+        pieceRepository.saveAll(playerPieces);
+    }
+
     private void checkAndApplyVictory(GameEntity game) {
         VictoryCheckResult result = victoryService.checkVictory(game.getId());
 
