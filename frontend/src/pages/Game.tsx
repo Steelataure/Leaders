@@ -19,7 +19,8 @@ import mainMusic from "../sounds/mainMenu.mp3";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 const CHARACTER_IMAGES: Record<string, string> = {
-  LEADER: "/image/garderoyal.png",
+  LEADER_RED: "/image/leaders/leader_red.png",
+  LEADER_BLUE: "/image/leaders/leader_blue.png",
   ARCHER: "/image/archere.png",
   BRAWLER: "/image/cogneur.png",
   PROWLER: "/image/rodeuse.png",
@@ -67,7 +68,7 @@ const CHARACTER_DATA: Record<string, { name: string; description: string; type: 
   CAVALRY: { name: "Cavalier", description: "Se déplace de 2 cases en ligne droite", type: "ACTIVE" },
   ACROBAT: { name: "Acrobate", description: "Saute par-dessus un personnage adjacent", type: "ACTIVE" },
   ILLUSIONIST: { name: "Illusioniste", description: "Échange de position avec un personnage visible", type: "ACTIVE" },
-  GRAPPLER: { name: "Lance-Grappin", description: "Se déplace jusqu'à un personnage visible", type: "ACTIVE" },
+  GRAPPLER: { name: "Lance-Grappin", description: "S'accroche à une pièce et se déplace sur une case adjacente", type: "ACTIVE" },
   MANIPULATOR: { name: "Manipulatrice", description: "Déplace un ennemi visible d'une case", type: "ACTIVE" },
   INNKEEPER: { name: "Tavernier", description: "Déplace un allié adjacent d'une case", type: "ACTIVE" },
   JAILER: { name: "Geôlier", description: "Les ennemis adjacents ne peuvent utiliser leur compétence", type: "PASSIVE" },
@@ -213,7 +214,7 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   const hasActiveAbility = useMemo(() => {
     if (!selectedPiece) return false;
     const charId = selectedPiece.characterId;
-    return ["BRAWLER", "MANIPULATOR", "GRAPPLER", "INNKEEPER", "ILLUSIONIST"].includes(charId);
+    return ["BRAWLER", "MANIPULATOR", "GRAPPLER", "INNKEEPER", "ILLUSIONIST", "ACROBAT", "CAVALRY", "PROWLER", "ROYAL_GUARD"].includes(charId);
   }, [selectedPiece]);
 
   // Music Hook
@@ -864,24 +865,38 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
       <div className="flex-1 flex flex-col items-center justify-center relative p-20">
         {/* ACTION MODE TOGGLE */}
         {selectedPiece && hasActiveAbility && isMyTurn && (
-          <div className="absolute top-20 z-50 flex gap-4 bg-slate-900/80 p-2 rounded-xl border border-slate-700 backdrop-blur-md left-1/2 transform -translate-x-1/2">
+          <div className="absolute top-24 z-50 flex p-1.5 bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] left-1/2 transform -translate-x-1/2 scale-110">
             <button
-              onClick={() => setActionMode("MOVE")}
-              className={`px-6 py-2 rounded-lg font-bold transition-all ${actionMode === "MOVE"
-                ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)]"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                }`}
+              onClick={() => { setActionMode("MOVE"); playButtonClickSfx(); }}
+              className={`
+                relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-cyber font-bold transition-all duration-300
+                ${actionMode === "MOVE"
+                  ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                  : "text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10"
+                }
+              `}
             >
-              DÉPLACEMENT
+              <span className="text-xs">🧭</span>
+              <span>DÉPLACEMENT</span>
+              {actionMode === "MOVE" && (
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-cyan-300 rounded-full" />
+              )}
             </button>
             <button
-              onClick={() => setActionMode("ABILITY")}
-              className={`px-6 py-2 rounded-lg font-bold transition-all ${actionMode === "ABILITY"
-                ? "bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                }`}
+              onClick={() => { setActionMode("ABILITY"); playButtonClickSfx(); }}
+              className={`
+                relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-cyber font-bold transition-all duration-300
+                ${actionMode === "ABILITY"
+                  ? "bg-purple-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] border border-purple-400/30"
+                  : "text-slate-400 hover:text-purple-400 hover:bg-purple-500/10"
+                }
+              `}
             >
-              COMPÉTENCE
+              <span className="text-xs">⚡</span>
+              <span>COMPÉTENCE</span>
+              {actionMode === "ABILITY" && (
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-purple-300 rounded-full" />
+              )}
             </button>
           </div>
         )}
@@ -910,6 +925,7 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
           onInnkeeperTargetSelect={actionMode === "ABILITY" ? setInnkeeperTarget : undefined}
           isLocalTurn={!!isMyTurn}
           volume={volume}
+          actionMode={actionMode}
         />
       </div>
 
@@ -920,20 +936,46 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
           ${selectedPiece ? "rotate-y-0 opacity-100" : "opacity-90"}
         `}>
           {selectedPiece ? (
-            <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+            <div className={`
+              bg-slate-900/90 backdrop-blur-xl border-2 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-colors duration-500
+              ${selectedPiece.characterId === "LEADER"
+                ? (selectedPiece.ownerIndex === 0 ? "border-cyan-500/50 shadow-cyan-500/20" : "border-red-500/50 shadow-red-500/20")
+                : "border-amber-500/30 shadow-amber-500/10"
+              }
+            `}>
               <div className="relative w-full aspect-[4/5] bg-slate-950">
-                {CHARACTER_IMAGES[selectedPiece.characterId] ? (
+                {selectedPiece.characterId === "LEADER" ? (
+                  <img
+                    src={selectedPiece.ownerIndex === 0 ? CHARACTER_IMAGES.LEADER_BLUE : CHARACTER_IMAGES.LEADER_RED}
+                    alt="Leader"
+                    className="w-full h-full object-cover object-center"
+                  />
+                ) : CHARACTER_IMAGES[selectedPiece.characterId] ? (
                   <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-6xl text-slate-700">?</div>
                 )}
+
+                {/* Tech Overlays */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90" />
-                <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,rgba(245,158,11,0.1)_2px)] bg-[size:100%_4px] pointer-events-none animate-scan-fast" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <h3 className="font-cyber text-3xl font-bold text-white tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                <div className={`absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_30%,black_100%)]`} />
+                <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,rgba(255,255,255,0.03)_2px)] bg-[size:100%_4px] pointer-events-none" />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_2px,rgba(255,255,255,0.01)_2px)] bg-[size:4px_100%] pointer-events-none" />
+
+                {/* Scanning Line */}
+                <div className={`
+                  absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(6,182,212,0.2)_50%,transparent_100%)] bg-[size:100%_200%] pointer-events-none animate-scan-fast
+                  ${selectedPiece.characterId === "LEADER" ? (selectedPiece.ownerIndex === 0 ? "opacity-40" : "hue-rotate-[140deg] opacity-40") : "opacity-20"}
+                `} />
+
+                <div className="absolute bottom-4 left-4 right-4 z-10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`h-1 w-8 rounded-full ${selectedPiece.characterId === "LEADER" ? (selectedPiece.ownerIndex === 0 ? "bg-cyan-400" : "bg-red-400") : "bg-amber-400"}`} />
+                    <span className="text-[10px] font-mono text-white/40 tracking-[0.2em] uppercase">Tactical Link</span>
+                  </div>
+                  <h3 className="font-cyber text-3xl font-bold text-white tracking-wider drop-shadow-lg uppercase">
                     {CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}
                   </h3>
-                  <div className="h-1 w-12 bg-amber-500 rounded-full mt-2" />
                 </div>
               </div>
 

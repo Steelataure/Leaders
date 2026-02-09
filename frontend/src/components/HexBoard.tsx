@@ -47,6 +47,7 @@ interface HexBoardProps {
   onInnkeeperTargetSelect?: (target: PieceFrontend | null) => void;
   isLocalTurn?: boolean;
   volume?: number;
+  actionMode?: "MOVE" | "ABILITY";
 }
 
 // === CONSTANTES DE STYLE ===
@@ -67,7 +68,8 @@ const SVG_HEIGHT = 600;
 
 // === IMAGES DES PERSONNAGES ===
 const CHARACTER_IMAGES: Record<string, string> = {
-  LEADER: "/image/garderoyal.png",
+  LEADER_RED: "/image/leaders/leader_red.png",
+  LEADER_BLUE: "/image/leaders/leader_blue.png",
   ARCHER: "/image/archere.png",
   BRAWLER: "/image/cogneur.png",
   PROWLER: "/image/rodeuse.png",
@@ -154,7 +156,9 @@ function PieceComponent({
   const radius = HEX_SIZE * 0.55;
   const glowId = `glow-${piece.id}`;
   const clipId = `clip-${piece.id}`;
-  const imageUrl = CHARACTER_IMAGES[piece.characterId] || "/image/garderoyal.png";
+  const imageUrl = isLeader
+    ? (piece.ownerIndex === 0 ? CHARACTER_IMAGES.LEADER_BLUE : CHARACTER_IMAGES.LEADER_RED)
+    : (CHARACTER_IMAGES[piece.characterId] || "/image/garderoyal.png");
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -182,6 +186,24 @@ function PieceComponent({
         <clipPath id={clipId}>
           <circle cx={x} cy={y} r={radius - 3} />
         </clipPath>
+        <radialGradient id={`grad-${piece.id}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.6" />
+        </radialGradient>
+        <filter id={`inner-shadow-${piece.id}`}>
+          <feComponentTransfer in="SourceAlpha">
+            <feFuncA type="table" tableValues="1 0" />
+          </feComponentTransfer>
+          <feGaussianBlur stdDeviation="3" />
+          <feOffset dx="0" dy="2" result="offsetblur" />
+          <feFlood floodColor="black" floodOpacity="0.8" />
+          <feComposite in2="offsetblur" operator="in" />
+          <feComposite in2="SourceAlpha" operator="in" />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode />
+          </feMerge>
+        </filter>
       </defs>
 
       {/* Selection/Ability Rings */}
@@ -231,8 +253,21 @@ function PieceComponent({
         height={(radius - 3) * 2}
         clipPath={`url(#${clipId})`}
         preserveAspectRatio="xMidYMid slice"
-        style={{ filter: piece.hasActed ? "grayscale(100%) brightness(70%)" : "none" }}
+        style={{
+          filter: piece.hasActed
+            ? "grayscale(100%) brightness(70%)"
+            : `url(#inner-shadow-${piece.id})`
+        }}
         opacity={piece.hasActed ? 0.6 : 1}
+      />
+      {/* Overlay gradient pour mieux intégrer l'image */}
+      <circle
+        cx={x}
+        cy={y}
+        r={radius - 3}
+        fill={`url(#grad-${piece.id})`}
+        pointerEvents="none"
+        opacity={piece.hasActed ? 0.3 : 0.4}
       />
 
       {isLeader && <g transform={`translate(${x}, ${y - radius - 8})`}><CrownIcon color={color} /></g>}
@@ -284,7 +319,8 @@ export default function HexBoard(props: HexBoardProps) {
     innkeeperTarget,
     onInnkeeperTargetSelect,
     isLocalTurn,
-    volume = 0,
+    volume = 0.5,
+    actionMode = "MOVE",
     availablePlacementCells = [],
   } = props;
 
@@ -536,9 +572,9 @@ export default function HexBoard(props: HexBoardProps) {
       </defs>
 
       {cells.map(cell => {
-        const isValid = validMoves.has(`${cell.q},${cell.r}`);
+        const isValid = actionMode === "MOVE" && validMoves.has(`${cell.q},${cell.r}`);
         const isPlacement = placementMode && availablePlacementCells.some(c => c.q === cell.q && c.r === cell.r);
-        const isAbility = manipulatorDestinations.has(`${cell.q},${cell.r}`) || brawlerDestinations.has(`${cell.q},${cell.r}`) || grapplerMoveDestinations.has(`${cell.q},${cell.r}`) || innkeeperDestinations.has(`${cell.q},${cell.r}`);
+        const isAbility = actionMode === "ABILITY" && (manipulatorDestinations.has(`${cell.q},${cell.r}`) || brawlerDestinations.has(`${cell.q},${cell.r}`) || grapplerMoveDestinations.has(`${cell.q},${cell.r}`) || innkeeperDestinations.has(`${cell.q},${cell.r}`));
 
         const pieceOnCell = findPieceAtCell(cell.q, cell.r);
         const canAct = pieceOnCell?.ownerIndex === currentPlayer && !pieceOnCell.hasActed && phase === "ACTIONS" && isLocalTurn;
@@ -584,7 +620,7 @@ export default function HexBoard(props: HexBoardProps) {
         const cell = cells.find(c => c.q === piece.q && c.r === piece.r);
         if (!cell) return null;
 
-        const isAbilityTarget = illusionistTargets.has(piece.id) || manipulatorTargets.has(piece.id) || brawlerTargets.has(piece.id) || grapplerTargets.has(piece.id) || innkeeperTargets.has(piece.id);
+        const isAbilityTarget = actionMode === "ABILITY" && (illusionistTargets.has(piece.id) || manipulatorTargets.has(piece.id) || brawlerTargets.has(piece.id) || grapplerTargets.has(piece.id) || innkeeperTargets.has(piece.id));
         const targetColor = brawlerTargets.has(piece.id) ? "#f97316" : grapplerTargets.has(piece.id) ? "#06b6d4" : innkeeperTargets.has(piece.id) ? "#eab308" : "#a855f7";
 
         const isSelected = selectedPiece?.id === piece.id || brawlerTarget?.id === piece.id || manipulatorTarget?.id === piece.id || grapplerTarget?.id === piece.id || innkeeperTarget?.id === piece.id;
