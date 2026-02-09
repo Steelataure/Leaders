@@ -182,11 +182,7 @@ public class ActionService {
         VictoryCheckResult result = victoryService.checkVictory(game.getId());
 
         if (result.isGameOver()) {
-            game.setStatus(GameStatus.FINISHED);
-            game.setWinnerPlayerIndex(result.winnerPlayerIndex());
-            game.setWinnerVictoryType(result.victoryType());
-            game.setUpdatedAt(LocalDateTime.now());
-            gameRepository.save(game);
+            gameService.finishGame(game.getId(), result.winnerPlayerIndex(), result.victoryType());
         }
     }
 

@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.UUID;
 
 public record UserDto(
-        UUID id,
-        String email,
-        String username,
-        List<String> roles) implements Serializable {
+                UUID id,
+                String email,
+                String username,
+                int elo,
+                List<String> roles) implements Serializable {
 }

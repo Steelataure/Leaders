@@ -17,6 +17,7 @@ import java.util.UUID;
 public class LeaveSessionUseCase {
     private final SessionRepository sessionRepository;
     private final GameRepository gameRepository;
+    private final esiea.hackathon.leaders.application.services.GameService gameService;
 
     public void leaveSession(String sessionId, String userId) {
         // Use String directly, don't force UUID
@@ -25,17 +26,12 @@ public class LeaveSessionUseCase {
 
         // Si la partie est en cours, le départ d'un joueur termine la partie
         if (session.getStatus() == Session.SessionStatus.ACTIVE) {
-            session.setStatus(Session.SessionStatus.FINISHED);
-
             // Gestion de la partie (GameEntity)
             try {
                 UUID gameId = UUID.fromString(sessionId);
                 GameEntity game = gameRepository.findById(gameId).orElse(null);
 
                 if (game != null && game.getStatus() == GameStatus.IN_PROGRESS) {
-                    game.setStatus(GameStatus.FINISHED);
-                    game.setWinnerVictoryType(VictoryType.RESIGNATION);
-
                     // Déterminer le gagnant (celui qui n'a PA quitté)
                     Integer leaverIndex = null;
                     if (game.getPlayers() != null) {
@@ -48,13 +44,14 @@ public class LeaveSessionUseCase {
                     }
 
                     if (leaverIndex != null) {
-                        game.setWinnerPlayerIndex(leaverIndex == 0 ? 1 : 0);
+                        int winnerIndex = (leaverIndex == 0 ? 1 : 0);
+                        gameService.finishGame(gameId, winnerIndex, VictoryType.RESIGNATION);
                     } else {
                         // Fallback si on ne trouve pas le joueur (ne devrait pas arriver)
                         System.err.println("ERROR: Leaving player " + userId + " not found in game " + gameId);
+                        // On finit quand même le jeu pour éviter un blocage
+                        gameService.finishGame(gameId, null, VictoryType.RESIGNATION);
                     }
-
-                    gameRepository.save(game);
                 }
             } catch (Exception e) {
                 System.err.println("Error updating game status on leave: " + e.getMessage());

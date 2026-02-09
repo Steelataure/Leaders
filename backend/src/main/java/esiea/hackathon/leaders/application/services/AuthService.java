@@ -60,6 +60,7 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getUsername(),
+                user.getElo(),
                 List.of("USER") // Default role
         );
 

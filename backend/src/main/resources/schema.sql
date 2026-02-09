@@ -3,16 +3,18 @@
 -- ==================================================================================
 DROP TABLE IF EXISTS ref_character_ability CASCADE;
 DROP TABLE IF EXISTS scenario_character CASCADE;
-DROP TABLE IF EXISTS recruitment_card CASCADE;
-DROP TABLE IF EXISTS piece CASCADE;
-DROP TABLE IF EXISTS game_player CASCADE;
-DROP TABLE IF EXISTS game CASCADE;
+-- Les tables métier (game, piece, user_credentials) ne doivent PAS être supprimées à chaque démarrage
+-- pour préserver les comptes et l'ELO.
+-- DROP TABLE IF EXISTS recruitment_card CASCADE;
+-- DROP TABLE IF EXISTS piece CASCADE;
+-- DROP TABLE IF EXISTS game_player CASCADE;
+-- DROP TABLE IF EXISTS game CASCADE;
 DROP TABLE IF EXISTS ability CASCADE;
 DROP TABLE IF EXISTS ref_character CASCADE;
 DROP TABLE IF EXISTS ref_scenario CASCADE;
 DROP TABLE IF EXISTS spring_session_attributes CASCADE;
 DROP TABLE IF EXISTS spring_session CASCADE;
-DROP TABLE IF EXISTS user_credentials CASCADE;
+-- DROP TABLE IF EXISTS user_credentials CASCADE;
 
 -- On supprime les anciens types ENUM s'ils existent encore, pour faire place nette
 DROP TYPE IF EXISTS ability_type CASCADE;
@@ -50,6 +52,7 @@ CREATE TABLE IF NOT EXISTS user_credentials (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     username VARCHAR(255),
+    elo INT DEFAULT 1000,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
     );

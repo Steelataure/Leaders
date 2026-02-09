@@ -30,6 +30,9 @@ public class UserCredentialsEntity {
     @Column(unique = true, nullable = false)
     private String username;
 
+    @Builder.Default
+    private int elo = 1000;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

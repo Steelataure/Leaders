@@ -23,6 +23,7 @@ export interface Piece {
 export interface Player {
   userId: string;
   username?: string;
+  elo?: number;
   playerIndex: number;
 }
 

@@ -2,6 +2,7 @@ import type { GameFrontend, PieceFrontend } from "../api/gameApi";
 import { gameApi } from "../api/gameApi";
 import { authService } from "../services/auth.service";
 import { webSocketService } from "../services/WebSocketService";
+import RankBadge from "../components/RankBadge";
 import HexBoard from "../components/HexBoard";
 import GameBackground from "../components/GameBackground";
 import RulesModal from "../components/RulesModal";
@@ -699,9 +700,15 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
             <img src="/image/garderoyal.png" className="w-full h-full object-cover" />
           </div>
           <div>
-            <div className="text-xs text-cyan-400 font-mono uppercase tracking-tighter">Joueur 1</div>
-            <div className="font-cyber text-lg font-bold text-white">
-              {gameState.players.find(p => p.playerIndex === 0)?.username || "Chargement..."}
+            <div className="text-[10px] text-cyan-400/60 font-mono uppercase tracking-[0.3em] mb-1">Commandant Tactique</div>
+            <div className="flex items-center gap-6">
+              <h2 className="font-cyber text-3xl font-black text-white tracking-wider bg-gradient-to-r from-white via-cyan-100 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(6,182,212,0.3)] uppercase italic">
+                {gameState.players.find(p => p.playerIndex === 0)?.username || "Chargement..."}
+              </h2>
+              <RankBadge
+                elo={gameState.players.find(p => p.playerIndex === 0)?.elo}
+                size="md"
+              />
             </div>
           </div>
           <div className={`ml-4 font-mono text-2xl font-bold px-3 py-1 rounded-lg ${timeP0 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-cyan-400 bg-cyan-500/10"}`}>
@@ -748,9 +755,15 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
             <img src="/image/garderoyal.png" className="w-full h-full object-cover grayscale" />
           </div>
           <div className="text-right">
-            <div className="text-xs text-rose-400 font-mono uppercase tracking-tighter">Joueur 2</div>
-            <div className="font-cyber text-lg font-bold text-white">
-              {gameState.players.find(p => p.playerIndex === 1)?.username || "Chargement..."}
+            <div className="text-[10px] text-rose-400/60 font-mono uppercase tracking-[0.3em] mb-1">Opposant Désigné</div>
+            <div className="flex items-center gap-6 flex-row-reverse">
+              <h2 className="font-cyber text-3xl font-black text-white tracking-wider bg-gradient-to-l from-white via-rose-100 to-rose-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(244,63,94,0.3)] uppercase italic text-right">
+                {gameState.players.find(p => p.playerIndex === 1)?.username || "Chargement..."}
+              </h2>
+              <RankBadge
+                elo={gameState.players.find(p => p.playerIndex === 1)?.elo}
+                size="md"
+              />
             </div>
           </div>
           <div className={`mr-4 font-mono text-2xl font-bold px-3 py-1 rounded-lg ${timeP1 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-rose-400 bg-rose-500/10"}`}>

@@ -25,6 +25,43 @@ public class GameService {
     private final PieceRepository pieceRepository;
     private final VictoryService victoryService;
     private final SessionRepository sessionRepository;
+    private final EloService eloService;
+
+    @Transactional
+    public void finishGame(UUID gameId, Integer winnerIndex,
+            esiea.hackathon.leaders.domain.model.enums.VictoryType victoryType) {
+        GameEntity game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        if (game.getStatus() == GameStatus.FINISHED) {
+            return;
+        }
+
+        System.out.println("DEBUG: Finishing game " + gameId + " with winner " + winnerIndex);
+        game.setStatus(GameStatus.FINISHED);
+        game.setWinnerPlayerIndex(winnerIndex);
+        game.setWinnerVictoryType(victoryType);
+        game.setUpdatedAt(LocalDateTime.now());
+
+        // ELO Update
+        if (winnerIndex != null && game.getPlayers() != null && game.getPlayers().size() >= 2) {
+            UUID winnerUserId = game.getPlayers().stream()
+                    .filter(p -> p.getPlayerIndex() == winnerIndex)
+                    .map(esiea.hackathon.leaders.domain.model.GamePlayerEntity::getUserId)
+                    .findFirst().orElse(null);
+
+            int loserIndex = (winnerIndex == 0) ? 1 : 0;
+            UUID loserUserId = game.getPlayers().stream()
+                    .filter(p -> p.getPlayerIndex() == loserIndex)
+                    .map(esiea.hackathon.leaders.domain.model.GamePlayerEntity::getUserId)
+                    .findFirst().orElse(null);
+
+            eloService.updateElo(winnerUserId, loserUserId);
+        }
+
+        gameRepository.save(game);
+        updateSessionStatusToFinished(gameId);
+    }
 
     @Transactional
     public GameEntity endTurn(UUID gameId) {
@@ -37,45 +74,20 @@ public class GameService {
         VictoryCheckResult victoryResult = victoryService.checkVictory(gameId);
 
         if (victoryResult.isGameOver()) {
-            // --- CAS DE VICTOIRE (Fin de partie) ---
-            game.setStatus(GameStatus.FINISHED);
-            game.setWinnerPlayerIndex(victoryResult.winnerPlayerIndex());
-
-            // Note : J'utilise le nom exact de ton entité (winnerVictoryType)
-            game.setWinnerVictoryType(victoryResult.victoryType());
-
-            // On ne change pas le joueur, on ne reset pas les actions. Le jeu est figé.
-
+            finishGame(gameId, victoryResult.winnerPlayerIndex(), victoryResult.victoryType());
+            return gameRepository.findById(gameId).get();
         } else {
             // --- CAS NORMAL (Le jeu continue) ---
-
-            // 0. Update Timer before switching player
             updateTimer(game);
-
-            // A. Changer de joueur (Alternance 0 / 1)
             short nextPlayer = (short) ((game.getCurrentPlayerIndex() + 1) % 2);
-            System.out.println("DEBUG: Switching player from " + game.getCurrentPlayerIndex() + " to " + nextPlayer);
             game.setCurrentPlayerIndex(nextPlayer);
-
-            // B. Incrémenter le tour
             game.setTurnNumber(game.getTurnNumber() + 1);
-
-            // C. Réinitialiser les actions des pièces pour le prochain tour
             resetPiecesActions(gameId);
-
-            // D. Réinitialiser le compteur de recrutement
             game.setRecruitmentCount(0);
         }
 
-        // 3. Mise à jour timestamp et sauvegarde
         game.setUpdatedAt(LocalDateTime.now());
-        GameEntity savedGame = gameRepository.save(game);
-
-        if (victoryResult.isGameOver()) {
-            updateSessionStatusToFinished(gameId);
-        }
-
-        return savedGame;
+        return gameRepository.save(game);
     }
 
     private void updateSessionStatusToFinished(UUID gameId) {
@@ -161,10 +173,8 @@ public class GameService {
         int currentTime = (game.getCurrentPlayerIndex() == 0) ? game.getRemainingTimeP0() : game.getRemainingTimeP1();
         if (currentTime <= 0) {
             System.out.println("DEBUG: TIMEOUT detected for player " + game.getCurrentPlayerIndex());
-            game.setStatus(GameStatus.FINISHED);
-            game.setWinnerPlayerIndex((game.getCurrentPlayerIndex() == 0) ? 1 : 0);
-            game.setWinnerVictoryType(esiea.hackathon.leaders.domain.model.enums.VictoryType.TIMEOUT);
-            // La sauvegarde se fera dans checkTimeout ou endTurn
+            finishGame(game.getId(), (game.getCurrentPlayerIndex() == 0) ? 1 : 0,
+                    esiea.hackathon.leaders.domain.model.enums.VictoryType.TIMEOUT);
         }
     }
 }

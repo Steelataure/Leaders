@@ -9,58 +9,79 @@ import java.util.stream.Collectors;
 
 public class GameMapper {
 
-    public static GameEntity toDomain(GameJpaEntity entity) {
-        if (entity == null)
-            return null;
+        public static GameEntity toDomain(GameJpaEntity entity) {
+                if (entity == null)
+                        return null;
 
-        List<GamePlayerEntity> players = null;
-        if (entity.getPlayers() != null) {
-            players = entity.getPlayers().stream()
-                    .map(p -> GamePlayerEntity.builder()
-                            .id(p.getId())
-                            .userId(p.getUserId())
-                            .playerIndex(p.getPlayerIndex())
-                            .isFirstTurnCompleted(p.isFirstTurnCompleted())
-                            .build())
-                    .collect(Collectors.toList());
+                List<GamePlayerEntity> players = null;
+                if (entity.getPlayers() != null) {
+                        players = entity.getPlayers().stream()
+                                        .map(p -> GamePlayerEntity.builder()
+                                                        .id(p.getId())
+                                                        .userId(p.getUserId())
+                                                        .playerIndex(p.getPlayerIndex())
+                                                        .isFirstTurnCompleted(p.isFirstTurnCompleted())
+                                                        .build())
+                                        .collect(Collectors.toList());
+                }
+
+                return GameEntity.builder()
+                                .id(entity.getId())
+                                .mode(entity.getMode())
+                                .status(entity.getStatus())
+                                .phase(entity.getPhase())
+                                .currentPlayerIndex(entity.getCurrentPlayerIndex())
+                                .turnNumber(entity.getTurnNumber())
+                                .banishmentCount(entity.getBanishmentCount())
+                                .recruitmentCount(entity.getRecruitmentCount())
+                                .winnerPlayerIndex(entity.getWinnerPlayerIndex())
+                                .winnerVictoryType(entity.getWinnerVictoryType())
+                                .players(players)
+                                .pieces(entity.getPieces() != null ? entity.getPieces().stream()
+                                                .map(PieceMapper::toDomain)
+                                                .collect(Collectors.toList()) : null)
+                                .cards(entity.getCards() != null ? entity.getCards().stream()
+                                                .map(RecruitmentCardMapper::toDomain)
+                                                .collect(Collectors.toList()) : null)
+                                .remainingTimeP0(entity.getRemainingTimeP0())
+                                .remainingTimeP1(entity.getRemainingTimeP1())
+                                .lastTimerUpdate(entity.getLastTimerUpdate())
+                                .build();
         }
 
-        return GameEntity.builder()
-                .id(entity.getId())
-                .mode(entity.getMode())
-                .status(entity.getStatus())
-                .phase(entity.getPhase())
-                .currentPlayerIndex(entity.getCurrentPlayerIndex())
-                .turnNumber(entity.getTurnNumber())
-                .banishmentCount(entity.getBanishmentCount())
-                .recruitmentCount(entity.getRecruitmentCount())
-                .winnerPlayerIndex(entity.getWinnerPlayerIndex())
-                .winnerVictoryType(entity.getWinnerVictoryType())
-                .players(players)
-                .remainingTimeP0(entity.getRemainingTimeP0())
-                .remainingTimeP1(entity.getRemainingTimeP1())
-                .lastTimerUpdate(entity.getLastTimerUpdate())
-                .build();
-    }
+        public static GameJpaEntity toEntity(GameEntity domain) {
+                if (domain == null)
+                        return null;
 
-    public static GameJpaEntity toEntity(GameEntity domain) {
-        if (domain == null)
-            return null;
+                GameJpaEntity entity = GameJpaEntity.builder()
+                                .id(domain.getId())
+                                .mode(domain.getMode())
+                                .status(domain.getStatus())
+                                .phase(domain.getPhase())
+                                .currentPlayerIndex(domain.getCurrentPlayerIndex())
+                                .turnNumber(domain.getTurnNumber())
+                                .banishmentCount(domain.getBanishmentCount())
+                                .recruitmentCount(domain.getRecruitmentCount())
+                                .winnerPlayerIndex(domain.getWinnerPlayerIndex())
+                                .winnerVictoryType(domain.getWinnerVictoryType())
+                                .remainingTimeP0(domain.getRemainingTimeP0())
+                                .remainingTimeP1(domain.getRemainingTimeP1())
+                                .lastTimerUpdate(domain.getLastTimerUpdate())
+                                .build();
 
-        return GameJpaEntity.builder()
-                .id(domain.getId())
-                .mode(domain.getMode()) // <--- TRANSFERT CRUCIAL
-                .status(domain.getStatus()) // <--- TRANSFERT CRUCIAL
-                .phase(domain.getPhase()) // <--- TRANSFERT CRUCIAL
-                .currentPlayerIndex(domain.getCurrentPlayerIndex())
-                .turnNumber(domain.getTurnNumber())
-                .banishmentCount(domain.getBanishmentCount())
-                .recruitmentCount(domain.getRecruitmentCount())
-                .winnerPlayerIndex(domain.getWinnerPlayerIndex())
-                .winnerVictoryType(domain.getWinnerVictoryType())
-                .remainingTimeP0(domain.getRemainingTimeP0())
-                .remainingTimeP1(domain.getRemainingTimeP1())
-                .lastTimerUpdate(domain.getLastTimerUpdate())
-                .build();
-    }
+                if (domain.getPlayers() != null) {
+                        entity.setPlayers(domain.getPlayers().stream()
+                                        .map(p -> esiea.hackathon.leaders.adapter.infrastructure.entity.GamePlayerJpaEntity
+                                                        .builder()
+                                                        .id(p.getId())
+                                                        .userId(p.getUserId())
+                                                        .playerIndex(p.getPlayerIndex())
+                                                        .isFirstTurnCompleted(p.isFirstTurnCompleted())
+                                                        .game(entity)
+                                                        .build())
+                                        .collect(Collectors.toList()));
+                }
+
+                return entity;
+        }
 }

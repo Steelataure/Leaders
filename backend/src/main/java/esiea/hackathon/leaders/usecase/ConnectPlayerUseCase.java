@@ -81,7 +81,10 @@ public class ConnectPlayerUseCase {
 
                 // Player 1 (host)
                 if (session.getPlayer1() != null) {
-                    UUID player1Id = safeUuid.apply(session.getPlayer1().getId());
+                    String p1IdStr = session.getPlayer1().getId();
+                    UUID player1Id = safeUuid.apply(p1IdStr);
+                    System.out.println("DEBUG: Connection - Player 1 ID from session: " + p1IdStr
+                            + " -> mapped to UUID: " + player1Id);
                     GamePlayerJpaEntity gp1 = GamePlayerJpaEntity.builder()
                             .game(gameRef)
                             .userId(player1Id)
@@ -90,12 +93,12 @@ public class ConnectPlayerUseCase {
                             .build();
                     gamePlayerRepository.save(gp1);
                     gameRef.getPlayers().add(gp1);
-                    System.out.println("DEBUG: Saved player 0 with userId: " + player1Id + " (original: "
-                            + session.getPlayer1().getId() + ")");
                 }
 
                 // Player 2 (joiner)
                 UUID player2Id = safeUuid.apply(actualPlayerId);
+                System.out.println("DEBUG: Connection - Player 2 ID actual: " + actualPlayerId + " -> mapped to UUID: "
+                        + player2Id);
                 GamePlayerJpaEntity gp2 = GamePlayerJpaEntity.builder()
                         .game(gameRef)
                         .userId(player2Id)
@@ -104,8 +107,6 @@ public class ConnectPlayerUseCase {
                         .build();
                 gamePlayerRepository.save(gp2);
                 gameRef.getPlayers().add(gp2);
-                System.out.println(
-                        "DEBUG: Saved player 1 with userId: " + player2Id + " (original: " + actualPlayerId + ")");
 
                 // Send game state via WebSocket ONLY if players were saved successfully
 

@@ -63,13 +63,37 @@ public class GameQueryService {
                 List<PlayerDto> players = game.getPlayers() != null
                                 ? game.getPlayers().stream()
                                                 .map(p -> {
+                                                        UUID userId = p.getUserId();
+                                                        System.out.println("DEBUG: Resolving player with userId: "
+                                                                        + userId + " (playerIndex: "
+                                                                        + p.getPlayerIndex() + ")");
                                                         String username = "Guest "
-                                                                        + p.getUserId().toString().substring(0, 4);
-                                                        var user = userCredentialsRepository.findById(p.getUserId());
-                                                        if (user.isPresent()) {
-                                                                username = user.get().getUsername();
+                                                                        + (userId != null
+                                                                                        ? userId.toString().substring(0,
+                                                                                                        4)
+                                                                                        : "Unknown");
+                                                        Integer elo = null;
+                                                        if (userId != null) {
+                                                                var user = userCredentialsRepository.findById(userId);
+                                                                if (user.isPresent()) {
+                                                                        username = user.get().getUsername();
+                                                                        elo = user.get().getElo();
+                                                                        System.out.println(
+                                                                                        "DEBUG: Found authenticated user: "
+                                                                                                        + username
+                                                                                                        + " (ELO: "
+                                                                                                        + elo + ")");
+                                                                } else {
+                                                                        System.out.println(
+                                                                                        "DEBUG: No UserCredentials found for UUID: "
+                                                                                                        + userId);
+                                                                }
+                                                        } else {
+                                                                System.out.println(
+                                                                                "DEBUG: Player userId is NULL for index: "
+                                                                                                + p.getPlayerIndex());
                                                         }
-                                                        return new PlayerDto(p.getUserId(), username,
+                                                        return new PlayerDto(userId, username, elo,
                                                                         p.getPlayerIndex());
                                                 })
                                                 .toList()

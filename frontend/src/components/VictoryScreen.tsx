@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import RankBadge from "./RankBadge";
 
 /**
  * Composant VictoryScreen - Écran de victoire DYNAMIQUE
@@ -19,6 +20,7 @@ interface VictoryScreenProps {
   turnNumber?: number;
   winnerPieceCount?: number;
   loserPieceCount?: number;
+  winnerElo?: number; // 🆕 Added optionally
 }
 
 // === CONSTANTES ===
@@ -330,6 +332,7 @@ export default function VictoryScreen({
   turnNumber = 0,
   winnerPieceCount = 0,
   loserPieceCount = 0,
+  winnerElo = 0,
 }: VictoryScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -423,14 +426,21 @@ export default function VictoryScreen({
 
             {/* Nom du gagnant */}
             <div className="animate-slide-up-delayed-1">
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <span className="text-4xl">{playerConfig.emoji}</span>
-                <h2
-                  className={`text-3xl md:text-4xl font-bold bg-gradient-to-r ${playerConfig.gradient} bg-clip-text text-transparent`}
-                >
-                  {playerConfig.name}
-                </h2>
-                <span className="text-4xl">{playerConfig.emoji}</span>
+              <div className="flex flex-col items-center gap-2 mb-6">
+                <div className="flex items-center justify-center gap-4">
+                  <span className="text-4xl">{playerConfig.emoji}</span>
+                  <h2
+                    className={`text-3xl md:text-5xl font-black bg-gradient-to-r ${playerConfig.gradient} bg-clip-text text-transparent uppercase tracking-wider italic`}
+                  >
+                    {playerConfig.name}
+                  </h2>
+                  <span className="text-4xl">{playerConfig.emoji}</span>
+                </div>
+                {winnerElo !== undefined && (
+                  <div className="mt-2 scale-125">
+                    <RankBadge elo={winnerElo} size="md" />
+                  </div>
+                )}
               </div>
             </div>
 

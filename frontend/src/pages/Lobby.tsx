@@ -3,6 +3,7 @@ import { authService } from "../services/auth.service";
 import { joinPublicQueue, createPrivateSession, joinPrivateSession, cancelSearch } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
 import type { User } from "../types/auth.types";
+import RankBadge from "../components/RankBadge";
 import { createGame, SCENARIO_NAMES, API_BASE_URL } from "../api/gameApi";
 
 import useSound from 'use-sound';
@@ -193,6 +194,7 @@ export default function Lobby({
         id: sessionGuestId,
         username: "Joueur",
         email: "",
+        elo: 1000,
         roles: []
       };
       // Do NOT save to localStorage, or it will contaminate other tabs.
@@ -220,7 +222,7 @@ export default function Lobby({
           // Fallback if login returns no user (unlikely but safe)
           const guestId = sessionStorage.getItem('guest_id') || crypto.randomUUID();
           sessionStorage.setItem('guest_id', guestId);
-          setUser({ username: "Joueur", id: guestId, email, roles: [] });
+          setUser({ username: "Joueur", id: guestId, email, elo: 1000, roles: [] });
         }
         setLoginOpen(false);
       }
@@ -355,10 +357,23 @@ export default function Lobby({
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             onMouseEnter={() => playButtonHoverSfx()}
-            className="relative border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/10 font-rajdhani font-bold py-2 px-6 rounded transition-all tracking-wider text-sm backdrop-blur-sm flex items-center gap-2"
+            className="group relative border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/10 font-rajdhani font-bold py-1.5 px-4 rounded transition-all tracking-wider text-sm backdrop-blur-sm flex items-center gap-4 pr-6"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            {user ? user.username.toUpperCase() : "CONNEXION"}
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] text-cyan-500/50 uppercase tracking-tighter leading-none mb-1">Identité Confirmée</span>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-white group-hover:text-cyan-400 transition-colors uppercase">
+                  {user ? user.username : "CONNEXION"}
+                </span>
+              </div>
+            </div>
+            {user && (
+              <div className="border-l border-white/10 pl-4 py-1">
+                <RankBadge elo={user.elo} size="sm" showElo={false} />
+              </div>
+            )}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] opacity-30 group-hover:opacity-100 transition-opacity">▼</div>
           </button>
 
           {dropdownOpen && (
@@ -667,7 +682,7 @@ export default function Lobby({
                     if (codeStr.length < 4) return;
                     playButtonClickSfx();
                     try {
-                      const session = await joinPrivateSession(codeStr);
+                      const session = await joinPrivateSession(codeStr, user?.id);
                       if (session.status === "ACTIVE") {
                         onStartGame(session.id);
                       } else {
