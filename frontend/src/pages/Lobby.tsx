@@ -81,7 +81,9 @@ export default function Lobby({
   const [volume, setVolume] = useState(0); // 0% by default as requested
   const [sfxEnabled, setSfxEnabled] = useState(false); // Disabled by default
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [isCreatingPrivate, setIsCreatingPrivate] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [createdSessionCode, setCreatedSessionCode] = useState<string | null>(null);
 
   // ... (keeping other states)
 
@@ -239,14 +241,40 @@ export default function Lobby({
     setDropdownOpen(false);
   };
 
-  const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+  const handleCodeChange = async (index: number, value: string) => {
+    if (!/^[0-9]?$/.test(value)) return;
+
     const newCode = [...code];
     newCode[index] = value.toUpperCase();
     setCode(newCode);
+
+    // Auto-focus next
     if (value && index < 5) {
-      const nextInput = document.getElementById(`code-${index + 1}`);
-      nextInput?.focus();
+      document.getElementById(`code-${index + 1}`)?.focus();
+    }
+
+    // Attempt join if all 6 digits are filled
+    if (newCode.every(char => char !== "")) {
+      const fullCode = newCode.join("");
+      try {
+        setSessionStatus("REJOINDRE LA SESSION...");
+        const session = await joinPrivateSession(fullCode, user?.id);
+        setCurrentSession(session);
+
+        if (session.status === "ACTIVE") {
+          onStartGame(session.id);
+        } else {
+          webSocketService.subscribeToSession(session.id, (updatedSession) => {
+            if (updatedSession.status === "ACTIVE") {
+              onStartGame(updatedSession.id);
+            }
+          });
+        }
+      } catch (err: any) {
+        console.error("Join private session failed", err);
+        setError("Code invalide ou session pleine.");
+        setSessionStatus("");
+      }
     }
   };
 
@@ -547,33 +575,37 @@ export default function Lobby({
               )}
             </div>
 
-            {!joinMode ? (
+            {!joinMode && !createdSessionCode ? (
               <div className="mt-auto w-full flex flex-col gap-3">
                 <button
                   onClick={async () => {
                     playButtonClickSfx();
                     try {
-                      const session = await createPrivateSession();
+                      setIsCreatingPrivate(true);
+                      setSessionStatus("CRÉATION DE LA SESSION...");
+                      const session = await createPrivateSession(user?.id);
                       setCurrentSession(session);
-                      setJoinMode(true); // Re-use join mode UI or specialized UI?
-                      // Actually, if we create, we want to show the code.
-                      // Currently joinMode shows "Enter Code". We need a "Show Code" mode.
-                      // For simplicity, let's use an alert or a specific UI state.
-                      alert(`Partie créée ! Code: ${session.code}`); // Temporary fallback
-                      // Ideally, show code in UI and wait
+                      setCreatedSessionCode(session.code || null);
                       setSessionStatus(`CODE: ${session.code} - EN ATTENTE...`);
-                      setIsSearching(true);
+
                       webSocketService.subscribeToSession(session.id, (updatedSession) => {
+                        console.log("PRIVATE SESSION UPDATE:", updatedSession);
                         if (updatedSession.status === "ACTIVE") {
                           onStartGame(updatedSession.id);
                         }
                       });
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                      console.error(e);
+                      setError("Erreur lors de la création de la partie.");
+                      setIsCreatingPrivate(false);
+                      setSessionStatus("");
+                    }
                   }}
+                  disabled={isCreatingPrivate}
                   onMouseEnter={() => playButtonHoverSfx()}
-                  className="w-full bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/50 font-orbitron font-bold py-3 px-4 rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] tracking-widest text-sm"
+                  className={`w-full ${isCreatingPrivate ? 'opacity-50 cursor-not-allowed bg-emerald-900/40' : 'bg-emerald-600/20 hover:bg-emerald-600/40'} text-emerald-400 border border-emerald-500/50 font-orbitron font-bold py-3 px-4 rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] tracking-widest text-sm`}
                 >
-                  CRÉER UNE PARTIE
+                  {isCreatingPrivate ? "SÉQUENCE DE LANCEMENT..." : "CRÉER UNE PARTIE"}
                 </button>
 
                 <button
@@ -584,9 +616,39 @@ export default function Lobby({
                   ENTRER UN CODE
                 </button>
               </div>
+            ) : createdSessionCode ? (
+              <div className="mt-auto w-full flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom duration-500">
+                <div className="text-center">
+                  <p className="text-cyan-500 font-orbitron text-[10px] tracking-[0.3em] font-bold mb-4 uppercase">CODE DE TRANSMISSION</p>
+                  <div className="flex gap-2 justify-center mb-2">
+                    {createdSessionCode.split('').map((char, i) => (
+                      <div key={i} className="w-10 h-12 bg-cyan-950/40 border-2 border-cyan-500/50 flex items-center justify-center text-white text-2xl font-orbitron font-black rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                        {char}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-3 w-full">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <p className="text-emerald-400 font-rajdhani text-sm font-bold tracking-widest animate-pulse uppercase">EN ATTENTE D'UN JOUEUR...</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCreatedSessionCode(null);
+                      setIsCreatingPrivate(false);
+                      setSessionStatus("");
+                    }}
+                    className="text-slate-500 hover:text-white text-[10px] font-rajdhani font-bold uppercase tracking-widest transition-colors"
+                  >
+                    ANNULER LA SESSION
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="animate-in fade-in zoom-in duration-300 flex flex-col justify-end mt-auto">
-                <div className="flex gap-2 mb-3 justify-center">
+                <div className="flex gap-2 mb-6 justify-center">
                   {code.map((char, i) => (
                     <input
                       key={i}

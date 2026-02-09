@@ -270,19 +270,21 @@ export async function cancelSearch(playerId: string): Promise<void> {
   if (!res.ok) throw new Error("Failed to cancel search");
 }
 
-export async function createPrivateSession(): Promise<Session> {
+export async function createPrivateSession(playerId?: string): Promise<Session> {
   const res = await fetch(`${BASE_URL}/sessions/private`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ playerId }),
   });
   if (!res.ok) throw new Error("Failed to create private session");
   return res.json();
 }
 
-export async function joinPrivateSession(code: string): Promise<Session> {
+export async function joinPrivateSession(code: string, playerId?: string): Promise<Session> {
   const res = await fetch(`${BASE_URL}/sessions/private/join`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, playerId }),
   });
   if (!res.ok) throw new Error("Failed to join private session");
   return res.json();
