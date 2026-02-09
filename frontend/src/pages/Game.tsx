@@ -5,6 +5,8 @@ import { authService } from "../services/auth.service";
 import { webSocketService } from "../services/WebSocketService";
 import HexBoard from "../components/HexBoard";
 import GameBackground from "../components/GameBackground";
+import RulesModal from "../components/RulesModal";
+import { BookOpen } from "lucide-react";
 
 
 import VictoryScreen from "../components/VictoryScreen";
@@ -208,6 +210,7 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   const [grapplerMode, setGrapplerMode] = useState<"PULL" | "MOVE" | null>(null);
   const [showGrapplerModal, setShowGrapplerModal] = useState(false);
   const [innkeeperTarget, setInnkeeperTarget] = useState<PieceFrontend | null>(null);
+  const [showRules, setShowRules] = useState(false);
 
   // Check if it's the local player's turn
   const isMyTurn = gameState && localPlayerIndex !== null && gameState.currentPlayerIndex === localPlayerIndex;
@@ -571,6 +574,14 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
             <div className={`px-6 py-2 rounded-full border shadow-[0_0_15px_inset] transition-all duration-300 ${gameState.currentPlayerIndex === 0 ? "border-cyan-500 text-cyan-400 bg-cyan-950/30" : "border-rose-500 text-rose-400 bg-rose-950/30"}`}>
               JOUEUR {gameState.currentPlayerIndex + 1} {gameState.currentPlayerIndex === localPlayerIndex ? "(VOUS)" : ""}
             </div>
+
+            <button
+              onClick={() => setShowRules(true)}
+              className="ml-6 p-3 rounded-full bg-slate-900/50 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:text-white transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+              title="Guide Tactique"
+            >
+              <BookOpen size={20} />
+            </button>
           </div>
         </div>
       </div>
@@ -601,6 +612,10 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
             </div>
           </div>
         </div>
+      )}
+
+      {showRules && (
+        <RulesModal onClose={() => setShowRules(false)} />
       )}
 
       {/* RIVIÈRE */}
