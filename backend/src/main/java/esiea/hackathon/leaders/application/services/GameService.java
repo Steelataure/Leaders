@@ -114,6 +114,27 @@ public class GameService {
      * joueur actif.
      * Vérifie également si le temps est écoulé (Timeout).
      */
+    /**
+     * Vérifie si un joueur a perdu au temps.
+     * Cette méthode est appelée à chaque polling (getGameState).
+     */
+    @Transactional
+    public void checkTimeout(UUID gameId) {
+        GameEntity game = gameRepository.findById(gameId).orElse(null);
+        if (game != null && game.getStatus() == GameStatus.IN_PROGRESS) {
+            updateTimer(game);
+            if (game.getStatus() == GameStatus.FINISHED) {
+                gameRepository.save(game);
+                updateSessionStatusToFinished(game.getId());
+            }
+        }
+    }
+
+    /**
+     * Calcule le temps écoulé depuis la dernière mise à jour et le soustrait au
+     * joueur actif.
+     * Vérifie également si le temps est écoulé (Timeout).
+     */
     public void updateTimer(GameEntity game) {
         if (game.getStatus() != GameStatus.IN_PROGRESS) {
             return;
@@ -128,9 +149,13 @@ public class GameService {
                 } else {
                     game.setRemainingTimeP1((int) Math.max(0, game.getRemainingTimeP1() - secondsElapsed));
                 }
+                // Important : mettre à jour le timestamp pour ne pas décompter deux fois
+                game.setLastTimerUpdate(now);
             }
+        } else {
+            // Si c'est la première fois, on initialise
+            game.setLastTimerUpdate(now);
         }
-        game.setLastTimerUpdate(now);
 
         // Vérification Timeout
         int currentTime = (game.getCurrentPlayerIndex() == 0) ? game.getRemainingTimeP0() : game.getRemainingTimeP1();
@@ -139,7 +164,7 @@ public class GameService {
             game.setStatus(GameStatus.FINISHED);
             game.setWinnerPlayerIndex((game.getCurrentPlayerIndex() == 0) ? 1 : 0);
             game.setWinnerVictoryType(esiea.hackathon.leaders.domain.model.enums.VictoryType.TIMEOUT);
-            updateSessionStatusToFinished(game.getId());
+            // La sauvegarde se fera dans checkTimeout ou endTurn
         }
     }
 }

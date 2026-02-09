@@ -52,6 +52,13 @@ public class GameController {
 
     @GetMapping("/{gameId}")
     public ResponseEntity<GameStateDto> getGameState(@PathVariable UUID gameId) {
+        // Vérification du timeout à chaque appel
+        try {
+            gameService.checkTimeout(gameId);
+        } catch (Exception e) {
+            // Log silentieux, on veut quand même renvoyer l'état
+            System.err.println("Error checking timeout: " + e.getMessage());
+        }
         return ResponseEntity.ok(gameQueryService.getGameState(gameId));
     }
 

@@ -61,8 +61,10 @@ public class ApplicationConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public LeaveSessionUseCase leaveSessionUseCase(SessionRepository sessionRepository) {
-        return new LeaveSessionUseCase(sessionRepository);
+
+    public LeaveSessionUseCase leaveSessionUseCase(SessionRepository sessionRepository,
+            esiea.hackathon.leaders.domain.repository.GameRepository gameRepository) {
+        return new LeaveSessionUseCase(sessionRepository, gameRepository);
     }
 
     @Bean
