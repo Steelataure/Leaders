@@ -451,6 +451,22 @@ export default function HexBoard(props: HexBoardProps) {
       }
     });
 
+    // Vizier Boost (Leader moves 2 if ally Vizier present)
+    if (selectedPiece.characterId === "LEADER") {
+      const hasVizierAlly = pieces.some(p => p.characterId === "VIZIER" && p.ownerIndex === selectedPiece.ownerIndex);
+      if (hasVizierAlly) {
+        cells.forEach(cell => {
+          const dist = hexDistance(selectedPiece.q, selectedPiece.r, cell.q, cell.r);
+          if (dist === 2 && !findPieceAtCell(cell.q, cell.r)) {
+            // Path must be clear
+            if (isPathClear(selectedPiece.q, selectedPiece.r, cell.q, cell.r)) {
+              moves.add(`${cell.q},${cell.r}`);
+            }
+          }
+        });
+      }
+    }
+
     return moves;
   }, [selectedPiece, pieces, phase, cells, isLocalTurn]);
 
