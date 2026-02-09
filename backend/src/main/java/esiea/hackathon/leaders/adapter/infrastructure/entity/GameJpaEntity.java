@@ -51,11 +51,11 @@ public class GameJpaEntity {
 
     @Column(name = "remaining_time_p0")
     @Builder.Default
-    private int remainingTimeP0 = 300;
+    private int remainingTimeP0 = 420;
 
     @Column(name = "remaining_time_p1")
     @Builder.Default
-    private int remainingTimeP1 = 300;
+    private int remainingTimeP1 = 420;
 
     @Column(name = "elo_change_p0")
     private Integer eloChangeP0;

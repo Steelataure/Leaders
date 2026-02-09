@@ -321,8 +321,8 @@ export default function Lobby({
     setError(null);
   };
 
-  // 🆕 Déterminer si c'est le Mode Masters
-  const isMastersMode = selectedScenario === 0;
+  // 🆕 Déterminer si c'est le Mode Normal
+  const isNormalMode = selectedScenario === 0;
 
   return (
     <div className="min-h-screen w-full bg-[#020617] text-slate-200 font-sans relative overflow-hidden">
@@ -468,40 +468,27 @@ export default function Lobby({
                 <select
                   value={selectedScenario}
                   onChange={(e) => setSelectedScenario(Number(e.target.value))}
-                  className={`w-full font-rajdhani font-medium rounded-lg px-4 py-3 outline-none transition-all cursor-pointer
-                    ${isMastersMode
-                      ? 'bg-purple-950/80 border-2 border-purple-500/50 text-purple-200 focus:border-purple-400 focus:shadow-[0_0_20px_rgba(168,85,247,0.4)]'
-                      : 'bg-slate-950/80 border border-cyan-500/30 text-white focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.3)]'
-                    }`}
+                  className={`w-full font-rajdhani font-medium rounded-lg px-4 py-3 outline-none transition-all cursor-pointer bg-slate-950/80 border border-cyan-500/30 text-white focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.3)]`}
                 >
-                  {Object.entries(SCENARIO_NAMES).map(([id, name]) => (
-                    <option key={id} value={id} className={Number(id) === 0 ? "bg-purple-900" : "bg-slate-900"}>
-                      {Number(id) === 0 ? name : `${id}. ${name}`}
-                    </option>
-                  ))}
+                  <option value={0} className="bg-slate-900">⚔️ MODE NORMAL - Toutes les cartes</option>
+                  <option value={-1} disabled className="bg-slate-900 text-slate-600">🤖 VS IA (Bientôt disponible)</option>
                 </select>
               </div>
 
-              {/* 🆕 Badge Mode Masters */}
-              {isMastersMode && (
-                <div className="flex items-center gap-3 p-3 bg-purple-950/40 border border-purple-500/30 rounded-lg masters-glow">
-                  <span className="text-2xl">🎲</span>
-                  <div>
-                    <p className="text-purple-300 font-orbitron text-xs font-bold tracking-wider">MODE MASTERS ACTIVÉ</p>
-                    <p className="text-purple-400/70 font-rajdhani text-[10px]">16 personnages • Combos uniques • Parties imprévisibles</p>
-                  </div>
-                </div>
-              )}
-
               {/* Info scénario standard */}
-              {!isMastersMode && (
+              <div>
                 <div className="flex items-center gap-2 pl-1">
-                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
-                  <p className="text-cyan-400 font-orbitron text-[10px] font-bold tracking-[0.2em] uppercase">
-                    Scénario {selectedScenario} sélectionné
+                  <div className={`w-1.5 h-1.5 rounded-full animate-ping ${isNormalMode ? "bg-cyan-400" : "bg-emerald-400"}`} />
+                  <p className={`font-orbitron text-[10px] font-bold tracking-[0.2em] uppercase ${isNormalMode ? "text-cyan-400" : "text-emerald-400"}`}>
+                    {isNormalMode ? "Mode Classique" : `Scénario ${selectedScenario} sélectionné`}
                   </p>
                 </div>
-              )}
+                {isNormalMode && (
+                  <p className="text-slate-400 font-rajdhani text-[10px] pl-4 mt-1">
+                    Toutes les cartes sont disponibles. Deck mélangé aléatoirement.
+                  </p>
+                )}
+              </div>
 
               <button
                 onClick={async () => {
@@ -525,12 +512,6 @@ export default function Lobby({
                   try {
                     setIsSearching(true);
                     setSessionStatus("RECHERCHE DE PARTIE... (CLIQUER POUR ANNULER)");
-
-                    // Priorité au matchmaking si l'utilisateur est connecté et qu'on ne force pas un scénario particulier
-                    // Pour Leaders, on va simplifier : "TROUVER UN MATCH" utilise le matchmaking standard
-                    // "LANCER MODE MASTERS" ou "INITIALISER" utilise createGame direct pour du local/private?
-                    // On va fusionner : Le bouton principal utilise joinPublicQueue avec le scenarioId si possible?
-                    // Le backend joinPublicQueue ne prend pas de scenarioId actuellement.
 
                     if (user && user.id) {
                       const session = await joinPublicQueue(user.id);
@@ -561,12 +542,10 @@ export default function Lobby({
                 disabled={false}
                 onMouseEnter={() => playButtonHoverSfx()}
                 className={`w-full font-orbitron font-bold py-3 px-4 rounded-lg transition-all duration-300 tracking-widest text-sm
-                  ${isMastersMode
-                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)]'
-                    : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]'
-                  } ${isSearching ? 'animate-pulse bg-amber-600 hover:bg-amber-500' : ''}`}
+                  bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]
+                  ${isSearching ? 'animate-pulse bg-amber-600 hover:bg-amber-500' : ''}`}
               >
-                {isSearching ? sessionStatus : (isMastersMode ? '🎲 LANCER MODE MASTERS' : 'TROUVER UN MATCH')}
+                {isSearching ? sessionStatus : 'TROUVER UN MATCH'}
               </button>
             </div>
           </div>

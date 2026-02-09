@@ -81,26 +81,12 @@ export interface Session {
 // ============================================================================
 
 export const SCENARIO_DECKS: Record<number, string[] | null> = {
-  0: null,  // Mode Masters - tout mélangé
-  1: ["ACROBAT", "CAVALRY"],           // + autres aléatoires
-  2: ["ILLUSIONIST", "MANIPULATOR"],   // + autres aléatoires
-  3: ["JAILER", "PROTECTOR"],          // + autres aléatoires
-  4: ["BRAWLER", "GRAPPLER"],          // + autres aléatoires
-  5: ["NEMESIS"],                      // + autres aléatoires
-  6: ["PROWLER", "INNKEEPER"],         // + autres aléatoires
-  7: ["ARCHER", "ASSASSIN"],           // + autres aléatoires
+  0: null,  // Mode Normal - tout mélangé
 };
 
 // Noms des scénarios pour l'UI
 export const SCENARIO_NAMES: Record<number, string> = {
-  0: "🎲 MODE MASTERS - Toutes les cartes",
-  1: "Acrobates & Cavaliers",
-  2: "Illusionnistes",
-  3: "Gardiens",
-  4: "Cogneurs",
-  5: "Némésis",
-  6: "Rôdeurs",
-  7: "Chasseurs",
+  0: "⚔️ MODE NORMAL - Toutes les cartes",
 };
 
 // ============================================================================

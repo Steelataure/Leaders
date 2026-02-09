@@ -47,8 +47,8 @@ public class GameSetupService {
                     .currentPlayerIndex(0)
                     .turnNumber(1)
                     .banishmentCount(0)
-                    .remainingTimeP0(300)
-                    .remainingTimeP1(300)
+                    .remainingTimeP0(420)
+                    .remainingTimeP1(420)
                     .lastTimerUpdate(java.time.LocalDateTime.now())
                     .build();
 
