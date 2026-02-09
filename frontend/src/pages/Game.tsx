@@ -572,7 +572,13 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   };
 
   const handleGrapplerModeChoice = (mode: "PULL" | "MOVE") => {
-    setGrapplerMode(mode);
+    if (mode === "PULL") {
+      if (selectedPiece && grapplerTarget) {
+        handleAbilityUse(selectedPiece.id, "GRAPPLE_HOOK", grapplerTarget.id);
+      }
+    } else {
+      setGrapplerMode(mode);
+    }
     setShowGrapplerModal(false);
     playButtonClickSfx();
   };
