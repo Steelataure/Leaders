@@ -6,7 +6,7 @@ import { webSocketService } from "../services/WebSocketService";
 import HexBoard from "../components/HexBoard";
 import GameBackground from "../components/GameBackground";
 import RulesModal from "../components/RulesModal";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Volume2, VolumeX } from "lucide-react";
 
 
 import VictoryScreen from "../components/VictoryScreen";
@@ -15,6 +15,7 @@ import useSound from "use-sound";
 // Sons
 import buttonClickSfx from "../sounds/buttonClick.mp3";
 import characterSelectSfx from "../sounds/characterSelect.mp3";
+import mainMusic from "../sounds/mainMenu.mp3";
 
 const CHARACTER_IMAGES: Record<string, string> = {
   LEADER: "/image/garderoyal.png",
@@ -189,8 +190,36 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   const isLeavingRef = useRef(false);
 
   // Audio settings
-  const [volume, setVolume] = useState(0); // 0% by default as requested
-  const [sfxEnabled, setSfxEnabled] = useState(false);
+  const [volume, setVolume] = useState(0.3); // 30% volume for music
+  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+
+  // Music Hook
+  const [playMusic, { stop: stopMusic }] = useSound(mainMusic, {
+    volume: volume,
+    loop: true,
+    interrupt: false,
+  });
+
+  // Toggle Music
+  const toggleMusic = () => {
+    if (isMusicPlaying) {
+      stopMusic();
+      setIsMusicPlaying(false);
+    } else {
+      playMusic();
+      setIsMusicPlaying(true);
+    }
+    playButtonClickSfx();
+  };
+
+  // Start music automatically (if interaction allowed, otherwise user must toggle)
+  useEffect(() => {
+    // Optional: Auto-start if desired, but often blocked by browser. 
+    // We'll let the user decide or start if they interacted previously.
+    // For now, let's keep it manual or try auto-play with catch.
+    // playMusic(); setIsMusicPlaying(true); // Commented out to be safe
+  }, [playMusic]);
 
   // Heartbeat while in game
   useEffect(() => {
@@ -621,6 +650,14 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
               <div className={`px-4 py-1 rounded-sm border font-bold text-xs uppercase tracking-wider ${gameState.currentPlayerIndex === 0 ? "border-cyan-500 text-cyan-400 bg-cyan-950/40" : "border-rose-500 text-rose-400 bg-rose-950/40"}`}>
                 J{gameState.currentPlayerIndex + 1}
               </div>
+
+              <button
+                onClick={toggleMusic}
+                className={`p-2 rounded-full border transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] ${isMusicPlaying ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-slate-800/80 border-slate-600 text-slate-500 hover:text-white"}`}
+                title={isMusicPlaying ? "Couper la musique" : "Lancer la musique"}
+              >
+                {isMusicPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              </button>
 
               <button
                 onClick={() => setShowRules(true)}
