@@ -5,6 +5,8 @@ import esiea.hackathon.leaders.domain.SessionRepository;
 import esiea.hackathon.leaders.usecase.CreateGameSessionUseCase;
 import esiea.hackathon.leaders.usecase.JoinPrivateSessionUseCase;
 import esiea.hackathon.leaders.usecase.MatchmakingUseCase;
+import esiea.hackathon.leaders.usecase.HeartbeatUseCase;
+import esiea.hackathon.leaders.usecase.LeaveSessionUseCase;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,16 +21,34 @@ public class SessionController {
     private final MatchmakingUseCase matchmakingUseCase;
     private final CreateGameSessionUseCase createGameSessionUseCase;
     private final JoinPrivateSessionUseCase joinPrivateSessionUseCase;
+    private final LeaveSessionUseCase leaveSessionUseCase;
     private final SessionRepository sessionRepository;
+    private final HeartbeatUseCase heartbeatUseCase;
 
     public SessionController(MatchmakingUseCase matchmakingUseCase,
             CreateGameSessionUseCase createGameSessionUseCase,
             JoinPrivateSessionUseCase joinPrivateSessionUseCase,
-            SessionRepository sessionRepository) {
+            LeaveSessionUseCase leaveSessionUseCase,
+            SessionRepository sessionRepository,
+            HeartbeatUseCase heartbeatUseCase) {
         this.matchmakingUseCase = matchmakingUseCase;
         this.createGameSessionUseCase = createGameSessionUseCase;
         this.joinPrivateSessionUseCase = joinPrivateSessionUseCase;
+        this.leaveSessionUseCase = leaveSessionUseCase;
         this.sessionRepository = sessionRepository;
+        this.heartbeatUseCase = heartbeatUseCase;
+    }
+
+    @PostMapping("/{sessionId}/heartbeat")
+    public ResponseEntity<Void> heartbeat(@PathVariable String sessionId) {
+        heartbeatUseCase.heartbeat(sessionId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{sessionId}/leave")
+    public ResponseEntity<Void> leaveSession(@PathVariable String sessionId, @RequestParam String userId) {
+        leaveSessionUseCase.leaveSession(sessionId, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/matchmaking")
@@ -100,5 +120,11 @@ public class SessionController {
                 })
                 .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(debugInfo);
+    }
+
+    @DeleteMapping("/cleanup")
+    public ResponseEntity<Void> cleanupSessions() {
+        sessionRepository.deleteAll();
+        return ResponseEntity.ok().build();
     }
 }

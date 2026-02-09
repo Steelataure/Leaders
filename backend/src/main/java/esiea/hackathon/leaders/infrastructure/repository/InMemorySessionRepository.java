@@ -71,4 +71,9 @@ public class InMemorySessionRepository implements SessionRepository {
                 })
                 .findFirst();
     }
+
+    @Override
+    public void deleteAll() {
+        sessions.clear();
+    }
 }

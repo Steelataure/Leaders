@@ -14,4 +14,6 @@ public interface SessionRepository {
     Optional<Session> findSuitableSession(String excludedPlayerId);
 
     java.util.List<Session> findAll();
+
+    void deleteAll();
 }

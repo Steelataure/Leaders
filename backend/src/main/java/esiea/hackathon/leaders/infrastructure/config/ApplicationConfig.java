@@ -5,6 +5,8 @@ import esiea.hackathon.leaders.usecase.ConnectPlayerUseCase;
 import esiea.hackathon.leaders.usecase.CreateGameSessionUseCase;
 import esiea.hackathon.leaders.usecase.MatchmakingUseCase;
 import esiea.hackathon.leaders.usecase.JoinPrivateSessionUseCase;
+import esiea.hackathon.leaders.usecase.LeaveSessionUseCase;
+import esiea.hackathon.leaders.usecase.HeartbeatUseCase;
 import esiea.hackathon.leaders.usecase.StatsUseCase;
 import esiea.hackathon.leaders.application.services.GameSetupService;
 import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGamePlayerRepository;
@@ -55,6 +57,16 @@ public class ApplicationConfig implements WebMvcConfigurer {
             SpringGameRepository springGameRepository) {
         return new ConnectPlayerUseCase(sessionRepository, gameSetupService, gameQueryService, messagingTemplate,
                 gamePlayerRepository, springGameRepository);
+    }
+
+    @Bean
+    public LeaveSessionUseCase leaveSessionUseCase(SessionRepository sessionRepository) {
+        return new LeaveSessionUseCase(sessionRepository);
+    }
+
+    @Bean
+    public HeartbeatUseCase heartbeatUseCase(SessionRepository sessionRepository) {
+        return new HeartbeatUseCase(sessionRepository);
     }
 
     @Bean

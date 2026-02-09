@@ -3,7 +3,7 @@ import { authService } from "../services/auth.service";
 import { joinPublicQueue, createPrivateSession, joinPrivateSession, cancelSearch } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
 import type { User } from "../types/auth.types";
-import { createGame, SCENARIO_NAMES } from "../api/gameApi";
+import { createGame, SCENARIO_NAMES, API_BASE_URL } from "../api/gameApi";
 
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
@@ -78,10 +78,12 @@ export default function Lobby({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [volume, setVolume] = useState(50);
-  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [volume, setVolume] = useState(0); // 0% by default as requested
+  const [sfxEnabled, setSfxEnabled] = useState(false); // Disabled by default
   const [aboutOpen, setAboutOpen] = useState(false);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+
+  // ... (keeping other states)
 
   // 🆕 Mode Masters par défaut (scénario 0)
   const [selectedScenario, setSelectedScenario] = useState<number>(0);
@@ -124,6 +126,18 @@ export default function Lobby({
 
   const [_currentSession, setCurrentSession] = useState<any>(null);
   const [sessionStatus, setSessionStatus] = useState<string>("");
+
+  // Heartbeat while searching/waiting
+  useEffect(() => {
+    if (!isSearching || !user?.id || !_currentSession?.id) return;
+
+    const interval = setInterval(() => {
+      fetch(`${API_BASE_URL}/sessions/${_currentSession.id}/heartbeat`, { method: 'POST' })
+        .catch(err => console.error("Lobby heartbeat failed", err));
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isSearching, user?.id, _currentSession?.id]);
 
   // 🆕 Stats State
   const [stats, setStats] = useState<{ inGame: number; inQueue: number } | null>(null);
@@ -248,8 +262,15 @@ export default function Lobby({
     }
   };
 
-  const [playButtonClickSfx] = useSound(buttonClickSfx);
-  const [playButtonHoverSfx] = useSound(buttonHoverSfx);
+  const [playClick] = useSound(buttonClickSfx, { volume: volume / 100 });
+  const [playHover] = useSound(buttonHoverSfx, { volume: (volume / 100) * 0.5 });
+
+  const playButtonClickSfx = () => {
+    if (sfxEnabled) playClick();
+  };
+  const playButtonHoverSfx = () => {
+    if (sfxEnabled) playHover();
+  };
 
   const closeAllModals = () => {
     setLoginOpen(false);

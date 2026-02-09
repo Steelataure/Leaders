@@ -46,6 +46,7 @@ interface HexBoardProps {
   innkeeperTarget?: PieceFrontend | null;
   onInnkeeperTargetSelect?: (target: PieceFrontend | null) => void;
   isLocalTurn?: boolean;
+  volume?: number;
 }
 
 // === CONSTANTES DE STYLE ===
@@ -263,31 +264,34 @@ function PieceComponent({
 
 // === COMPOSANT PRINCIPAL ===
 
-export default function HexBoard({
-  pieces,
-  currentPlayer,
-  phase,
-  selectedPiece,
-  onSelectPiece,
-  onMove,
-  placementMode,
-  availablePlacementCells = [],
-  onPlacementConfirm,
-  onAbilityUse,
-  manipulatorTarget,
-  onManipulatorTargetSelect,
-  brawlerTarget,
-  onBrawlerTargetSelect,
-  grapplerTarget,
-  onGrapplerTargetSelect,
-  grapplerMode,
-  onGrapplerModeSelect,
-  innkeeperTarget,
-  onInnkeeperTargetSelect,
-  isLocalTurn = true,
-}: HexBoardProps) {
-  const [playBoardPlacementSfx] = useSound(boardPlacementSfx);
-  const [playPawnSelectSfx] = useSound(pawnSelectSfx);
+export default function HexBoard(props: HexBoardProps) {
+  const {
+    pieces,
+    currentPlayer,
+    onMove,
+    selectedPiece,
+    onSelectPiece,
+    placementMode,
+    onPlacementConfirm,
+    phase,
+    onAbilityUse,
+    manipulatorTarget,
+    onManipulatorTargetSelect,
+    brawlerTarget,
+    onBrawlerTargetSelect,
+    grapplerTarget,
+    onGrapplerTargetSelect,
+    grapplerMode,
+    onGrapplerModeSelect,
+    innkeeperTarget,
+    onInnkeeperTargetSelect,
+    isLocalTurn,
+    volume = 0,
+    availablePlacementCells = [],
+  } = props;
+
+  const [playPlacement] = useSound(boardPlacementSfx, { volume: volume / 100 });
+  const [playSelect] = useSound(pawnSelectSfx, { volume: volume / 100 });
   const cells = useMemo(() => generateBoard(SVG_WIDTH / 2, SVG_HEIGHT / 2), []);
 
   const findPieceAtCell = (q: number, r: number) => pieces.find((p) => p.q === q && p.r === r);
@@ -473,7 +477,7 @@ export default function HexBoard({
 
     if (placementMode && onPlacementConfirm) {
       if (availablePlacementCells.some(c => c.q === cell.q && c.r === cell.r)) {
-        playBoardPlacementSfx();
+        playPlacement();
         onPlacementConfirm(cell.q, cell.r);
         return;
       }
@@ -500,7 +504,7 @@ export default function HexBoard({
     }
 
     if (selectedPiece && validMoves.has(`${cell.q},${cell.r}`)) {
-      playBoardPlacementSfx();
+      playPlacement();
       onMove(selectedPiece.id, cell.q, cell.r);
       onSelectPiece(null);
     } else {
@@ -519,7 +523,7 @@ export default function HexBoard({
     if (piece.characterId === "NEMESIS") return;
 
     // Jouer le son si changement de sélection
-    if (selectedPiece?.id !== piece.id) playPawnSelectSfx();
+    if (selectedPiece?.id !== piece.id) playSelect();
 
     onSelectPiece(selectedPiece?.id === piece.id ? null : piece);
   };

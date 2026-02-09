@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { GameFrontend, PieceFrontend } from "../api/gameApi";
 import { gameApi } from "../api/gameApi";
 import { authService } from "../services/auth.service";
@@ -106,12 +106,12 @@ function SidebarCard({
       onClick={!disabled ? onClick : undefined}
       onMouseEnter={onMouseEnter}
       className={`
-        group relative p-3 rounded-xl border transition-all duration-300
+        group relative p - 3 rounded - xl border transition - all duration - 300
         ${disabled
           ? "bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed grayscale shadow-none"
           : "bg-slate-800/80 border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 hover:shadow-[0_0_15px_rgba(0,245,255,0.2)] cursor-pointer"
         }
-      `}
+`}
     >
       {disabled && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-xl border border-white/5">
@@ -122,7 +122,7 @@ function SidebarCard({
         </div>
       )}
       <div
-        className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-amber-400`}
+        className={`absolute left - 0 top - 3 bottom - 3 w - 1 rounded - r bg - amber - 400`}
       />
 
       <div className="pl-3">
@@ -154,12 +154,42 @@ function SidebarCard({
   );
 }
 
-export default function Game({ gameId, onBackToLobby }: { gameId: string; onBackToLobby: () => void }) {
+export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: string; sessionId: string; onBackToLobby: () => void }) {
   const [gameState, setGameState] = useState<GameFrontend | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<PieceFrontend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [localPlayerIndex, setLocalPlayerIndex] = useState<number | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const isLeavingRef = useRef(false);
+
+  // Audio settings
+  const [volume, setVolume] = useState(0); // 0% by default as requested
+  const [sfxEnabled, setSfxEnabled] = useState(false);
+
+  // Heartbeat while in game
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const interval = setInterval(() => {
+      fetch(`/ api / sessions / ${sessionId}/heartbeat`, { method: 'POST' })
+        .catch(err => console.error("Game heartbeat failed", err));
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
+  // Handle page refresh/close cleanup
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (sessionId && user?.id && !isLeavingRef.current) {
+        const url = `/api/sessions/${sessionId}/leave?userId=${user.id}`;
+        navigator.sendBeacon(url);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [sessionId, user?.id]);
 
   // Steps
   const [isRecruiting, setIsRecruiting] = useState(false);
@@ -180,8 +210,16 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string; onBack
   const isMyTurn = gameState && localPlayerIndex !== null && gameState.currentPlayerIndex === localPlayerIndex;
 
   // Sons
-  const [playButtonClickSfx] = useSound(buttonClickSfx);
-  const [playCharacterSelectSfx] = useSound(characterSelectSfx);
+  const [playClick] = useSound(buttonClickSfx, { volume: volume / 100 });
+  const [playCharacterSelectSfx] = useSound(characterSelectSfx, { volume: volume / 100 });
+
+  const playButtonClickSfx = () => { if (sfxEnabled) playClick(); };
+  const playButtonHoverSfx = () => { if (sfxEnabled && (volume > 0)) { /* logic for hover if needed */ } };
+
+  useEffect(() => {
+    const currentUser = authService.getUser();
+    setUser(currentUser);
+  }, []);
 
   const updateGameState = useCallback((game: any) => {
     const mappedGame = gameApi.mapGameToFrontend(game);
@@ -619,6 +657,7 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string; onBack
           innkeeperTarget={innkeeperTarget}
           onInnkeeperTargetSelect={setInnkeeperTarget}
           isLocalTurn={!!isMyTurn}
+          volume={volume}
         />
       </div>
 
@@ -668,7 +707,16 @@ export default function Game({ gameId, onBackToLobby }: { gameId: string; onBack
             Terminer le tour
           </button>
         )}
-        <button onClick={() => { onBackToLobby(); playButtonClickSfx(); }} className="px-8 py-3 bg-rose-900/40 border border-rose-500/50 text-rose-500 font-bold rounded-xl hover:bg-rose-500 hover:text-white transition-all uppercase tracking-widest">Quitter</button>
+        <button
+          onClick={() => {
+            isLeavingRef.current = true;
+            onBackToLobby();
+            playButtonClickSfx();
+          }}
+          className="px-8 py-3 bg-rose-900/40 border border-rose-500/50 text-rose-500 font-bold rounded-xl hover:bg-rose-500 hover:text-white transition-all uppercase tracking-widest"
+        >
+          Quitter
+        </button>
       </div>
 
       <style>{`

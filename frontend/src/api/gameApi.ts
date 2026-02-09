@@ -1,3 +1,4 @@
+export const API_BASE_URL = "/api";
 const BASE_URL = "/api";
 
 // ============================================================================
@@ -293,6 +294,13 @@ export async function getSession(sessionId: string): Promise<Session> {
   return res.json();
 }
 
+export async function leaveSession(sessionId: string, userId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/sessions/${sessionId}/leave?userId=${userId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to leave session");
+}
+
 /**
  * Object export for convenience of use in frontend components
  */
@@ -307,6 +315,7 @@ export const gameApi = {
   movePiece,
   useAbility,
   performAction,
+  leaveSession,
   mapPieceToFrontend,
   mapGameToFrontend,
 };
