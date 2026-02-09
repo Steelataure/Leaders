@@ -680,31 +680,76 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         />
       </div>
 
-      {/* SIDEBAR RIGHT: SCANNER */}
-      <div className="absolute top-24 right-10 w-72 h-[72] z-10">
-        <div className={`h-full w-full rounded-2xl border p-6 bg-slate-900/40 backdrop-blur-sm transition-all ${selectedPiece ? "border-amber-500/50" : "border-white/10"}`}>
+      {/* SIDEBAR RIGHT: SCANNER / TACTICAL CARD */}
+      <div className="absolute top-24 right-10 w-80 z-10 perspective-[1000px]">
+        <div className={`
+          relative w-full transition-all duration-500 transform-style-3d
+          ${selectedPiece ? "rotate-y-0 opacity-100" : "opacity-90"}
+        `}>
           {selectedPiece ? (
-            <div className="flex flex-col items-center">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-amber-500/50 mb-4 bg-slate-900/80">
+            // === ACTIVE CARD VIEW ===
+            <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+              {/* Card Header / Image */}
+              <div className="relative w-full aspect-[4/5] bg-slate-950">
                 {CHARACTER_IMAGES[selectedPiece.characterId] ? (
                   <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl">{selectedPiece.characterId === "LEADER" ? "👑" : "⚔️"}</div>
+                  <div className="w-full h-full flex items-center justify-center text-6xl text-slate-700">?</div>
                 )}
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90" />
+
+                {/* Scanner/Holo Effect overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,rgba(245,158,11,0.1)_2px)] bg-[size:100%_4px] pointer-events-none animate-scan-fast" />
+
+                {/* Name Overlay */}
+                <div className="absolute bottom-4 left-4 right-4">
+                  <h3 className="font-cyber text-3xl font-bold text-white tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    {CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}
+                  </h3>
+                  <div className="h-1 w-12 bg-amber-500 rounded-full mt-2" />
+                </div>
               </div>
-              <h3 className="font-cyber text-2xl font-bold text-amber-400 mb-2">{CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}</h3>
-              <p className="text-[11px] text-slate-300 mb-3 text-center leading-tight px-2 italic">
-                "{CHARACTER_DATA[selectedPiece.characterId]?.description || "Aucune description"}"
-              </p>
-              <p className="text-[10px] text-slate-500 mb-4 tracking-widest uppercase">COORD: [{selectedPiece.q}, {selectedPiece.r}]</p>
-              <div className={`px-4 py-1 rounded-full border text-[10px] font-bold ${selectedPiece.hasActed ? "border-rose-500/30 text-rose-400" : "border-emerald-500/30 text-emerald-400"}`}>
-                {selectedPiece.hasActed ? "ÉPUISÉ" : "PRÊT"}
+
+              {/* Card Body - Data */}
+              <div className="p-5 space-y-4">
+                {/* Description */}
+                <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5">
+                  <p className="text-sm text-slate-300 italic leading-relaxed text-center">
+                    "{CHARACTER_DATA[selectedPiece.characterId]?.description || "Données inconnues..."}"
+                  </p>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-800/40 p-2 rounded-lg border border-white/5 flex flex-col items-center">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">POS</span>
+                    <span className="font-mono text-amber-400 font-bold">
+                      [{selectedPiece.q}, {selectedPiece.r}]
+                    </span>
+                  </div>
+                  <div className={`
+                    p-2 rounded-lg border flex flex-col items-center justify-center
+                    ${selectedPiece.hasActed
+                      ? "bg-rose-950/30 border-rose-500/30 text-rose-400"
+                      : "bg-emerald-950/30 border-emerald-500/30 text-emerald-400"}
+                  `}>
+                    <span className="text-[10px] uppercase tracking-widest mb-1">ÉTAT</span>
+                    <span className="font-bold text-xs">
+                      {selectedPiece.hasActed ? "ÉPUISÉ" : "OPÉRATIONNEL"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full opacity-30">
-              <span className="text-4xl mb-4">⌖</span>
-              <p className="font-cyber text-xs tracking-widest">SCANNER ACTIF</p>
+            // === EMPTY STATE / SCANNER IDLE ===
+            <div className="h-96 flex flex-col items-center justify-center bg-slate-900/20 backdrop-blur-sm border border-white/10 rounded-2xl border-dashed">
+              <div className="w-20 h-20 rounded-full border-2 border-cyan-500/20 flex items-center justify-center mb-4 animate-pulse">
+                <span className="text-3xl grayscale opacity-50">⌖</span>
+              </div>
+              <p className="font-cyber text-sm tracking-[0.2em] text-cyan-500/40 uppercase">Scanner en attente</p>
+              <p className="text-[10px] text-slate-600 mt-2">Sélectionnez une unité</p>
             </div>
           )}
         </div>
