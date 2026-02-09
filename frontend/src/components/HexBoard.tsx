@@ -378,39 +378,64 @@ export default function HexBoard(props: HexBoardProps) {
   }, [pieces]);
 
   // Movement calculation
+  // Special Mobility Destinations (Only for ABILITY mode)
+  const abilityMoveDestinations = useMemo(() => {
+    if (!selectedPiece || selectedPiece.ownerIndex !== currentPlayer || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
+    const dests = new Set<string>();
+
+    // PROWLER: Non-adjacent to enemies
+    if (selectedPiece.characterId === "PROWLER") {
+      cells.forEach(cell => {
+        // Must be empty
+        if (findPieceAtCell(cell.q, cell.r)) return;
+        // Must NOT be adjacent to any enemy
+        const isAdjacentToEnemy = pieces.some(p => p.ownerIndex !== selectedPiece.ownerIndex && hexDistance(cell.q, cell.r, p.q, p.r) === 1);
+
+        if (!isAdjacentToEnemy) {
+          dests.add(`${cell.q},${cell.r}`);
+        }
+      });
+    }
+
+    // ACROBAT: Jump over adjacent
+    if (selectedPiece.characterId === "ACROBAT") {
+      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+        const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
+        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
+        // Jump condition: Adjacent cell occupied, Landing cell empty & valid
+        if (isValidHex(midQ, midR) && findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) {
+          dests.add(`${destQ},${destR}`);
+        }
+      });
+    }
+
+    // CAVALRY: Charge (2 tiles straight line)
+    if (selectedPiece.characterId === "CAVALRY") {
+      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+        const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
+        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
+        // Charge condition: Path clear (mid empty), Landing empty & valid
+        if (isValidHex(midQ, midR) && !findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) {
+          dests.add(`${destQ},${destR}`);
+        }
+      });
+    }
+
+    return dests;
+  }, [selectedPiece, pieces, cells, isLocalTurn]);
+
+  // Movement calculation
   const validMoves = useMemo(() => {
     // Si ce n'est pas mon tour, ou si la pièce n'est pas à moi, ou si elle a déjà joué, pas de mouvement.
     if (!selectedPiece || selectedPiece.ownerIndex !== currentPlayer || selectedPiece.hasActed || phase !== "ACTIONS" || !isLocalTurn) return new Set<string>();
     const moves = new Set<string>();
 
-    if (selectedPiece.characterId === "PROWLER") {
-      cells.forEach(cell => {
-        if (!findPieceAtCell(cell.q, cell.r) && !pieces.some(p => p.ownerIndex !== selectedPiece.ownerIndex && hexDistance(cell.q, cell.r, p.q, p.r) === 1)) {
-          moves.add(`${cell.q},${cell.r}`);
-        }
-      });
-      return moves;
-    }
-
+    // Standard Move: Always 1 tile adjacent
     cells.forEach(cell => {
-      if (areAdjacent(selectedPiece.q, selectedPiece.r, cell.q, cell.r) && !findPieceAtCell(cell.q, cell.r)) moves.add(`${cell.q},${cell.r}`);
+      if (areAdjacent(selectedPiece.q, selectedPiece.r, cell.q, cell.r) && !findPieceAtCell(cell.q, cell.r)) {
+        moves.add(`${cell.q},${cell.r}`);
+      }
     });
-
-    if (selectedPiece.characterId === "ACROBAT") {
-      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
-        const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
-        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
-        if (isValidHex(midQ, midR) && findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) moves.add(`${destQ},${destR}`);
-      });
-    }
-
-    if (selectedPiece.characterId === "CAVALRY") {
-      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
-        const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
-        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
-        if (isValidHex(midQ, midR) && !findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) moves.add(`${destQ},${destR}`);
-      });
-    }
 
     return moves;
   }, [selectedPiece, pieces, phase, cells, isLocalTurn]);
@@ -533,6 +558,43 @@ export default function HexBoard(props: HexBoardProps) {
       return;
     }
 
+    // Handle Special Mobility Abilities (PROWLER, ACROBAT, CAVALRY)
+    const abilityKey = `${cell.q},${cell.r}`;
+    const isProwlerStruct = selectedPiece?.characterId === "PROWLER";
+    const targetPiece = findPieceAtCell(cell.q, cell.r);
+
+    // We allow Prowler to try any empty cell in Ability mode, relying on backend validation if frontend calc is too strict
+    const isValidAbilityClick = abilityMoveDestinations.has(abilityKey) || (isProwlerStruct && !targetPiece);
+
+    if (actionMode === "ABILITY" && isValidAbilityClick && onAbilityUse && selectedPiece) {
+      console.log("HexBoard: Special Ability Click detected for", abilityKey);
+      let abilityId = "";
+      let targetId = "";
+
+      if (selectedPiece.characterId === "PROWLER") {
+        abilityId = "PROWLER_STEALTH";
+      } else if (selectedPiece.characterId === "ACROBAT") {
+        abilityId = "ACROBAT_JUMP";
+        // Find mid piece to jump over
+        const dq = (cell.q - selectedPiece.q) / 2;
+        const dr = (cell.r - selectedPiece.r) / 2;
+        const midPiece = findPieceAtCell(selectedPiece.q + dq, selectedPiece.r + dr);
+        if (midPiece) targetId = midPiece.id;
+      } else if (selectedPiece.characterId === "CAVALRY") {
+        abilityId = "CAVALRY_CHARGE";
+      }
+
+      if (abilityId) {
+        console.log("HexBoard: Executing Ability", abilityId, "at", cell.q, cell.r, "target:", targetId);
+        onAbilityUse(selectedPiece.id, abilityId, targetId, { q: cell.q, r: cell.r });
+        playPlacement();
+        onSelectPiece(null);
+        return;
+      }
+    } else if (actionMode === "ABILITY") {
+      console.log("HexBoard: Click in ABILITY mode ignored: ", abilityKey, "HasDest:", abilityMoveDestinations.has(abilityKey));
+    }
+
     if (selectedPiece && validMoves.has(`${cell.q},${cell.r}`)) {
       playPlacement();
       onMove(selectedPiece.id, cell.q, cell.r);
@@ -570,7 +632,13 @@ export default function HexBoard(props: HexBoardProps) {
       {cells.map(cell => {
         const isValid = actionMode === "MOVE" && validMoves.has(`${cell.q},${cell.r}`);
         const isPlacement = placementMode && availablePlacementCells.some(c => c.q === cell.q && c.r === cell.r);
-        const isAbility = actionMode === "ABILITY" && (manipulatorDestinations.has(`${cell.q},${cell.r}`) || brawlerDestinations.has(`${cell.q},${cell.r}`) || grapplerMoveDestinations.has(`${cell.q},${cell.r}`) || innkeeperDestinations.has(`${cell.q},${cell.r}`));
+        const isAbility = actionMode === "ABILITY" && (
+          manipulatorDestinations.has(`${cell.q},${cell.r}`) ||
+          brawlerDestinations.has(`${cell.q},${cell.r}`) ||
+          grapplerMoveDestinations.has(`${cell.q},${cell.r}`) ||
+          innkeeperDestinations.has(`${cell.q},${cell.r}`) ||
+          abilityMoveDestinations.has(`${cell.q},${cell.r}`)
+        );
 
         const pieceOnCell = findPieceAtCell(cell.q, cell.r);
         const canAct = pieceOnCell?.ownerIndex === currentPlayer && !pieceOnCell.hasActed && phase === "ACTIONS" && isLocalTurn;

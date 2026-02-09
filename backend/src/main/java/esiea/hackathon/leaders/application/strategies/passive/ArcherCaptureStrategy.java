@@ -7,17 +7,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class ArcherCaptureStrategy implements PassiveAbilityStrategy {
     @Override
-    public String getAbilityId() { return "ARCHER_RANGE"; }
-
-    public boolean canHelpCapture(PieceEntity archer, PieceEntity target) {
-        int dist = getDistance(archer, target);
-        // Participe si distance == 2, mais pas si adjacent (dist == 1)
-        return dist == 2;
+    public String getAbilityId() {
+        return "ARCHER_RANGE";
     }
 
-    private int getDistance(PieceEntity p1, PieceEntity p2) {
-        return (Math.abs(p1.getQ() - p2.getQ())
-                + Math.abs(p1.getR() - p2.getR())
-                + Math.abs((p1.getQ()+p1.getR()) - (p2.getQ()+p2.getR()))) / 2;
+    public boolean canHelpCapture(PieceEntity archer, PieceEntity target) {
+        esiea.hackathon.leaders.domain.model.HexCoord a = new esiea.hackathon.leaders.domain.model.HexCoord(
+                archer.getQ(), archer.getR());
+        esiea.hackathon.leaders.domain.model.HexCoord t = new esiea.hackathon.leaders.domain.model.HexCoord(
+                target.getQ(), target.getR());
+
+        int dist = esiea.hackathon.leaders.domain.utils.HexUtils.getDistance(a, t);
+
+        // Participe si distance == 2 ET aligné (Ligne Droite)
+        // Si distance == 1, c'est l'adjacence standard qui compte (géré par
+        // VictoryService)
+        return dist == 2 && esiea.hackathon.leaders.domain.utils.HexUtils.isAligned(a, t);
     }
 }

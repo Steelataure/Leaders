@@ -5,6 +5,7 @@ import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import org.springframework.stereotype.Component;
 
+import esiea.hackathon.leaders.domain.utils.HexUtils;
 import java.util.List;
 
 /**
@@ -28,40 +29,54 @@ public class GrappleHookAction implements ActionAbilityStrategy {
             throw new IllegalArgumentException("Target required for Grapple");
         }
 
-        // Calcul de la distance et direction
-        int dq = target.getQ() - source.getQ();
-        int dr = target.getR() - source.getR();
-        int dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+        boolean isPull = (dest == null);
+
+        // PROTECTION CHECK
+        // Only applies if we are PULLING the target (forced movement).
+        // Moving towards the target is not a forced movement for the target.
+        if (isPull && HexUtils.isProtected(target, allPieces)) {
+            throw new IllegalArgumentException("Target is protected by a Royal Guard/Protector!");
+        }
+
+        HexCoord sourceCoord = new HexCoord(source.getQ(), source.getR());
+        HexCoord targetCoord = new HexCoord(target.getQ(), target.getR());
+
+        // Calcul de la distance
+        int dist = HexUtils.getDistance(sourceCoord, targetCoord);
 
         if (dist <= 1) {
             throw new IllegalArgumentException("Target is too close to grapple (must be non-adjacent)");
         }
 
-        // Vérifier ligne droite
-        int ds = -dq - dr;
-        if (dq != 0 && dr != 0 && ds != 0) {
-            throw new IllegalArgumentException("Target must be in a straight line");
-        }
-
-        // Vérifier visibilité (chemin libre)
-        if (!isPathClear(source, target, allPieces)) {
-            throw new IllegalArgumentException("Path to target is blocked");
+        // Vérifier visibilité (chemin libre + alignement)
+        if (!HexUtils.isPathClear(sourceCoord, targetCoord, allPieces)) {
+            throw new IllegalArgumentException("Path to target is blocked or not in line");
         }
 
         // Direction unitaire (de source vers target)
+        int dq = target.getQ() - source.getQ();
+        int dr = target.getR() - source.getR();
         int dirQ = dq / dist;
         int dirR = dr / dist;
 
         if (dest != null) {
             // === MODE 2: MOVE - Le Grappler se déplace vers la cible ===
             // La destination doit être adjacente à la cible
-            if (getDistance(target.getQ(), target.getR(), dest.q(), dest.r()) != 1) {
+            if (HexUtils.getDistance(target.getQ(), target.getR(), dest.q(), dest.r()) != 1) {
                 throw new IllegalArgumentException("Grappler must land adjacent to target");
             }
 
             // La destination doit être sur la ligne entre source et target
-            // (ou au moins dans la bonne direction)
-            if (isOccupied(dest.q(), dest.r(), allPieces)) {
+            // Si on se déplace vers la cible, la case adjacente à la cible sur la ligne est
+            // : target - dir
+            int targetAdjQ = target.getQ() - dirQ;
+            int targetAdjR = target.getR() - dirR;
+
+            if (dest.q() != targetAdjQ || dest.r() != targetAdjR) {
+                throw new IllegalArgumentException("Grappler must move strictly towards the target");
+            }
+
+            if (HexUtils.isOccupied(dest, allPieces)) {
                 throw new IllegalArgumentException("Cannot move: destination is occupied");
             }
 
@@ -75,7 +90,7 @@ public class GrappleHookAction implements ActionAbilityStrategy {
             short pullDestQ = (short) (source.getQ() + dirQ);
             short pullDestR = (short) (source.getR() + dirR);
 
-            if (isOccupied(pullDestQ, pullDestR, allPieces)) {
+            if (HexUtils.isOccupied(pullDestQ, pullDestR, allPieces)) {
                 throw new IllegalArgumentException("Cannot pull: cell adjacent to you is occupied");
             }
 
@@ -83,37 +98,5 @@ public class GrappleHookAction implements ActionAbilityStrategy {
             target.setQ(pullDestQ);
             target.setR(pullDestR);
         }
-
-    }
-
-    // --- Helpers ---
-
-    private int getDistance(int q1, int r1, int q2, int r2) {
-        return (Math.abs(q1 - q2) + Math.abs(r1 - r2) + Math.abs((q1 + r1) - (q2 + r2))) / 2;
-    }
-
-    private boolean isOccupied(short q, short r, List<PieceEntity> pieces) {
-        return pieces.stream().anyMatch(p -> p.getQ() == q && p.getR() == r);
-    }
-
-    private boolean isPathClear(PieceEntity source, PieceEntity target, List<PieceEntity> allPieces) {
-        int dq = target.getQ() - source.getQ();
-        int dr = target.getR() - source.getR();
-        int dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
-
-        if (dist <= 1)
-            return true;
-
-        int dirQ = dq / dist;
-        int dirR = dr / dist;
-
-        for (int i = 1; i < dist; i++) {
-            short checkQ = (short) (source.getQ() + dirQ * i);
-            short checkR = (short) (source.getR() + dirR * i);
-            if (isOccupied(checkQ, checkR, allPieces)) {
-                return false;
-            }
-        }
-        return true;
     }
 }

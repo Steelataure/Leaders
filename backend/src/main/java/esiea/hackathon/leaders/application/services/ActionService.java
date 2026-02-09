@@ -107,11 +107,17 @@ public class ActionService {
             throw new IllegalArgumentException("No implementation found for ability: " + abilityId);
         }
 
+        System.out.println("DEBUG: Piece BEFORE action: " + source.getCharacterId() + " at " + source.getQ() + ","
+                + source.getR());
         strategy.execute(source, target, destination, allPieces);
+        System.out.println(
+                "DEBUG: Piece AFTER action: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());
 
         // Validation de l'action
         source.setHasActedThisTurn(true);
-        pieceRepository.save(source);
+        PieceEntity savedSource = pieceRepository.save(source);
+        System.out.println("DEBUG: Piece AFTER save: " + savedSource.getCharacterId() + " at " + savedSource.getQ()
+                + "," + savedSource.getR() + " hasActed=" + savedSource.getHasActedThisTurn());
 
         if (target != null) {
             pieceRepository.save(target);

@@ -249,8 +249,8 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     if (!sessionId) return;
 
     const interval = setInterval(() => {
-      fetch(`/ api / sessions / ${sessionId}/heartbeat`, { method: 'POST' })
-        .catch(err => console.error("Game heartbeat failed", err));
+      fetch(`/api/sessions/${sessionId}/heartbeat`, { method: "POST" })
+        .catch((err) => console.warn("Game heartbeat failed", err));
     }, 5000);
 
     return () => clearInterval(interval);
@@ -457,22 +457,7 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     return null;
   };
 
-  const autoEndTurnIfNeeded = useCallback(
-    async (updatedGame: GameFrontend) => {
-      const currentPieces = updatedGame.pieces.filter((p) => p.ownerIndex === updatedGame.currentPlayerIndex);
-      const piecesRemaining = currentPieces.filter((p) => !p.hasActed);
 
-      if (piecesRemaining.length === 0) {
-        // Automatically end turn if no pieces are left AND no recruitment is possible
-        if (!canRecruit || !hasAvailableSpawnCells) {
-          await gameApi.endTurn(gameId);
-          const newGame = await gameApi.getGameState(gameId);
-          updateGameState(newGame);
-        }
-      }
-    },
-    [gameId, updateGameState],
-  );
 
   const handleMove = useCallback(
     async (pieceId: string, toQ: number, toR: number) => {
@@ -508,18 +493,19 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         setInnkeeperTarget(null);
 
         const mappedGame = gameApi.mapGameToFrontend(game);
-        await autoEndTurnIfNeeded(mappedGame);
       } catch (err) {
         console.error("Move error:", err);
       }
     },
-    [gameId, gameState, autoEndTurnIfNeeded, updateGameState],
+    [gameId, gameState, updateGameState],
   );
 
   const handleAbilityUse = useCallback(
     async (pieceId: string, abilityId: string, targetId?: string, destination?: { q: number; r: number }) => {
+      console.log("Game: handleAbilityUse called", { pieceId, abilityId, targetId, destination });
       try {
         await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination);
+        console.log("Game: Ability API call success");
         const game = await gameApi.getGameState(gameId);
         const mappedGame = gameApi.mapGameToFrontend(game);
         setGameState(mappedGame);
@@ -529,12 +515,12 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
-        await autoEndTurnIfNeeded(mappedGame);
       } catch (err) {
         console.error("Ability error:", err);
+        alert("Erreur lors de l'utilisation de la compétence: " + err);
       }
     },
-    [gameId, autoEndTurnIfNeeded],
+    [gameId],
   );
 
   // Filtrage des interactions du plateau selon le mode
@@ -604,6 +590,18 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   );
 
   const handleEndTurn = useCallback(async () => {
+    if (!gameState) return;
+
+    // Vérification : Recrutement obligatoire si possible
+    if (!gameState.hasRecruitedThisTurn) {
+      const canRecruitResult = currentPlayerPieceCount < 5 && hasAvailableSpawnCells;
+
+      if (canRecruitResult) {
+        alert("Action impossible : Vous devez recruter une unité avant de terminer votre tour !");
+        return;
+      }
+    }
+
     try {
       playButtonClickSfx();
       await gameApi.endTurn(gameId);
@@ -612,7 +610,7 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     } catch (err) {
       console.error("End turn error:", err);
     }
-  }, [playButtonClickSfx, canRecruit, hasAvailableSpawnCells, gameId, updateGameState]);
+  }, [playButtonClickSfx, currentPlayerPieceCount, hasAvailableSpawnCells, gameId, gameState, updateGameState]);
 
   if (isLoading) {
     return (
