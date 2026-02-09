@@ -30,6 +30,9 @@ public class GameEntity {
     private int recruitmentCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private int remainingTimeP0;
+    private int remainingTimeP1;
+    private LocalDateTime lastTimerUpdate;
     private List<GamePlayerEntity> players;
     private List<PieceEntity> pieces;
     private List<RecruitmentCardEntity> cards;

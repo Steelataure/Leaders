@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,6 +48,9 @@ public class GameService {
 
         } else {
             // --- CAS NORMAL (Le jeu continue) ---
+
+            // 0. Update Timer before switching player
+            updateTimer(game);
 
             // A. Changer de joueur (Alternance 0 / 1)
             short nextPlayer = (short) ((game.getCurrentPlayerIndex() + 1) % 2);
@@ -102,6 +106,40 @@ public class GameService {
 
         if (!piecesToReset.isEmpty()) {
             pieceRepository.saveAll(piecesToReset);
+        }
+    }
+
+    /**
+     * Calcule le temps écoulé depuis la dernière mise à jour et le soustrait au
+     * joueur actif.
+     * Vérifie également si le temps est écoulé (Timeout).
+     */
+    public void updateTimer(GameEntity game) {
+        if (game.getStatus() != GameStatus.IN_PROGRESS) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (game.getLastTimerUpdate() != null) {
+            long secondsElapsed = Duration.between(game.getLastTimerUpdate(), now).toSeconds();
+            if (secondsElapsed > 0) {
+                if (game.getCurrentPlayerIndex() == 0) {
+                    game.setRemainingTimeP0((int) Math.max(0, game.getRemainingTimeP0() - secondsElapsed));
+                } else {
+                    game.setRemainingTimeP1((int) Math.max(0, game.getRemainingTimeP1() - secondsElapsed));
+                }
+            }
+        }
+        game.setLastTimerUpdate(now);
+
+        // Vérification Timeout
+        int currentTime = (game.getCurrentPlayerIndex() == 0) ? game.getRemainingTimeP0() : game.getRemainingTimeP1();
+        if (currentTime <= 0) {
+            System.out.println("DEBUG: TIMEOUT detected for player " + game.getCurrentPlayerIndex());
+            game.setStatus(GameStatus.FINISHED);
+            game.setWinnerPlayerIndex((game.getCurrentPlayerIndex() == 0) ? 1 : 0);
+            game.setWinnerVictoryType(esiea.hackathon.leaders.domain.model.enums.VictoryType.TIMEOUT);
+            updateSessionStatusToFinished(game.getId());
         }
     }
 }

@@ -21,8 +21,8 @@ export interface Piece {
 }
 
 export interface Player {
-  index?: number; // legacy from feat
   userId: string;
+  username?: string;
   playerIndex: number;
 }
 
@@ -46,6 +46,9 @@ export interface Game {
   pieces: Piece[];
   river: RecruitmentCard[];
   players: Player[];
+  remainingTimeP0: number;
+  remainingTimeP1: number;
+  lastTimerUpdate?: string;
   mode?: string;
 }
 

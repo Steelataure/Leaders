@@ -23,6 +23,7 @@ public class RecruitmentService {
     private final RecruitmentCardRepository cardRepository;
     private final PieceRepository pieceRepository;
     private final GameRepository gameRepository;
+    private final GameService gameService;
 
     @Transactional
     public List<PieceEntity> recruit(UUID gameId, Short playerIndex, UUID cardId, List<HexCoord> placements) {
@@ -30,6 +31,9 @@ public class RecruitmentService {
         // 1. Chargement du Jeu
         GameEntity game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        // 1b. Update Timer
+        gameService.updateTimer(game);
 
         // 2. SÉCURITÉ : Vérification du tour
         if (game.getCurrentPlayerIndex() != playerIndex.intValue()) {

@@ -77,6 +77,7 @@ const CHARACTER_DATA: Record<string, { name: string; description: string; type: 
   VIZIER: { name: "Vizir", description: "Votre Leader peut se déplacer d'une case supplémentaire", type: "PASSIVE" },
   NEMESIS: { name: "Némésis", description: "Se déplace automatiquement quand le Leader adverse bouge", type: "SPECIAL" },
   OLD_BEAR: { name: "Vieil Ours", description: "Vient avec son Ourson (2 pièces)", type: "SPECIAL" },
+  LEADER: { name: "Leader", description: "Votre champion. S'il est capturé ou encerclé, la partie est perdue.", type: "SPECIAL" },
 };
 
 interface CharacterCard {
@@ -199,6 +200,10 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   // === GESTION DES MODES D'ACTION (Move vs Ability) ===
   const [actionMode, setActionMode] = useState<"MOVE" | "ABILITY">("MOVE");
 
+  // === GESTION DU TIMER ===
+  const [timeP0, setTimeP0] = useState<number>(300);
+  const [timeP1, setTimeP1] = useState<number>(300);
+
   // Reset du mode quand on change de pièce
   useEffect(() => {
     setActionMode("MOVE");
@@ -298,18 +303,41 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     setGameState(mappedGame);
     setIsLoading(false);
 
-    if (game.players && game.players.length > 0) {
+    // Sync timers from backend
+    if (game.remainingTimeP0 !== undefined) setTimeP0(game.remainingTimeP0);
+    if (game.remainingTimeP1 !== undefined) setTimeP1(game.remainingTimeP1);
+
+    if (mappedGame.players && mappedGame.players.length > 0) {
       const user = authService.getUser();
       if (user) {
-        const localPlayer = game.players.find((p: any) => String(p.userId) === String(user.id));
+        const localPlayer = mappedGame.players.find((p: any) => String(p.userId) === String(user.id));
         if (localPlayer !== undefined) {
           setLocalPlayerIndex(localPlayer.playerIndex);
         }
       }
     }
-
-
   }, []);
+
+  // Countdown logic
+  useEffect(() => {
+    if (!gameState || gameState.status !== "IN_PROGRESS") return;
+
+    const timer = setInterval(() => {
+      if (gameState.currentPlayerIndex === 0) {
+        setTimeP0(prev => Math.max(0, prev - 1));
+      } else {
+        setTimeP1(prev => Math.max(0, prev - 1));
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameState?.currentPlayerIndex, gameState?.status]);
+
+  const formatTime = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     if (!gameId) return;
@@ -652,66 +680,93 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
       <div className="absolute bottom-6 left-6 w-8 h-8 border-b-2 border-l-2 border-cyan-500 rounded-bl-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)] z-20" />
       <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-cyan-500 rounded-br-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)] z-20" />
 
-      {/* HEADER */}
-      <div className="absolute top-0 left-0 right-0 h-32 z-20 flex items-center justify-center pointer-events-none">
-        <div className={`
-          relative flex items-center gap-10 px-12 py-5 rounded-b-[3rem] border-x-2 border-b-4 
-          backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto transition-all duration-500
-          ${isMyTurn
-            ? "bg-slate-900/90 border-cyan-500 shadow-[0_0_30px_rgba(6,182,212,0.3)]"
-            : "bg-slate-950/90 border-rose-600 shadow-[0_0_30px_rgba(225,29,72,0.3)]"}
-        `}>
-          {/* Main Turn Text */}
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-4 mb-1">
-              <span className={`text-3xl animate-pulse ${isMyTurn ? "text-cyan-400" : "text-rose-500"}`}>
-                {isMyTurn ? "💠" : "⚠️"}
-              </span>
-              <h1 className={`
-                  font-cyber text-6xl font-black italic tracking-[0.15em] select-none
-                  ${isMyTurn
-                  ? "text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]"
-                  : "text-transparent bg-clip-text bg-gradient-to-r from-rose-600 via-rose-300 to-rose-600 drop-shadow-[0_0_10px_rgba(225,29,72,0.8)]"}
-                `}>
-                {isMyTurn ? "VOTRE TOUR" : "TOUR ADVERSE"}
-              </h1>
-              <span className={`text-3xl animate-pulse ${isMyTurn ? "text-cyan-400" : "text-rose-500"}`}>
-                {isMyTurn ? "💠" : "⚠️"}
-              </span>
-            </div>
-            {/* Subtitle / Decoration line */}
-            <div className={`h-1 w-full rounded-full shadow-[0_0_10px_currentColor] ${isMyTurn ? "bg-cyan-500 text-cyan-500" : "bg-rose-500 text-rose-500"}`} />
+      {/* TOP HEADER: PLAYERS & TIMERS */}
+      <div className="absolute top-0 left-0 right-0 h-36 bg-slate-900/40 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-10 z-50">
+        {/* Player 0 (Blue) */}
+        <div className={`flex items-center gap-4 p-2 rounded-xl transition-all ${gameState.currentPlayerIndex === 0 ? "bg-cyan-500/10 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "opacity-60"}`}>
+          <div className="w-10 h-10 rounded-full border-2 border-cyan-500 bg-slate-800 flex items-center justify-center overflow-hidden">
+            <img src="/image/garderoyal.png" className="w-full h-full object-cover" />
           </div>
-
-          {/* Info Side */}
-          <div className="flex flex-col items-end gap-1">
-            <div className="text-xs font-bold uppercase tracking-widest text-slate-500">
-              TOUR <span className="text-white text-lg ml-1">{gameState.turnNumber}</span>
+          <div>
+            <div className="text-xs text-cyan-400 font-mono uppercase tracking-tighter">Joueur 1</div>
+            <div className="font-cyber text-lg font-bold text-white">
+              {gameState.players.find(p => p.playerIndex === 0)?.username || "Chargement..."}
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className={`px-4 py-1 rounded-sm border font-bold text-xs uppercase tracking-wider ${gameState.currentPlayerIndex === 0 ? "border-cyan-500 text-cyan-400 bg-cyan-950/40" : "border-rose-500 text-rose-400 bg-rose-950/40"}`}>
-                J{gameState.currentPlayerIndex + 1}
-              </div>
-
-              <button
-                onClick={toggleMusic}
-                className={`p-2 rounded-full border transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] ${isMusicPlaying ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-slate-800/80 border-slate-600 text-slate-500 hover:text-white"}`}
-                title={isMusicPlaying ? "Couper la musique" : "Lancer la musique"}
-              >
-                {isMusicPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
-              </button>
-
-              <button
-                onClick={() => setShowRules(true)}
-                className="p-2 rounded-full bg-slate-800/80 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)]"
-                title="Guide Tactique"
-              >
-                <BookOpen size={18} />
-              </button>
-            </div>
+          </div>
+          <div className={`ml-4 font-mono text-2xl font-bold px-3 py-1 rounded-lg ${timeP0 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-cyan-400 bg-cyan-500/10"}`}>
+            {formatTime(timeP0)}
           </div>
         </div>
+
+        {/* Turn indicator center */}
+        <div className="flex flex-col items-center gap-4 min-w-[280px]">
+          <div className={`
+            relative group
+            ${isMyTurn
+              ? "text-cyan-400"
+              : "text-rose-400"
+            }
+          `}>
+            {/* Decorative corners */}
+            <div className={`absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
+            <div className={`absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
+            <div className={`absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
+            <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
+
+            <div className={`
+              px-12 py-2 font-cyber text-2xl font-black tracking-[0.25em] uppercase transition-all duration-500
+              bg-slate-950/60 backdrop-blur-sm border border-white/5
+              ${isMyTurn ? "shadow-[inset_0_0_20px_rgba(6,182,212,0.1)] animate-pulse border-cyan-500/20" : "shadow-[inset_0_0_20px_rgba(244,63,94,0.1)] border-rose-500/20"}
+            `}>
+              {isMyTurn ? "VOTRE TOUR" : "TOUR ADVERSE"}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-slate-500/50" />
+            <div className="text-[11px] text-slate-300 font-mono font-bold tracking-[0.3em] uppercase">
+              TOUR n°{gameState.turnNumber}
+            </div>
+            <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-slate-500/50" />
+          </div>
+        </div>
+
+        {/* Player 1 (Red) */}
+        <div className={`flex items-center gap-4 p-2 rounded-xl transition-all flex-row-reverse ${gameState.currentPlayerIndex === 1 ? "bg-rose-500/10 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]" : "opacity-60"}`}>
+          <div className="w-10 h-10 rounded-full border-2 border-rose-500 bg-slate-800 flex items-center justify-center overflow-hidden">
+            <img src="/image/garderoyal.png" className="w-full h-full object-cover grayscale" />
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-rose-400 font-mono uppercase tracking-tighter">Joueur 2</div>
+            <div className="font-cyber text-lg font-bold text-white">
+              {gameState.players.find(p => p.playerIndex === 1)?.username || "Chargement..."}
+            </div>
+          </div>
+          <div className={`mr-4 font-mono text-2xl font-bold px-3 py-1 rounded-lg ${timeP1 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-rose-400 bg-rose-500/10"}`}>
+            {formatTime(timeP1)}
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Buttons */}
+      <div className="absolute top-40 left-10 flex flex-col gap-4 z-20">
+        <button
+          onClick={() => setShowRules(true)}
+          className="w-12 h-12 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all shadow-lg group relative overflow-hidden"
+          title="Règles du jeu"
+        >
+          <BookOpen size={24} />
+          <div className="absolute inset-0 bg-cyan-400/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+
+        <button
+          onClick={toggleMusic}
+          className={`w-12 h-12 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center transition-all shadow-lg group relative overflow-hidden ${isMusicPlaying ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white" : "bg-slate-900/80 text-slate-400 hover:bg-slate-700 hover:text-white"}`}
+          title={isMusicPlaying ? "Couper la musique" : "Lancer la musique"}
+        >
+          {isMusicPlaying ? <Volume2 size={24} /> : <VolumeX size={24} />}
+          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
       </div>
 
       {/* MODALS */}
@@ -746,8 +801,8 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         <RulesModal onClose={() => setShowRules(false)} />
       )}
 
-      {/* RIVIÈRE */}
-      <div className="absolute top-36 left-8 w-96 h-[calc(100vh-12rem)] flex flex-col gap-6 z-10 perspective-[1000px]">
+      {/* RIVIÈRE (Sidebar Gauche) */}
+      <div className="absolute top-48 left-8 w-96 h-[calc(100vh-16rem)] flex flex-col gap-6 z-10 perspective-[1000px]">
         <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(0,0,0,0.5)] transform -rotate-y-2 hover:rotate-0 transition-transform duration-500">
           <div className="flex justify-between items-center mb-2">
             <h2 className="font-cyber font-bold text-2xl text-white tracking-wider flex items-center gap-2">
@@ -805,10 +860,9 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         </div>
       </div>
 
-      {/* HEXBOARD w/ ACTION MODE TOGGLE */}
+      {/* HEXBOARD (Centre) */}
       <div className="flex-1 flex flex-col items-center justify-center relative p-20">
-
-        {/* ACTION MODE TOGGLE (Flottant au-dessus du plateau) */}
+        {/* ACTION MODE TOGGLE */}
         {selectedPiece && hasActiveAbility && isMyTurn && (
           <div className="absolute top-20 z-50 flex gap-4 bg-slate-900/80 p-2 rounded-xl border border-slate-700 backdrop-blur-md left-1/2 transform -translate-x-1/2">
             <button
@@ -859,29 +913,22 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         />
       </div>
 
-      {/* SIDEBAR RIGHT: SCANNER / TACTICAL CARD */}
-      <div className="absolute top-24 right-10 w-80 z-10 perspective-[1000px]">
+      {/* TACTICAL SCANNER (Sidebar Droite) */}
+      <div className="absolute top-40 right-10 w-80 z-10 perspective-[1000px]">
         <div className={`
           relative w-full transition-all duration-500 transform-style-3d
           ${selectedPiece ? "rotate-y-0 opacity-100" : "opacity-90"}
         `}>
           {selectedPiece ? (
-            // === ACTIVE CARD VIEW ===
             <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-              {/* Card Header / Image */}
               <div className="relative w-full aspect-[4/5] bg-slate-950">
                 {CHARACTER_IMAGES[selectedPiece.characterId] ? (
                   <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-6xl text-slate-700">?</div>
                 )}
-                {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90" />
-
-                {/* Scanner/Holo Effect overlay */}
                 <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,rgba(245,158,11,0.1)_2px)] bg-[size:100%_4px] pointer-events-none animate-scan-fast" />
-
-                {/* Name Overlay */}
                 <div className="absolute bottom-4 left-4 right-4">
                   <h3 className="font-cyber text-3xl font-bold text-white tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     {CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}
@@ -890,39 +937,41 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
                 </div>
               </div>
 
-              {/* Card Body - Data */}
               <div className="p-5 space-y-4">
-                {/* Description */}
                 <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5">
                   <p className="text-sm text-slate-300 italic leading-relaxed text-center">
                     "{CHARACTER_DATA[selectedPiece.characterId]?.description || "Données inconnues..."}"
                   </p>
                 </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-800/40 p-2 rounded-lg border border-white/5 flex flex-col items-center">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">POS</span>
-                    <span className="font-mono text-amber-400 font-bold">
-                      [{selectedPiece.q}, {selectedPiece.r}]
-                    </span>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-800/40 p-2 rounded-lg border border-white/5 flex flex-col items-center">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">CAPACITÉ</span>
+                      {selectedPiece.characterId === "LEADER" ? (
+                        <span className="font-mono text-[9px] font-black px-2 py-0.5 rounded border bg-slate-500/10 border-slate-500/50 text-slate-400">
+                          AUCUNE
+                        </span>
+                      ) : (
+                        <span className={`font-mono text-[9px] font-black px-2 py-0.5 rounded border ${CHARACTER_DATA[selectedPiece.characterId]?.type === "ACTIVE" ? "bg-cyan-500/10 border-cyan-500/50 text-cyan-400" : "bg-purple-500/10 border-purple-500/50 text-purple-400"}`}>
+                          {CHARACTER_DATA[selectedPiece.characterId]?.type || "SPÉCIAL"}
+                        </span>
+                      )}
+                    </div>
+                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center ${selectedPiece.hasActed ? "bg-rose-950/30 border-rose-500/30 text-rose-400" : "bg-emerald-950/30 border-emerald-500/30 text-emerald-400"}`}>
+                      <span className="text-[10px] uppercase tracking-widest mb-1">ÉTAT</span>
+                      <span className="font-bold text-xs">{selectedPiece.hasActed ? "ÉPUISÉ" : "OPÉRATIONNEL"}</span>
+                    </div>
                   </div>
-                  <div className={`
-                    p-2 rounded-lg border flex flex-col items-center justify-center
-                    ${selectedPiece.hasActed
-                      ? "bg-rose-950/30 border-rose-500/30 text-rose-400"
-                      : "bg-emerald-950/30 border-emerald-500/30 text-emerald-400"}
-                  `}>
-                    <span className="text-[10px] uppercase tracking-widest mb-1">ÉTAT</span>
-                    <span className="font-bold text-xs">
-                      {selectedPiece.hasActed ? "ÉPUISÉ" : "OPÉRATIONNEL"}
+                  <div className="bg-slate-800/40 p-2 rounded-lg border border-white/5 flex items-center justify-between px-4">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest">Coordonnées Tactiques</span>
+                    <span className="font-mono text-amber-500 font-bold text-sm">
+                      Q:{selectedPiece.q} R:{selectedPiece.r}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            // === EMPTY STATE / SCANNER IDLE ===
             <div className="h-96 flex flex-col items-center justify-center bg-slate-900/20 backdrop-blur-sm border border-white/10 rounded-2xl border-dashed">
               <div className="w-20 h-20 rounded-full border-2 border-cyan-500/20 flex items-center justify-center mb-4 animate-pulse">
                 <span className="text-3xl grayscale opacity-50">⌖</span>
@@ -934,18 +983,12 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         </div>
       </div>
 
-      {/* ACTION BAR */}
+      {/* ACTION BAR (Bottom) */}
       <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-20 flex gap-4">
         {isMyTurn && (
           <button
             onClick={handleEndTurn}
-            className={`
-              px-10 py-4 font-bold rounded-2xl shadow-xl transition-all uppercase tracking-widest text-lg border-2
-              ${allActionsCompleted
-                ? "bg-amber-600 border-amber-400 text-white animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-110"
-                : "bg-cyan-600 border-cyan-400/50 text-white hover:bg-cyan-500"
-              }
-            `}
+            className={`px-10 py-4 font-bold rounded-2xl shadow-xl transition-all uppercase tracking-widest text-lg border-2 ${allActionsCompleted ? "bg-amber-600 border-amber-400 text-white animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-110" : "bg-cyan-600 border-cyan-400/50 text-white hover:bg-cyan-500"}`}
           >
             Terminer le tour
           </button>

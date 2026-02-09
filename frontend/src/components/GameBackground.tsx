@@ -16,7 +16,7 @@ export default function GameBackground() {
                 duration: isLayer1 ? Math.random() * 20 + 15 : Math.random() * 40 + 30, // Layer 2 plus lent
                 delay: Math.random() * -40,
                 opacity: isLayer1 ? Math.random() * 0.5 + 0.3 : Math.random() * 0.3 + 0.1, // Layer 1 plus brillant
-                layer: isLayer1 ? 1 : 2,
+                layer: (isLayer1 ? 1 : 2) as 1 | 2,
             };
         });
         setParticles(newParticles);

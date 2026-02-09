@@ -102,6 +102,9 @@ CREATE TABLE IF NOT EXISTS game (
     winner_victory_type VARCHAR(50),                 -- Ex: 'CAPTURE'
     banishment_count SMALLINT DEFAULT 0,
     recruitment_count SMALLINT DEFAULT 0,
+    remaining_time_p0 INT DEFAULT 300,
+    remaining_time_p1 INT DEFAULT 300,
+    last_timer_update TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     scenario_id SMALLINT REFERENCES ref_scenario(id)

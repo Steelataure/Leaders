@@ -47,6 +47,9 @@ public class GameSetupService {
                     .currentPlayerIndex(0)
                     .turnNumber(1)
                     .banishmentCount(0)
+                    .remainingTimeP0(300)
+                    .remainingTimeP1(300)
+                    .lastTimerUpdate(java.time.LocalDateTime.now())
                     .build();
 
             GameEntity savedGame = gameRepository.save(game);

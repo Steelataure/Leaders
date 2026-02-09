@@ -49,6 +49,17 @@ public class GameJpaEntity {
     @Column(name = "winner_victory_type")
     private VictoryType winnerVictoryType;
 
+    @Column(name = "remaining_time_p0")
+    @Builder.Default
+    private int remainingTimeP0 = 300;
+
+    @Column(name = "remaining_time_p1")
+    @Builder.Default
+    private int remainingTimeP1 = 300;
+
+    @Column(name = "last_timer_update")
+    private java.time.LocalDateTime lastTimerUpdate;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

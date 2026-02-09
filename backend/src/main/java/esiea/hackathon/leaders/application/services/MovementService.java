@@ -31,6 +31,7 @@ public class MovementService {
     private final NemesisBehavior nemesisBehavior;
     private final GameRepository gameRepository;
     private final VictoryService victoryService; // 🆕 Injection du VictoryService
+    private final GameService gameService;
 
     @Transactional
     public PieceEntity movePiece(UUID pieceId, short toQ, short toR, UUID playerId) {
@@ -49,6 +50,9 @@ public class MovementService {
         // Chargement du Jeu
         GameEntity game = gameRepository.findById(pieceEntity.getGameId())
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        // 2b. Update Timer
+        gameService.updateTimer(game);
 
         // 3. 🛑 SÉCURITÉ : Vérification du tour et de l'identité
         // On compare l'index du propriétaire de la pièce avec l'index du joueur courant

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ public class GameQueryService {
         private final GameRepository gameRepository;
         private final PieceRepository pieceRepository;
         private final RecruitmentCardRepository cardRepository;
+        private final esiea.hackathon.leaders.domain.repository.UserCredentialsRepository userCredentialsRepository;
 
         @Transactional(readOnly = true)
         public GameStateDto getGameState(UUID gameId) {
@@ -48,7 +50,7 @@ public class GameQueryService {
 
                 // 3. Rivière
                 List<CardDto> river = cardRepository.findAllByGameId(gameId).stream()
-                                .filter(c -> c.getState() == CardState.VISIBLE)
+                                .filter(c -> c.getState() == esiea.hackathon.leaders.domain.model.enums.CardState.VISIBLE)
                                 .map(c -> new CardDto(
                                                 c.getId(),
                                                 c.getCharacter().getId(),
@@ -59,7 +61,16 @@ public class GameQueryService {
                 // 4. Joueurs
                 List<PlayerDto> players = game.getPlayers() != null
                                 ? game.getPlayers().stream()
-                                                .map(p -> new PlayerDto(p.getUserId(), p.getPlayerIndex()))
+                                                .map(p -> {
+                                                        String username = "Guest "
+                                                                        + p.getUserId().toString().substring(0, 4);
+                                                        var user = userCredentialsRepository.findById(p.getUserId());
+                                                        if (user.isPresent()) {
+                                                                username = user.get().getUsername();
+                                                        }
+                                                        return new PlayerDto(p.getUserId(), username,
+                                                                        p.getPlayerIndex());
+                                                })
                                                 .toList()
                                 : List.of();
 
@@ -76,6 +87,9 @@ public class GameQueryService {
                                                 && game.getTurnNumber() <= 2) ? 2 : 1),
                                 game.getWinnerPlayerIndex(),
                                 game.getWinnerVictoryType(),
+                                game.getRemainingTimeP0(),
+                                game.getRemainingTimeP1(),
+                                game.getLastTimerUpdate(),
                                 pieces,
                                 river,
                                 players);

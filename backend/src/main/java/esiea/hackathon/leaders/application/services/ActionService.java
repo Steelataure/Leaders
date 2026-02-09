@@ -34,6 +34,7 @@ public class ActionService {
     private final GameRepository gameRepository;
     private final NemesisBehavior nemesisBehavior;
     private final VictoryService victoryService; // 🆕 Injection pour Scénario 7
+    private final GameService gameService;
 
     @Transactional
     public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination, UUID playerId) {
@@ -44,6 +45,9 @@ public class ActionService {
         // 2. Chargement du Jeu
         GameEntity game = gameRepository.findById(source.getGameId())
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        // 2b. Update Timer
+        gameService.updateTimer(game);
 
         // 3. 🛑 SÉCURITÉ : Vérification du tour
         if (source.getOwnerIndex().intValue() != game.getCurrentPlayerIndex()) {
@@ -116,30 +120,35 @@ public class ActionService {
         // 🆕 SCÉNARIO 5 : Trigger Némésis si un Leader a été déplacé par une capacité
         // Recharger les pièces car les positions ont pu changer
         List<PieceEntity> updatedPieces = pieceRepository.findByGameId(source.getGameId());
-        
-        // Vérifier si la SOURCE est un Leader qui a bougé (ex: Illusionniste swap avec Leader)
+
+        // Vérifier si la SOURCE est un Leader qui a bougé (ex: Illusionniste swap avec
+        // Leader)
         triggerNemesisIfLeaderMoved(source, updatedPieces);
-        
-        // Vérifier si la CIBLE est un Leader qui a été déplacé (ex: Manipulatrice, Grappler, Cogneur)
+
+        // Vérifier si la CIBLE est un Leader qui a été déplacé (ex: Manipulatrice,
+        // Grappler, Cogneur)
         if (target != null) {
             triggerNemesisIfLeaderMoved(target, updatedPieces);
         }
 
         // 🆕 SCÉNARIO 7 : Vérification de victoire IMMÉDIATE après chaque capacité
-        // Cela permet à l'Assassin (seul) ou à l'Archère (à distance 2) de déclencher la victoire
-        // même si le déplacement vient d'une capacité (Illusionniste swap, Manipulatrice move, etc.)
+        // Cela permet à l'Assassin (seul) ou à l'Archère (à distance 2) de déclencher
+        // la victoire
+        // même si le déplacement vient d'une capacité (Illusionniste swap,
+        // Manipulatrice move, etc.)
         checkAndApplyVictory(game);
     }
 
     /**
-     * 🆕 SCÉNARIO 7 : Vérifie si une condition de victoire est remplie et termine la partie si nécessaire.
+     * 🆕 SCÉNARIO 7 : Vérifie si une condition de victoire est remplie et termine
+     * la partie si nécessaire.
      * Appelé après chaque mouvement et chaque action.
      * - Assassin adjacent au Leader = 2 points (capture solo immédiate)
      * - Archère à distance 2 du Leader = 1 point (aide à la capture)
      */
     private void checkAndApplyVictory(GameEntity game) {
         VictoryCheckResult result = victoryService.checkVictory(game.getId());
-        
+
         if (result.isGameOver()) {
             game.setStatus(GameStatus.FINISHED);
             game.setWinnerPlayerIndex(result.winnerPlayerIndex());

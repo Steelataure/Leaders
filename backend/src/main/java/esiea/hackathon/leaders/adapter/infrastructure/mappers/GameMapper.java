@@ -37,6 +37,9 @@ public class GameMapper {
                 .winnerPlayerIndex(entity.getWinnerPlayerIndex())
                 .winnerVictoryType(entity.getWinnerVictoryType())
                 .players(players)
+                .remainingTimeP0(entity.getRemainingTimeP0())
+                .remainingTimeP1(entity.getRemainingTimeP1())
+                .lastTimerUpdate(entity.getLastTimerUpdate())
                 .build();
     }
 
@@ -55,6 +58,9 @@ public class GameMapper {
                 .recruitmentCount(domain.getRecruitmentCount())
                 .winnerPlayerIndex(domain.getWinnerPlayerIndex())
                 .winnerVictoryType(domain.getWinnerVictoryType())
+                .remainingTimeP0(domain.getRemainingTimeP0())
+                .remainingTimeP1(domain.getRemainingTimeP1())
+                .lastTimerUpdate(domain.getLastTimerUpdate())
                 .build();
     }
 }

@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 // === TYPES ===
 
-type VictoryType = "CAPTURE" | "ENCIRCLEMENT";
+type VictoryType = "CAPTURE" | "ENCIRCLEMENT" | "TIMEOUT";
 
 interface VictoryScreenProps {
   winner: 0 | 1;
@@ -55,6 +55,11 @@ const VICTORY_CONFIG: Record<
     label: "Encerclement Total",
     icon: "🔄",
     description: "Le Leader adverse n'a plus aucune issue !",
+  },
+  TIMEOUT: {
+    label: "Temps Épuisé",
+    icon: "⌛",
+    description: "Le temps de l'adversaire est écoulé !",
   },
 };
 
@@ -267,18 +272,17 @@ function StyledButton({
         transition-all duration-300 ease-out
         hover:scale-105 hover:-translate-y-1
         active:scale-95
-        ${
-          isPrimary
-            ? "text-white shadow-lg hover:shadow-xl"
-            : "bg-slate-800 text-slate-300 border-2 border-slate-600 hover:border-slate-400 hover:text-white"
+        ${isPrimary
+          ? "text-white shadow-lg hover:shadow-xl"
+          : "bg-slate-800 text-slate-300 border-2 border-slate-600 hover:border-slate-400 hover:text-white"
         }
       `}
       style={
         isPrimary
           ? {
-              background: `linear-gradient(135deg, ${color}, ${color}dd)`,
-              boxShadow: `0 10px 40px ${color}50`,
-            }
+            background: `linear-gradient(135deg, ${color}, ${color}dd)`,
+            boxShadow: `0 10px 40px ${color}50`,
+          }
           : undefined
       }
     >
