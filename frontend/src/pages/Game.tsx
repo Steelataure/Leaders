@@ -86,7 +86,7 @@ interface CharacterCard {
 
 // === COMPOSANTS UI ===
 
-// Carte de la rivière (Sidebar gauche)
+// Carte de la rivière (Sidebar gauche) - Redesign "Data Slate"
 function SidebarCard({
   card,
   onClick,
@@ -111,49 +111,69 @@ function SidebarCard({
       onClick={!disabled ? onClick : undefined}
       onMouseEnter={onMouseEnter}
       className={`
-        group relative p - 3 rounded - xl border transition - all duration - 300
+        group relative w-full p-3 rounded-xl border-l-[6px] transition-all duration-300
         ${disabled
-          ? "bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed grayscale shadow-none"
-          : "bg-slate-800/80 border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-800 hover:shadow-[0_0_15px_rgba(0,245,255,0.2)] cursor-pointer"
+          ? "bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed grayscale"
+          : "bg-slate-900/80 border-cyan-500 hover:bg-slate-800 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] cursor-pointer hover:scale-[1.02]"
         }
-`}
+      `}
     >
+      {/* Background Tech Pattern */}
+      {!disabled && (
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(6,182,212,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-shine opacity-0 group-hover:opacity-100 transition-opacity" />
+      )}
+
       {disabled && (
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-xl border border-white/5">
-          <div className="flex flex-col items-center gap-1 opacity-40">
-            <span className="text-[14px]">🔒</span>
-            <span className="text-slate-400 font-bold text-[7px] tracking-[0.2em] uppercase">VERROUILLÉ</span>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
+          <div className="bg-black/60 px-3 py-1 rounded text-[10px] font-bold tracking-widest text-slate-400 border border-slate-700 uppercase">
+            Verrouillé
           </div>
         </div>
       )}
-      <div
-        className={`absolute left - 0 top - 3 bottom - 3 w - 1 rounded - r bg - amber - 400`}
-      />
 
-      <div className="pl-3">
-        <div className="flex justify-between items-start mb-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 relative bg-slate-900/50">
-              {CHARACTER_IMAGES[card.characterId] ? (
-                <img
-                  src={CHARACTER_IMAGES[card.characterId]}
-                  alt={card.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xs">
-                  {icons[charType]}
-                </div>
-              )}
+      <div className="flex gap-4 items-center relative z-0">
+        {/* Avatar Image */}
+        <div className={`
+           w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 bg-slate-950 shadow-inner
+           ${disabled ? "border-slate-700" : "border-cyan-500/50 group-hover:border-cyan-400"}
+        `}>
+          {CHARACTER_IMAGES[card.characterId] ? (
+            <img
+              src={CHARACTER_IMAGES[card.characterId]}
+              alt={card.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xl text-slate-600">
+              {icons[charType]}
             </div>
-            <span className="text-white font-bold text-sm tracking-wide">
+          )}
+        </div>
+
+        {/* Content Info */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="flex justify-between items-baseline mb-1">
+            <span className={`font-cyber text-lg font-bold truncate ${disabled ? "text-slate-500" : "text-white group-hover:text-cyan-300"}`}>
               {card.name}
             </span>
+            <span className="text-[10px] text-slate-600 font-mono">
+              {charType === "ACTIVE" ? "ACTIF" : "PASSIF"}
+            </span>
           </div>
+
+          <p className="text-[11px] text-slate-400 leading-tight line-clamp-2 italic pr-2">
+            "{card.description || "Information classifiée"}"
+          </p>
+
+          {!disabled && (
+            <div className="mt-2 flex items-center gap-1">
+              <div className="h-1 w-12 bg-cyan-900 rounded-full overflow-hidden">
+                <div className="h-full bg-cyan-500 w-2/3 animate-pulse" />
+              </div>
+              <span className="text-[8px] text-cyan-500 uppercase tracking-wider ml-2">DISPONIBLE</span>
+            </div>
+          )}
         </div>
-        <p className="text-slate-500 text-[10px] leading-relaxed group-hover:text-slate-400">
-          {card.description || "Personnage du scénario"}
-        </p>
       </div>
     </div>
   );
@@ -561,27 +581,55 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
       <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-cyan-500 rounded-br-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)] z-20" />
 
       {/* HEADER */}
-      <div className="absolute top-0 left-0 right-0 h-24 z-20 flex items-center justify-center pointer-events-none">
-        <div className="relative flex items-center gap-8 bg-slate-950/80 backdrop-blur-xl px-16 py-4 rounded-b-[2rem] border-x border-b border-cyan-500/20 shadow-[0_0_40px_rgba(0,245,255,0.15)] pointer-events-auto">
-          <div className="flex items-center gap-4">
-            <span className="text-2xl">💠</span>
-            <h1 className="font-cyber text-5xl font-bold italic tracking-[0.1em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-100 to-cyan-300">
-              {isMyTurn ? "VOTRE TOUR" : "TOUR ADVERSE"}
-            </h1>
+      <div className="absolute top-0 left-0 right-0 h-32 z-20 flex items-center justify-center pointer-events-none">
+        <div className={`
+          relative flex items-center gap-10 px-12 py-5 rounded-b-[3rem] border-x-2 border-b-4 
+          backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto transition-all duration-500
+          ${isMyTurn
+            ? "bg-slate-900/90 border-cyan-500 shadow-[0_0_30px_rgba(6,182,212,0.3)]"
+            : "bg-slate-950/90 border-rose-600 shadow-[0_0_30px_rgba(225,29,72,0.3)]"}
+        `}>
+          {/* Main Turn Text */}
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-4 mb-1">
+              <span className={`text-3xl animate-pulse ${isMyTurn ? "text-cyan-400" : "text-rose-500"}`}>
+                {isMyTurn ? "💠" : "⚠️"}
+              </span>
+              <h1 className={`
+                  font-cyber text-6xl font-black italic tracking-[0.15em] select-none
+                  ${isMyTurn
+                  ? "text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]"
+                  : "text-transparent bg-clip-text bg-gradient-to-r from-rose-600 via-rose-300 to-rose-600 drop-shadow-[0_0_10px_rgba(225,29,72,0.8)]"}
+                `}>
+                {isMyTurn ? "VOTRE TOUR" : "TOUR ADVERSE"}
+              </h1>
+              <span className={`text-3xl animate-pulse ${isMyTurn ? "text-cyan-400" : "text-rose-500"}`}>
+                {isMyTurn ? "💠" : "⚠️"}
+              </span>
+            </div>
+            {/* Subtitle / Decoration line */}
+            <div className={`h-1 w-full rounded-full shadow-[0_0_10px_currentColor] ${isMyTurn ? "bg-cyan-500 text-cyan-500" : "bg-rose-500 text-rose-500"}`} />
           </div>
-          <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest">
-            <span className="text-slate-500">TOUR <span className="text-cyan-50 text-base ml-1">{gameState.turnNumber}</span></span>
-            <div className={`px-6 py-2 rounded-full border shadow-[0_0_15px_inset] transition-all duration-300 ${gameState.currentPlayerIndex === 0 ? "border-cyan-500 text-cyan-400 bg-cyan-950/30" : "border-rose-500 text-rose-400 bg-rose-950/30"}`}>
-              JOUEUR {gameState.currentPlayerIndex + 1} {gameState.currentPlayerIndex === localPlayerIndex ? "(VOUS)" : ""}
+
+          {/* Info Side */}
+          <div className="flex flex-col items-end gap-1">
+            <div className="text-xs font-bold uppercase tracking-widest text-slate-500">
+              TOUR <span className="text-white text-lg ml-1">{gameState.turnNumber}</span>
             </div>
 
-            <button
-              onClick={() => setShowRules(true)}
-              className="ml-6 p-3 rounded-full bg-slate-900/50 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:text-white transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)]"
-              title="Guide Tactique"
-            >
-              <BookOpen size={20} />
-            </button>
+            <div className="flex items-center gap-3">
+              <div className={`px-4 py-1 rounded-sm border font-bold text-xs uppercase tracking-wider ${gameState.currentPlayerIndex === 0 ? "border-cyan-500 text-cyan-400 bg-cyan-950/40" : "border-rose-500 text-rose-400 bg-rose-950/40"}`}>
+                J{gameState.currentPlayerIndex + 1}
+              </div>
+
+              <button
+                onClick={() => setShowRules(true)}
+                className="p-2 rounded-full bg-slate-800/80 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                title="Guide Tactique"
+              >
+                <BookOpen size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -619,26 +667,52 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
       )}
 
       {/* RIVIÈRE */}
-      <div className="absolute top-24 left-10 w-72 h-[calc(100vh-12rem)] flex flex-col gap-5 z-10">
-        <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-white/5">
-          <h2 className="font-cyber font-bold text-xl text-white mb-2 underline decoration-cyan-500 py-1">RIVIÈRE</h2>
-          <p className="text-[10px] text-slate-500 uppercase">Unités: {currentPlayerPieceCount}/5 | Cases: {availableSpawnCells.length}/3</p>
+      <div className="absolute top-36 left-8 w-96 h-[calc(100vh-12rem)] flex flex-col gap-6 z-10 perspective-[1000px]">
+        <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(0,0,0,0.5)] transform -rotate-y-2 hover:rotate-0 transition-transform duration-500">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-cyber font-bold text-2xl text-white tracking-wider flex items-center gap-2">
+              <span className="text-cyan-400 animate-pulse">◈</span> RIVIÈRE
+            </h2>
+            <div className="px-3 py-1 bg-slate-950 rounded text-[10px] font-mono text-cyan-500 border border-cyan-900">
+              {availableSpawnCells.length} ZONE(S)
+            </div>
+          </div>
+
+          <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden mb-3">
+            <div
+              className={`h-full transition-all duration-500 ${currentPlayerPieceCount >= 5 ? "bg-rose-500 w-full" : "bg-cyan-500"}`}
+              style={{ width: `${(currentPlayerPieceCount / 5) * 100}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest flex justify-between">
+            <span>Effectif: {currentPlayerPieceCount}/5</span>
+            <span>{isMyTurn ? "SESSION ACTIVE" : "EN ATTENTE"}</span>
+          </p>
+
           {isMyTurn && (
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="mt-4 flex flex-col gap-2 bg-slate-950/50 p-3 rounded-lg border border-white/5">
               {(!canRecruit || !hasAvailableSpawnCells) ? (
-                <p className="text-[10px] text-rose-500 font-bold uppercase tracking-tighter shadow-sm">⚠️ RECRUTEMENT TERMINÉ</p>
+                <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase">
+                  <span className="animate-pulse">⛔</span> RECRUTEMENT INDISPONIBLE
+                </div>
               ) : (
-                <p className="text-[10px] text-amber-500 animate-pulse uppercase tracking-tighter">UNITÉS DISPONIBLES</p>
+                <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase">
+                  <span className="animate-pulse">🟢</span> RECRUTEMENT AUTORISÉ
+                </div>
               )}
               {allPiecesActed ? (
-                <p className="text-[10px] text-rose-500 font-bold uppercase tracking-tighter shadow-sm">⚠️ MOUVEMENTS TERMINÉS</p>
+                <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase">
+                  <span>⏳</span> UNITÉS ÉPUISÉES
+                </div>
               ) : (
-                <p className="text-[10px] text-cyan-500 animate-pulse uppercase tracking-tighter">MOUVEMENTS DISPONIBLES</p>
+                <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase">
+                  <span>⚡</span> ACTIONS POSSIBLES
+                </div>
               )}
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-cyan-500/20">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-cyan-600 scrollbar-track-slate-900/50 hover:scrollbar-thumb-cyan-400 transition-colors">
           {riverCards.map((card) => (
             <SidebarCard
               key={card.id}
