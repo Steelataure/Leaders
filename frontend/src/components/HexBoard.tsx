@@ -124,6 +124,15 @@ function ShieldIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <g transform="translate(-8, -8) scale(0.8)">
+      <circle cx="12" cy="12" r="10" fill="#22c55e" stroke="#fff" strokeWidth="1.5" />
+      <path d="M8 12l3 3 5-5" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+  );
+}
+
 interface PieceComponentProps {
   piece: PieceFrontend;
   x: number;
@@ -276,21 +285,8 @@ function PieceComponent({
       {isBlocked && !isJailer && <g transform={`translate(${x + radius - 8}, ${y + radius - 8})`}><LockIcon /></g>}
       {isProtected && !isProtector && <g transform={`translate(${x + radius - 8}, ${y + radius - 8})`}><ShieldIcon /></g>}
 
-      {piece.hasActed && (
-        <g transform={`translate(${x}, ${y})`}>
-          <circle r={radius} fill="rgba(0,0,0,0.5)" />
-          {/* Logo validé (cadenas/coche) - Ici on met le cadenas pour uniformité */}
-          <text
-            x="0"
-            y="5"
-            textAnchor="middle"
-            fontSize="24"
-            style={{ filter: "drop-shadow(0px 0px 4px rgba(0,0,0,0.8))" }}
-          >
-            🔒
-          </text>
-        </g>
-      )}
+      {/* Exhaustion Indicator (Checkmark) - Drawn at the top for maximum visibility */}
+      {piece.hasActed && <g transform={`translate(${x + radius - 12}, ${y + radius - 12})`} className="drop-shadow-lg"><CheckIcon /></g>}
     </g>
   );
 }

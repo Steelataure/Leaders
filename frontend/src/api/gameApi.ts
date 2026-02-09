@@ -17,7 +17,7 @@ export interface Piece {
   ownerIndex: number;
   q: number;
   r: number;
-  hasActedThisTurn: boolean;
+  hasActed: boolean;
 }
 
 export interface Player {
@@ -53,8 +53,8 @@ export interface Game {
 }
 
 // Frontend specific types
-export interface PieceFrontend extends Omit<Piece, "hasActedThisTurn"> {
-  hasActed: boolean;
+export interface PieceFrontend extends Piece {
+  // we can use Piece directly now that the property name matches
 }
 
 export type GamePhase = "SETUP" | "ACTIONS" | "RECRUITMENT";
@@ -107,7 +107,7 @@ export const SCENARIO_NAMES: Record<number, string> = {
 export function mapPieceToFrontend(piece: Piece): PieceFrontend {
   return {
     ...piece,
-    hasActed: piece.hasActedThisTurn,
+    hasActed: piece.hasActed,
   };
 }
 

@@ -864,7 +864,7 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
       {/* HEXBOARD (Centre) */}
       <div className="flex-1 flex flex-col items-center justify-center relative p-20">
         {/* ACTION MODE TOGGLE */}
-        {selectedPiece && hasActiveAbility && isMyTurn && (
+        {selectedPiece && hasActiveAbility && isMyTurn && !selectedPiece.hasActed && (
           <div className="absolute top-24 z-50 flex p-1.5 bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] left-1/2 transform -translate-x-1/2 scale-110">
             <button
               onClick={() => { setActionMode("MOVE"); playButtonClickSfx(); }}
@@ -954,6 +954,14 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
                   <img src={CHARACTER_IMAGES[selectedPiece.characterId]} alt={selectedPiece.characterId} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-6xl text-slate-700">?</div>
+                )}
+
+                {selectedPiece.hasActed && (
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
+                    <div className="bg-emerald-500 text-white px-4 py-1.5 rounded-full font-cyber font-bold text-sm tracking-widest shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-white/20 animate-pulse">
+                      VALIDÉ ✅
+                    </div>
+                  </div>
                 )}
 
                 {/* Tech Overlays */}

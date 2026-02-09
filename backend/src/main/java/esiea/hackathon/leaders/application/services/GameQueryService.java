@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,7 +75,24 @@ public class GameQueryService {
                                                 .toList()
                                 : List.of();
 
-                // 5. DTO final
+                // 5. Calcul du temps REEL (non persisité en DB ici, mais calculé pour le DTO)
+                int timeP0 = game.getRemainingTimeP0();
+                int timeP1 = game.getRemainingTimeP1();
+
+                if (game.getStatus() == esiea.hackathon.leaders.domain.model.enums.GameStatus.IN_PROGRESS
+                                && game.getLastTimerUpdate() != null) {
+                        long secondsElapsed = Duration.between(game.getLastTimerUpdate(), LocalDateTime.now())
+                                        .toSeconds();
+                        if (secondsElapsed > 0) {
+                                if (game.getCurrentPlayerIndex() == 0) {
+                                        timeP0 = (int) Math.max(0, timeP0 - secondsElapsed);
+                                } else {
+                                        timeP1 = (int) Math.max(0, timeP1 - secondsElapsed);
+                                }
+                        }
+                }
+
+                // 6. DTO final
                 return new GameStateDto(
                                 game.getId(),
                                 game.getStatus(),
@@ -87,8 +105,8 @@ public class GameQueryService {
                                                 && game.getTurnNumber() <= 2) ? 2 : 1),
                                 game.getWinnerPlayerIndex(),
                                 game.getWinnerVictoryType(),
-                                game.getRemainingTimeP0(),
-                                game.getRemainingTimeP1(),
+                                timeP0,
+                                timeP1,
                                 game.getLastTimerUpdate(),
                                 pieces,
                                 river,
