@@ -64,6 +64,19 @@ public class AuthService {
                 List.of("USER"));
     }
 
+    public List<UserDto> getLeaderboard() {
+        java.util.List<UserDto> leaderboard = new java.util.ArrayList<>();
+        userCredentialsRepository.findTop10ByOrderByEloDesc().forEach(user -> {
+            leaderboard.add(new UserDto(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getUsername(),
+                    user.getElo(),
+                    List.of("USER")));
+        });
+        return leaderboard;
+    }
+
     private LoginResponseDto createLoginResponse(UserCredentialsEntity user) {
         // DUMMY IMPLEMENTATION: No real JWT/Security yet
         String dummyToken = "dummy-token-" + UUID.randomUUID();

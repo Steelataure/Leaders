@@ -62,6 +62,11 @@ export const authService = {
             localStorage.setItem('user', JSON.stringify(user));
         }
 
+
         return user;
+    },
+
+    async getLeaderboard(): Promise<User[]> {
+        return await apiClient.get<User[]>('/auth/leaderboard');
     }
 };

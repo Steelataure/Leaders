@@ -1,54 +1,8 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play } from "lucide-react";
-import { cn } from "../utils/cn";
 
-const Rain = () => {
-    const [drops, setDrops] = useState<{ id: number; left: number; delay: number; duration: number }[]>([]);
-
-    useEffect(() => {
-        // Generate static rain drops on mount to avoid hydration mismatch
-        const dropCount = 100;
-        const newDrops = Array.from({ length: dropCount }).map((_, i) => ({
-            id: i,
-            left: Math.random() * 100,
-            delay: Math.random() * 2,
-            duration: 0.5 + Math.random() * 0.5,
-        }));
-        setDrops(newDrops);
-    }, []);
-
-    return (
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-            {drops.map((drop) => (
-                <div
-                    key={drop.id}
-                    className="absolute top-0 w-[1px] h-[30vh] bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent"
-                    style={{
-                        left: `${drop.left}%`,
-                        animation: `rain ${drop.duration}s linear infinite`,
-                        animationDelay: `${drop.delay}s`,
-                        opacity: 0.4,
-                    }}
-                />
-            ))}
-        </div>
-    );
-};
-
-const GlitchText = ({ text, className }: { text: string; className?: string }) => {
-    return (
-        <div className={cn("relative inline-block group", className)}>
-            <span className="relative z-10">{text}</span>
-            <span className="absolute top-0 left-0 -z-10 w-full h-full text-cyan-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-[2px] transition-all duration-200 select-none">
-                {text}
-            </span>
-            <span className="absolute top-0 left-0 -z-10 w-full h-full text-magenta-500 opacity-0 group-hover:opacity-100 group-hover:-translate-x-[2px] transition-all duration-200 select-none">
-                {text}
-            </span>
-        </div>
-    );
-};
+import { Rain } from "../components/Rain";
+import { GlitchText } from "../components/GlitchText";
 
 interface HomeProps {
     onStart: () => void;

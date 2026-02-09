@@ -30,4 +30,9 @@ public class AuthController {
             @RequestParam java.util.UUID userId) {
         return ResponseEntity.ok(authService.getUserProfile(userId));
     }
+
+    @GetMapping("/leaderboard")
+    public ResponseEntity<java.util.List<esiea.hackathon.leaders.application.dto.response.UserDto>> getLeaderboard() {
+        return ResponseEntity.ok(authService.getLeaderboard());
+    }
 }

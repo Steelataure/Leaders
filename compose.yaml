@@ -1,25 +1,20 @@
 services:
   database:
     image: postgres:15-alpine
-    container_name: leaders_db
     restart: always
     environment:
       POSTGRES_DB: leaders_db
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password123
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    # Pas besoin de ports ici pour Railway, la comm est interne
 
   backend:
     build:
-      context: ./backend  # On précise le dossier du backend
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: leaders_backend
     restart: always
     ports:
-      - "8081:8080"
+      - "8085:8080" # On utilise 8085 pour le backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/leaders_db
       SPRING_DATASOURCE_USERNAME: admin
@@ -30,11 +25,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend # On précise le dossier du frontend
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: leaders_frontend
     ports:
-      - "8081:80"  # Ton PC (8081) -> Docker (80 interne)
+      - "5173:80" # On utilise 5173 pour le frontend
+    environment:
+      # L'URL sera à mettre à jour une fois le domaine backend généré
+      - VITE_API_URL=https://ton-backend.up.railway.app
     depends_on:
       - backend
     restart: always

@@ -12,4 +12,6 @@ public interface UserCredentialsRepository extends CrudRepository<UserCredential
     Optional<UserCredentialsEntity> findByEmail(String email);
 
     Optional<UserCredentialsEntity> findByUsername(String username);
+
+    Iterable<UserCredentialsEntity> findTop10ByOrderByEloDesc();
 }
