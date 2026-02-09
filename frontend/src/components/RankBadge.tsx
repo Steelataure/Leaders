@@ -7,11 +7,12 @@ interface RankBadgeProps {
 }
 
 const RANK_CONFIG = [
-    { min: 0, max: 1099, label: "NOVICE", color: "text-slate-300", bg: "bg-slate-400/20", border: "border-slate-300/40", icon: Medal, glow: "shadow-slate-500/20" },
-    { min: 1100, max: 1299, label: "TACTICIEN", color: "text-emerald-400", bg: "bg-emerald-400/20", border: "border-emerald-400/40", icon: Shield, glow: "shadow-emerald-500/30" },
-    { min: 1300, max: 1499, label: "COMMANDANT", color: "text-cyan-400", bg: "bg-cyan-400/20", border: "border-cyan-400/40", icon: Zap, glow: "shadow-cyan-500/30" },
-    { min: 1500, max: 1699, label: "STRATÈGE", color: "text-purple-400", bg: "bg-purple-400/20", border: "border-purple-400/40", icon: Trophy, glow: "shadow-purple-500/30" },
-    { min: 1700, max: 9999, label: "GRAND MAÎTRE", color: "text-amber-400", bg: "bg-amber-400/20", border: "border-amber-400/50", icon: Crown, glow: "shadow-amber-500/40" },
+    { min: 0, max: 1099, label: "BRONZE", color: "text-orange-400", bg: "bg-orange-900/40", border: "border-orange-500/40", icon: Shield, glow: "shadow-orange-500/20" },
+    { min: 1100, max: 1299, label: "ARGENT", color: "text-slate-300", bg: "bg-slate-400/20", border: "border-slate-300/40", icon: Medal, glow: "shadow-slate-500/20" },
+    { min: 1300, max: 1499, label: "OR", color: "text-amber-400", bg: "bg-amber-400/20", border: "border-amber-400/50", icon: Trophy, glow: "shadow-amber-500/40" },
+    { min: 1500, max: 1699, label: "PLATINE", color: "text-cyan-400", bg: "bg-cyan-400/20", border: "border-cyan-400/40", icon: Zap, glow: "shadow-cyan-500/30" },
+    { min: 1700, max: 1899, label: "DIAMANT", color: "text-purple-400", bg: "bg-purple-400/20", border: "border-purple-400/40", icon: Crown, glow: "shadow-purple-500/40" },
+    { min: 1900, max: 9999, label: "MASTER", color: "text-red-500", bg: "bg-red-500/20", border: "border-red-500/50", icon: Crown, glow: "shadow-red-500/50" },
 ];
 
 export default function RankBadge({ elo, size = "md", showElo = true }: RankBadgeProps) {

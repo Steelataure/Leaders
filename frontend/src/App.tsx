@@ -2,10 +2,10 @@ import { useState } from "react";
 import Home from "./pages/Home";
 import Lobby from "./pages/Lobby";
 import Game from "./pages/Game";
-import Rules from "./pages/Rules";
+import RankInfo from "./pages/RankInfo";
 
 function App() {
-  const [step, setStep] = useState("home"); // "home", "lobby", ou "game"
+  const [step, setStep] = useState("home"); // "home", "lobby", "game", "rank-info"
   const [gameId, setGameId] = useState<string | null>(null);
 
   const handleStartGame = (id: string) => {
@@ -26,13 +26,13 @@ function App() {
     return (
       <Lobby
         onStartGame={handleStartGame}
-        onOpenRules={() => setStep("rules")}
+        onOpenRankInfo={() => setStep("rank-info")}
       />
     );
   }
 
-  if (step === "rules") {
-    return <Rules onBack={() => setStep("lobby")} />;
+  if (step === "rank-info") {
+    return <RankInfo onBack={() => setStep("lobby")} />;
   }
 
   return <Home onStart={() => setStep("lobby")} />;

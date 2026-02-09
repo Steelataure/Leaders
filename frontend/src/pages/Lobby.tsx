@@ -10,15 +10,15 @@ import { GlitchText } from "../components/GlitchText"; // Optional usage
 
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
-import { LogOut, Settings, Info, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, Trophy, User as UserIcon } from "lucide-react";
 
 
 export default function Lobby({
   onStartGame,
-  onOpenRules,
+  onOpenRankInfo,
 }: {
   onStartGame: (id: string) => void;
-  onOpenRules: () => void;
+  onOpenRankInfo: () => void;
 }) {
   const [joinMode, setJoinMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -212,8 +212,12 @@ export default function Lobby({
         </div>
 
         <div className="flex items-center gap-6">
-          <button onClick={onOpenRules} className="text-sm font-rajdhani font-bold text-slate-400 hover:text-cyan-400 transition-colors uppercase tracking-wider flex items-center gap-2">
-            <Info className="w-4 h-4" /> Règles
+          <button onClick={onOpenRankInfo} className="text-sm font-rajdhani font-bold text-slate-400 hover:text-cyan-400 transition-colors uppercase tracking-wider flex items-center gap-2">
+            <Trophy className="w-4 h-4" /> CLASSEMENT
+          </button>
+
+          <button onClick={() => setSettingsOpen(true)} className="text-slate-400 hover:text-white transition-colors">
+            <Settings className="w-6 h-6" />
           </button>
 
           <button
@@ -234,9 +238,8 @@ export default function Lobby({
               {!user ? (
                 <button onClick={() => { closeAllModals(); setLoginOpen(true); }} className="w-full text-left px-5 py-3 text-sm text-cyan-400 hover:bg-white/5 flex items-center gap-2"><UserIcon className="w-4 h-4" /> CONNEXION</button>
               ) : (
-                <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-sm text-red-400 hover:bg-white/5 flex items-center gap-2"><LogOut className="w-4 h-4" /> DÉCONNEXION</button>
+                <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2"><LogOut className="w-4 h-4" /> DÉCONNEXION</button>
               )}
-              <button onClick={() => { closeAllModals(); setSettingsOpen(true); }} className="w-full text-left px-5 py-3 text-sm text-slate-300 hover:bg-white/5 flex items-center gap-2"><Settings className="w-4 h-4" /> PARAMÈTRES</button>
             </div>
           )}
         </div>
