@@ -52,6 +52,18 @@ public class AuthService {
         return createLoginResponse(user);
     }
 
+    public UserDto getUserProfile(UUID userId) {
+        UserCredentialsEntity user = userCredentialsRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return new UserDto(
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getElo(),
+                List.of("USER"));
+    }
+
     private LoginResponseDto createLoginResponse(UserCredentialsEntity user) {
         // DUMMY IMPLEMENTATION: No real JWT/Security yet
         String dummyToken = "dummy-token-" + UUID.randomUUID();

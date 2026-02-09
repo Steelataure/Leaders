@@ -24,4 +24,10 @@ public class AuthController {
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request) {
         return ResponseEntity.ok(authService.login(request));
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<esiea.hackathon.leaders.application.dto.response.UserDto> getProfile(
+            @RequestParam java.util.UUID userId) {
+        return ResponseEntity.ok(authService.getUserProfile(userId));
+    }
 }

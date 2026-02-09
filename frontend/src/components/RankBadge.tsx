@@ -7,11 +7,11 @@ interface RankBadgeProps {
 }
 
 const RANK_CONFIG = [
-    { min: 0, max: 1099, label: "NOVICE", color: "text-slate-400", bg: "bg-slate-400/10", border: "border-slate-400/20", icon: Medal, glow: "shadow-slate-500/10" },
-    { min: 1100, max: 1299, label: "TACTICIEN", color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/30", icon: Shield, glow: "shadow-emerald-500/20" },
-    { min: 1300, max: 1499, label: "COMMANDANT", color: "text-cyan-400", bg: "bg-cyan-400/10", border: "border-cyan-400/30", icon: Zap, glow: "shadow-cyan-500/20" },
-    { min: 1500, max: 1699, label: "STRATÈGE", color: "text-purple-400", bg: "bg-purple-400/10", border: "border-purple-400/30", icon: Trophy, glow: "shadow-purple-500/20" },
-    { min: 1700, max: 9999, label: "GRAND MAÎTRE", color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/40", icon: Crown, glow: "shadow-amber-500/30" },
+    { min: 0, max: 1099, label: "NOVICE", color: "text-slate-300", bg: "bg-slate-400/20", border: "border-slate-300/40", icon: Medal, glow: "shadow-slate-500/20" },
+    { min: 1100, max: 1299, label: "TACTICIEN", color: "text-emerald-400", bg: "bg-emerald-400/20", border: "border-emerald-400/40", icon: Shield, glow: "shadow-emerald-500/30" },
+    { min: 1300, max: 1499, label: "COMMANDANT", color: "text-cyan-400", bg: "bg-cyan-400/20", border: "border-cyan-400/40", icon: Zap, glow: "shadow-cyan-500/30" },
+    { min: 1500, max: 1699, label: "STRATÈGE", color: "text-purple-400", bg: "bg-purple-400/20", border: "border-purple-400/40", icon: Trophy, glow: "shadow-purple-500/30" },
+    { min: 1700, max: 9999, label: "GRAND MAÎTRE", color: "text-amber-400", bg: "bg-amber-400/20", border: "border-amber-400/50", icon: Crown, glow: "shadow-amber-500/40" },
 ];
 
 export default function RankBadge({ elo, size = "md", showElo = true }: RankBadgeProps) {
@@ -20,9 +20,9 @@ export default function RankBadge({ elo, size = "md", showElo = true }: RankBadg
     const Icon = config.icon;
 
     const sizeClasses = {
-        sm: { container: "px-2 py-0.5", icon: 12, text: "text-[9px]", elo: "text-[8px]" },
-        md: { container: "px-3 py-1", icon: 14, text: "text-[10px]", elo: "text-[9px]" },
-        lg: { container: "px-6 py-2.5", icon: 20, text: "text-sm", elo: "text-xs" },
+        sm: { container: "px-3 py-1", icon: 14, text: "text-[12px]", elo: "text-[14px]" },
+        md: { container: "px-4 py-1.5", icon: 18, text: "text-[14px]", elo: "text-[18px]" },
+        lg: { container: "px-8 py-3", icon: 24, text: "text-lg", elo: "text-2xl" },
     };
 
     const currentSize = sizeClasses[size];
@@ -54,12 +54,12 @@ export default function RankBadge({ elo, size = "md", showElo = true }: RankBadg
             {/* ELO Overlay/Subtext */}
             {showElo && (
                 <div className={`
-          flex items-center gap-1 font-mono font-bold
-          ${currentSize.elo} opacity-60 group-hover:opacity-100 transition-all duration-500
-          text-slate-400
+          flex items-center gap-2 font-mono font-black
+          ${currentSize.elo} transition-all duration-500
+          text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]
         `}>
-                    <span className="text-[7px] tracking-tighter uppercase opacity-50">Score Tactical</span>
-                    <span className={config.color}>{score}</span>
+                    <span className="text-[10px] tracking-widest uppercase opacity-70 text-slate-400">SCORE</span>
+                    <span className={`${config.color} scale-110 origin-left`}>{score}</span>
                 </div>
             )}
 

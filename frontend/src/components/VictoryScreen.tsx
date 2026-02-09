@@ -319,11 +319,13 @@ function StatCard({
 }) {
   return (
     <div className="text-center px-4">
-      <div className="flex items-center justify-center gap-2 mb-1">
-        <span className="text-xl">{icon}</span>
-        <p className="text-3xl font-bold text-white">{value}</p>
+      <div className="flex items-center justify-center gap-3 mb-2">
+        <span className="text-2xl">{icon}</span>
+        <p className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{value}</p>
       </div>
-      <p className="text-slate-400 text-sm">{label}</p>
+      <p className="text-slate-300 text-sm uppercase tracking-widest font-rajdhani font-bold flex items-center justify-center gap-1 opacity-80">
+        {label}
+      </p>
     </div>
   );
 }

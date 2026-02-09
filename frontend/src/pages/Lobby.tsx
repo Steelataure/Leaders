@@ -201,6 +201,16 @@ export default function Lobby({
     }
 
     setUser(currentUser);
+
+    // Refresh user profile from backend if they are NOT a guest
+    if (currentUser && currentUser.username !== "Joueur" && currentUser.email !== "") {
+      authService.getProfile(currentUser.id)
+        .then(updatedUser => {
+          console.log("Profile refreshed:", updatedUser);
+          setUser(updatedUser);
+        })
+        .catch(err => console.error("Failed to refresh profile", err));
+    }
   }, []);
 
   const handleAuth = async () => {
@@ -370,7 +380,7 @@ export default function Lobby({
             </div>
             {user && (
               <div className="border-l border-white/10 pl-4 py-1">
-                <RankBadge elo={user.elo} size="sm" />
+                <RankBadge elo={user.elo} size="md" />
               </div>
             )}
             <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] opacity-30 group-hover:opacity-100 transition-opacity">▼</div>

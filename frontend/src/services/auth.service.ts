@@ -47,10 +47,21 @@ export const authService = {
                 id: guestId,
                 username: "Joueur", // Default guest name
                 email: "",
+                elo: 1000,
                 roles: []
             };
         }
 
         return null;
+    },
+
+    async getProfile(userId: string): Promise<User> {
+        const user = await apiClient.get<User>(`/auth/me?userId=${userId}`);
+
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        }
+
+        return user;
     }
 };
