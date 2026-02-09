@@ -6,7 +6,9 @@ import type { User } from "../types/auth.types";
 import RankBadge from "../components/RankBadge";
 import Leaderboard from "../components/Leaderboard";
 import { Rain } from "../components/Rain";
-import { GlitchText } from "../components/GlitchText"; // Optional usage
+import { GlitchText } from "../components/GlitchText";
+import { HexGrid } from "../components/HexGrid";
+import { SystemStatus } from "../components/SystemStatus";
 
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
@@ -193,6 +195,7 @@ export default function Lobby({
         style={{ backgroundImage: 'url("/bg.png")' }}
       />
       <div className="fixed inset-0 z-0 bg-gradient-to-t from-black via-slate-950/80 to-slate-900/50" />
+      <HexGrid />
       <Rain />
 
       {/* Noise Overlay */}
@@ -246,13 +249,13 @@ export default function Lobby({
       </div>
 
       {/* MAIN LAYOUT */}
-      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col lg:flex-row gap-8 items-stretch justify-center h-[calc(100vh-100px)]">
+      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col lg:flex-row gap-8 items-stretch justify-center h-[calc(100vh-100px)] pb-12">
 
         {/* LEFT: ACTION PANEL */}
         <div className="flex-[2] flex flex-col gap-6 h-full">
 
           {/* HERO / PLAY */}
-          <div className="flex-1 bg-gradient-to-br from-slate-900/90 to-black/90 backdrop-blur-md border-l-2 border-cyan-500/50 rounded-r-xl p-8 flex flex-col justify-between group relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+          <div className="flex-1 bg-gradient-to-br from-slate-900/90 to-black/90 backdrop-blur-md border-l-2 border-cyan-500/50 rounded-r-xl p-8 flex flex-col justify-between group relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] holo-corner bg-scanline">
 
             {/* Decorative Lines */}
             <div className="absolute top-0 right-0 w-32 h-1 bg-gradient-to-l from-cyan-500/50 to-transparent" />
@@ -321,11 +324,13 @@ export default function Lobby({
                     }
                   }}
                   className={`
-                        relative flex-1 py-3 px-8 rounded font-orbitron font-bold tracking-[0.1em] uppercase transition-all duration-300
-                        ${isSearching
-                      ? 'bg-amber-600/10 border border-amber-500/50 text-amber-500 hover:bg-amber-600/20'
+                            relative flex-1 py-4 px-8 font-orbitron font-bold tracking-[0.1em] uppercase transition-all duration-300
+                            clip-path-button
+                            ${isSearching
+                      ? 'bg-amber-600/20 border-amber-500 text-amber-500 hover:bg-amber-600/30'
                       : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(8,145,178,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]'}
-                        `}
+                            `}
+                  style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%)' }}
                 >
                   {isSearching ? sessionStatus : "RECHERCHER UNE PARTIE"}
                 </button>
@@ -334,7 +339,7 @@ export default function Lobby({
           </div>
 
           {/* PRIVATE GAME */}
-          <div className="bg-slate-900/80 backdrop-blur border border-white/5 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-white/10 transition-colors">
+          <div className="bg-slate-900/80 backdrop-blur border border-white/5 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-white/10 transition-colors holo-corner">
             <div className="flex-1">
               <h3 className="font-orbitron text-lg font-bold text-slate-200 uppercase tracking-wide">Partie Privée</h3>
               <p className="text-slate-500 text-sm font-rajdhani">Code d'accès requis pour la connexion sécurisée.</p>
@@ -364,7 +369,7 @@ export default function Lobby({
                 <button onClick={() => { setCreatedSessionCode(null); setIsCreatingPrivate(false); }} className="text-xs text-red-400 hover:text-red-300 font-orbitron tracking-widest bg-red-900/10 px-3 py-2 rounded h-fit">ANNULER</button>
               </div>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <button
                   onClick={async () => {
                     try {
@@ -379,15 +384,15 @@ export default function Lobby({
                     }
                   }}
                   disabled={isCreatingPrivate}
-                  className="px-5 py-2 rounded border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 font-orbitron text-xs font-bold tracking-widest transition-colors"
+                  className="px-6 py-2 border-l-2 border-emerald-500 bg-emerald-900/20 hover:bg-emerald-500/20 text-emerald-400 font-orbitron text-sm font-bold tracking-widest transition-all skew-x-[-10deg] hover:skew-x-[-15deg]"
                 >
-                  CRÉER
+                  <span className="skew-x-[10deg] block">CRÉER</span>
                 </button>
                 <button
                   onClick={() => setJoinMode(true)}
-                  className="px-5 py-2 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 font-orbitron text-xs font-bold tracking-widest transition-colors"
+                  className="px-6 py-2 border-l-2 border-white/30 bg-white/5 hover:bg-white/10 text-slate-200 font-orbitron text-sm font-bold tracking-widest transition-all skew-x-[-10deg] hover:skew-x-[-15deg]"
                 >
-                  REJOINDRE
+                  <span className="skew-x-[10deg] block">REJOINDRE</span>
                 </button>
               </div>
             )}
@@ -395,7 +400,7 @@ export default function Lobby({
         </div>
 
         {/* RIGHT: LEADERBOARD */}
-        <div className="flex-1 min-w-[320px] bg-black/40 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex flex-col shadow-2xl">
+        <div className="flex-1 min-w-[320px] bg-black/40 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex flex-col shadow-2xl holo-corner bg-scanline">
           <div className="p-4 border-b border-white/5 bg-white/5">
             <h3 className="font-orbitron font-bold text-cyan-400 tracking-widest text-sm uppercase flex items-center gap-2">
               <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
@@ -408,6 +413,8 @@ export default function Lobby({
         </div>
 
       </div>
+
+      <SystemStatus />
 
       {/* --- MODALS (Login/Register/Settings) - Styled consistently --- */}
       {loginOpen && (

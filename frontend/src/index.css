@@ -95,8 +95,8 @@ body {
     21%,
     23%,
     25%,
-    54%,
-    56%,
+    91%,
+    93%,
     100% {
         opacity: 1;
         filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8)) drop-shadow(0 0 20px rgba(0, 255, 255, 0.5));
@@ -156,4 +156,67 @@ body {
     50% {
         opacity: 0.6;
     }
+}
+
+@keyframes scan {
+    0% {
+        transform: translateY(-100%);
+    }
+
+    100% {
+        transform: translateY(100%);
+    }
+}
+
+.animate-scan {
+    animation: scan 8s linear infinite;
+}
+
+/* Holographic / Tactical UI Accents */
+.bg-scanline {
+    background: linear-gradient(to bottom,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0) 50%,
+            rgba(0, 0, 0, 0.2) 50%,
+            rgba(0, 0, 0, 0.2));
+    background-size: 100% 4px;
+}
+
+.holo-corner {
+    position: relative;
+    overflow: hidden;
+}
+
+.holo-corner::before,
+.holo-corner::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.holo-corner::before {
+    top: 0;
+    left: 0;
+    border-top: 2px solid rgba(6, 182, 212, 0.3);
+    /* cyan-500/30 */
+    border-left: 2px solid rgba(6, 182, 212, 0.3);
+}
+
+.holo-corner::after {
+    bottom: 0;
+    right: 0;
+    border-bottom: 2px solid rgba(6, 182, 212, 0.3);
+    border-right: 2px solid rgba(6, 182, 212, 0.3);
+}
+
+.holo-corner:hover::before,
+.holo-corner:hover::after {
+    border-color: rgba(34, 211, 238, 0.8);
+    /* cyan-400 */
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
 }
