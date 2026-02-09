@@ -9,7 +9,7 @@ import RankBadge from "./RankBadge";
 
 // === TYPES ===
 
-type VictoryType = "CAPTURE" | "ENCIRCLEMENT" | "TIMEOUT";
+type VictoryType = "CAPTURE" | "ENCIRCLEMENT" | "TIMEOUT" | "RESIGNATION";
 
 interface VictoryScreenProps {
   winner: 0 | 1;
@@ -21,6 +21,8 @@ interface VictoryScreenProps {
   winnerPieceCount?: number;
   loserPieceCount?: number;
   winnerElo?: number; // 🆕 Added optionally
+  winnerEloChange?: number; // 🆕 Added
+  loserEloChange?: number; // 🆕 Added
 }
 
 // === CONSTANTES ===
@@ -62,6 +64,11 @@ const VICTORY_CONFIG: Record<
     label: "Temps Épuisé",
     icon: "⌛",
     description: "Le temps de l'adversaire est écoulé !",
+  },
+  RESIGNATION: {
+    label: "Abandon",
+    icon: "🏳️",
+    description: "L'adversaire a capitulé !",
   },
 };
 
@@ -333,6 +340,8 @@ export default function VictoryScreen({
   winnerPieceCount = 0,
   loserPieceCount = 0,
   winnerElo = 0,
+  winnerEloChange = 0,
+  loserEloChange = 0,
 }: VictoryScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -479,6 +488,12 @@ export default function VictoryScreen({
                 value={loserPieceCount}
                 label="Unités perdant"
                 icon="💀"
+              />
+              <div className="w-px bg-slate-700" />
+              <StatCard
+                value={(winnerEloChange ?? 0) >= 0 ? `+${winnerEloChange ?? 0}` : (winnerEloChange ?? 0)}
+                label="Variation ELO"
+                icon="📈"
               />
             </div>
 

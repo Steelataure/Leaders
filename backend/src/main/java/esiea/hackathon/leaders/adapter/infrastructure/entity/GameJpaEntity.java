@@ -57,6 +57,15 @@ public class GameJpaEntity {
     @Builder.Default
     private int remainingTimeP1 = 300;
 
+    @Column(name = "elo_change_p0")
+    private Integer eloChangeP0;
+
+    @Column(name = "elo_change_p1")
+    private Integer eloChangeP1;
+
+    @Column(name = "scenario_id")
+    private Integer scenarioId;
+
     @Column(name = "last_timer_update")
     private java.time.LocalDateTime lastTimerUpdate;
 

@@ -49,6 +49,8 @@ export interface Game {
   players: Player[];
   remainingTimeP0: number;
   remainingTimeP1: number;
+  eloChangeP0?: number;
+  eloChangeP1?: number;
   lastTimerUpdate?: string;
   mode?: string;
 }
@@ -264,6 +266,19 @@ export async function skipActions(gameId: string, playerId: string): Promise<voi
   }
 }
 
+export async function surrender(gameId: string, playerId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/games/${gameId}/surrender`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ playerId }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to surrender: ${errorText}`);
+  }
+}
+
 // --- Session API ---
 
 export async function joinPublicQueue(playerId: string): Promise<Session> {
@@ -333,6 +348,7 @@ export const gameApi = {
   useAbility,
   performAction,
   skipActions,
+  surrender,
   leaveSession,
   mapPieceToFrontend,
   mapGameToFrontend,

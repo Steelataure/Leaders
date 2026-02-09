@@ -8,19 +8,21 @@ import java.util.List;
 import java.util.UUID;
 
 public record GameStateDto(
-                UUID gameId,
-                GameStatus status,
-                GamePhase currentPhase,
-                int currentPlayerIndex,
-                int turnNumber,
-                boolean hasRecruitedThisTurn,
-                Integer winnerPlayerIndex,
-                VictoryType winnerVictoryType,
-                int remainingTimeP0,
-                int remainingTimeP1,
-                LocalDateTime lastTimerUpdate,
+        UUID gameId,
+        GameStatus status,
+        GamePhase currentPhase,
+        int currentPlayerIndex,
+        int turnNumber,
+        boolean hasRecruitedThisTurn,
+        Integer winnerPlayerIndex,
+        VictoryType winnerVictoryType,
+        int remainingTimeP0,
+        int remainingTimeP1,
+        LocalDateTime lastTimerUpdate,
+        Integer eloChangeP0,
+        Integer eloChangeP1,
 
-                List<PieceDto> pieces,
-                List<CardDto> river,
-                List<PlayerDto> players) {
+        List<PieceDto> pieces,
+        List<CardDto> river,
+        List<PlayerDto> players) {
 }

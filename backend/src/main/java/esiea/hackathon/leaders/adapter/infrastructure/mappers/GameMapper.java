@@ -45,6 +45,9 @@ public class GameMapper {
                                                 .collect(Collectors.toList()) : null)
                                 .remainingTimeP0(entity.getRemainingTimeP0())
                                 .remainingTimeP1(entity.getRemainingTimeP1())
+                                .eloChangeP0(entity.getEloChangeP0())
+                                .eloChangeP1(entity.getEloChangeP1())
+                                .scenarioId(entity.getScenarioId())
                                 .lastTimerUpdate(entity.getLastTimerUpdate())
                                 .build();
         }
@@ -66,6 +69,9 @@ public class GameMapper {
                                 .winnerVictoryType(domain.getWinnerVictoryType())
                                 .remainingTimeP0(domain.getRemainingTimeP0())
                                 .remainingTimeP1(domain.getRemainingTimeP1())
+                                .eloChangeP0(domain.getEloChangeP0())
+                                .eloChangeP1(domain.getEloChangeP1())
+                                .scenarioId(domain.getScenarioId())
                                 .lastTimerUpdate(domain.getLastTimerUpdate())
                                 .build();
 

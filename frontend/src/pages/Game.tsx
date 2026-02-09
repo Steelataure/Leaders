@@ -185,18 +185,20 @@ function SidebarCard({
   );
 }
 
-export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: string; sessionId: string; onBackToLobby: () => void }) {
+export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }: { gameId: string; sessionId?: string; onBackToLobby: () => void }) {
+  const sessionId = propSessionId || gameId;
   const [gameState, setGameState] = useState<GameFrontend | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<PieceFrontend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localPlayerIndex, setLocalPlayerIndex] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
   const isLeavingRef = useRef(false);
 
   // Audio settings
-  const [volume, setVolume] = useState(0.3); // 30% volume for music
-  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [volume] = useState(0.3); // 30% volume for music
+  const [sfxEnabled] = useState(true);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   // === GESTION DES MODES D'ACTION (Move vs Ability) ===
@@ -293,7 +295,6 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
   const [playCharacterSelectSfx] = useSound(characterSelectSfx, { volume: volume / 100 });
 
   const playButtonClickSfx = () => { if (sfxEnabled) playClick(); };
-  const playButtonHoverSfx = () => { if (sfxEnabled && (volume > 0)) { /* logic for hover if needed */ } };
 
   useEffect(() => {
     const currentUser = authService.getUser();
@@ -310,9 +311,9 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     if (game.remainingTimeP1 !== undefined) setTimeP1(game.remainingTimeP1);
 
     if (mappedGame.players && mappedGame.players.length > 0) {
-      const user = authService.getUser();
-      if (user) {
-        const localPlayer = mappedGame.players.find((p: any) => String(p.userId) === String(user.id));
+      const u = authService.getUser();
+      if (u) {
+        const localPlayer = mappedGame.players.find((p: any) => String(p.userId) === String(u.id));
         if (localPlayer !== undefined) {
           setLocalPlayerIndex(localPlayer.playerIndex);
         }
@@ -379,6 +380,27 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
 
     return () => clearInterval(interval);
   }, [gameId, updateGameState]);
+
+  const handleSurrender = async () => {
+    // On récupère l'ID joueur. Priorité au user object (auth/guest).
+    const currentUser = user || authService.getUser();
+    const playerId = currentUser?.id || sessionId;
+
+    if (!playerId) {
+      console.error("Surrender aborted: No playerId found");
+      return;
+    }
+
+    try {
+      isLeavingRef.current = true;
+      await gameApi.surrender(gameId, playerId);
+      setShowSurrenderModal(false);
+      onBackToLobby();
+    } catch (e) {
+      console.error("Surrender failed", e);
+      setError("Échec de l'abandon (Vérifiez votre connexion)");
+    }
+  };
 
   useEffect(() => {
     if (grapplerTarget && !grapplerMode) {
@@ -493,8 +515,6 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
-
-        const mappedGame = gameApi.mapGameToFrontend(game);
       } catch (err) {
         console.error("Move error:", err);
       }
@@ -648,12 +668,13 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
     );
   }
 
-  if (gameState.status === "FINISHED_CAPTURE" || gameState.status === "FINISHED" || (gameState.winnerPlayerIndex !== undefined && gameState.winnerPlayerIndex !== null)) {
+  if (!isLeavingRef.current && (gameState.status === "FINISHED_CAPTURE" || gameState.status === "FINISHED" || (gameState.winnerPlayerIndex !== undefined && gameState.winnerPlayerIndex !== null))) {
     const winnerIndex = gameState.winnerPlayerIndex ?? 0;
     const loserIndex = winnerIndex === 0 ? 1 : 0;
     const winnerPieces = gameState.pieces.filter((p) => p.ownerIndex === winnerIndex);
     const loserPieces = gameState.pieces.filter((p) => p.ownerIndex === loserIndex);
     const victoryType = gameState.winnerVictoryType || (gameState.status === "FINISHED_CAPTURE" ? "CAPTURE" : "ENCIRCLEMENT");
+    const winnerElo = gameState.players.find((p) => p.playerIndex === winnerIndex)?.elo;
 
     return (
       <VictoryScreen
@@ -664,6 +685,9 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         turnNumber={gameState.turnNumber}
         winnerPieceCount={winnerPieces.length}
         loserPieceCount={loserPieces.length}
+        winnerElo={winnerElo}
+        winnerEloChange={winnerIndex === 0 ? gameState.eloChangeP0 : gameState.eloChangeP1}
+        loserEloChange={winnerIndex === 0 ? gameState.eloChangeP1 : gameState.eloChangeP0}
       />
     );
   }
@@ -1103,8 +1127,12 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
         )}
         <button
           onClick={() => {
-            isLeavingRef.current = true;
-            onBackToLobby();
+            if (gameState.status === "IN_PROGRESS") {
+              setShowSurrenderModal(true);
+            } else {
+              isLeavingRef.current = true;
+              onBackToLobby();
+            }
             playButtonClickSfx();
           }}
           className="px-8 py-3 bg-rose-900/40 border border-rose-500/50 text-rose-500 font-bold rounded-xl hover:bg-rose-500 hover:text-white transition-all uppercase tracking-widest"
@@ -1112,6 +1140,44 @@ export default function Game({ gameId, sessionId, onBackToLobby }: { gameId: str
           Quitter
         </button>
       </div>
+
+      {/* SURRENDER CONFIRMATION MODAL */}
+      {showSurrenderModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-[#0f172a] border-2 border-rose-500/30 p-8 rounded-3xl max-w-md w-full shadow-[0_0_50px_rgba(244,63,94,0.2)] animate-in zoom-in-95 duration-300">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/20">
+                <span className="text-4xl">⚠️</span>
+              </div>
+              <h3 className="font-cyber text-2xl font-black text-white mb-2 tracking-wider uppercase italic">ABANDONNER ?</h3>
+              <p className="text-slate-400 mb-8 leading-relaxed">
+                Êtes-vous sûr de vouloir quitter la partie ? Ce sera considéré comme un <span className="text-rose-400 font-bold uppercase">abandon</span> et vous perdrez des <span className="text-amber-400 font-bold">points de rang</span>.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    handleSurrender();
+                    playButtonClickSfx();
+                  }}
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-2xl transition-all uppercase tracking-[0.2em] shadow-lg shadow-rose-900/20"
+                >
+                  Confirmer l'abandon
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSurrenderModal(false);
+                    playButtonClickSfx();
+                  }}
+                  className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl transition-all uppercase tracking-[0.2em] border border-white/5"
+                >
+                  Rester et se battre
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap');

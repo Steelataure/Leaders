@@ -19,7 +19,7 @@ function App() {
   };
 
   if (step === "game" && gameId) {
-    return <Game gameId={gameId} onBackToLobby={handleBackToLobby} />;
+    return <Game gameId={gameId} sessionId={gameId} onBackToLobby={handleBackToLobby} />;
   }
 
   if (step === "lobby") {

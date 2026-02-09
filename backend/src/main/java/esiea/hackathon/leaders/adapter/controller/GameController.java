@@ -75,4 +75,21 @@ public class GameController {
 
         return ResponseEntity.ok(updatedGameState);
     }
+
+    @PostMapping("/{gameId}/surrender")
+    public ResponseEntity<GameStateDto> surrender(@PathVariable UUID gameId,
+            @RequestBody java.util.Map<String, String> body) {
+        String playerId = body.get("playerId");
+        if (playerId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        gameService.surrender(gameId, playerId);
+
+        // Get updated state and notify
+        GameStateDto updatedGameState = gameQueryService.getGameState(gameId);
+        messagingTemplate.convertAndSend("/topic/game/" + gameId, updatedGameState);
+
+        return ResponseEntity.ok(updatedGameState);
+    }
 }

@@ -5,7 +5,6 @@ import esiea.hackathon.leaders.application.dto.response.GameStateDto;
 import esiea.hackathon.leaders.application.dto.response.PieceDto;
 import esiea.hackathon.leaders.application.dto.response.PlayerDto;
 import esiea.hackathon.leaders.domain.model.GameEntity;
-import esiea.hackathon.leaders.domain.model.enums.CardState;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RecruitmentCardRepository;
@@ -93,7 +92,11 @@ public class GameQueryService {
                                                                                 "DEBUG: Player userId is NULL for index: "
                                                                                                 + p.getPlayerIndex());
                                                         }
-                                                        return new PlayerDto(userId, username, elo,
+                                                        Integer playerEloChange = (p.getPlayerIndex() == 0)
+                                                                        ? game.getEloChangeP0()
+                                                                        : game.getEloChangeP1();
+
+                                                        return new PlayerDto(userId, username, elo, playerEloChange,
                                                                         p.getPlayerIndex());
                                                 })
                                                 .toList()
@@ -132,6 +135,8 @@ public class GameQueryService {
                                 timeP0,
                                 timeP1,
                                 game.getLastTimerUpdate(),
+                                game.getEloChangeP0(),
+                                game.getEloChangeP1(),
                                 pieces,
                                 river,
                                 players);

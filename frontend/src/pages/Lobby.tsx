@@ -370,7 +370,7 @@ export default function Lobby({
             </div>
             {user && (
               <div className="border-l border-white/10 pl-4 py-1">
-                <RankBadge elo={user.elo} size="sm" showElo={false} />
+                <RankBadge elo={user.elo} size="sm" />
               </div>
             )}
             <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] opacity-30 group-hover:opacity-100 transition-opacity">▼</div>

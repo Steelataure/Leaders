@@ -32,7 +32,10 @@ public class GameEntity {
     private LocalDateTime updatedAt;
     private int remainingTimeP0;
     private int remainingTimeP1;
+    private Integer eloChangeP0;
+    private Integer eloChangeP1;
     private LocalDateTime lastTimerUpdate;
+    private Integer scenarioId;
     private List<GamePlayerEntity> players;
     private List<PieceEntity> pieces;
     private List<RecruitmentCardEntity> cards;

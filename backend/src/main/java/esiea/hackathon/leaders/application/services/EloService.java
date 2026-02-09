@@ -13,14 +13,27 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EloService {
 
+    public record EloResult(int winnerDelta, int loserDelta) {
+    }
+
     private final UserCredentialsRepository userCredentialsRepository;
     private static final int K_FACTOR = 32;
 
+    public EloResult calculateEloDelta(int winnerElo, int loserElo) {
+        double expectedWinner = 1.0 / (1.0 + Math.pow(10, (loserElo - winnerElo) / 400.0));
+        double expectedLoser = 1.0 / (1.0 + Math.pow(10, (winnerElo - loserElo) / 400.0));
+
+        int newWinner = (int) Math.round(winnerElo + K_FACTOR * (1.0 - expectedWinner));
+        int newLoser = (int) Math.round(loserElo + K_FACTOR * (0.0 - expectedLoser));
+
+        return new EloResult(newWinner - winnerElo, newLoser - loserElo);
+    }
+
     @Transactional
-    public void updateElo(UUID winnerUserId, UUID loserUserId) {
+    public Optional<EloResult> updateElo(UUID winnerUserId, UUID loserUserId) {
         if (winnerUserId == null || loserUserId == null) {
             System.out.println("ELO: One of the players is a guest. No ELO update.");
-            return;
+            return Optional.empty();
         }
 
         Optional<UserCredentialsEntity> winnerOpt = userCredentialsRepository.findById(winnerUserId);
@@ -33,25 +46,23 @@ public class EloService {
             int winnerElo = winner.getElo();
             int loserElo = loser.getElo();
 
-            // expected score
-            double expectedWinnerProgress = 1.0 / (1.0 + Math.pow(10, (loserElo - winnerElo) / 400.0));
-            double expectedLoserProgress = 1.0 / (1.0 + Math.pow(10, (winnerElo - loserElo) / 400.0));
+            EloResult result = calculateEloDelta(winnerElo, loserElo);
 
-            // New ratings
-            int newWinnerElo = (int) Math.round(winnerElo + K_FACTOR * (1.0 - expectedWinnerProgress));
-            int newLoserElo = (int) Math.round(loserElo + K_FACTOR * (0.0 - expectedLoserProgress));
-
-            winner.setElo(newWinnerElo);
-            loser.setElo(newLoserElo);
+            winner.setElo(winnerElo + result.winnerDelta());
+            loser.setElo(loserElo + result.loserDelta());
 
             userCredentialsRepository.save(winner);
             userCredentialsRepository.save(loser);
 
             System.out
-                    .println("ELO UPDATED: " + winner.getUsername() + " (" + winnerElo + " -> " + newWinnerElo + ") vs "
-                            + loser.getUsername() + " (" + loserElo + " -> " + newLoserElo + ")");
+                    .println("ELO UPDATED: " + winner.getUsername() + " (" + winnerElo + " -> "
+                            + (winnerElo + result.winnerDelta()) + ") vs "
+                            + loser.getUsername() + " (" + loserElo + " -> " + (loserElo + result.loserDelta()) + ")");
+
+            return Optional.of(result);
         } else {
             System.out.println("ELO: One or both authenticated users not found in repository. No update.");
+            return Optional.empty();
         }
     }
 }

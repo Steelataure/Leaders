@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import esiea.hackathon.leaders.application.services.EloService.EloResult;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +58,17 @@ public class GameService {
                     .map(esiea.hackathon.leaders.domain.model.GamePlayerEntity::getUserId)
                     .findFirst().orElse(null);
 
-            eloService.updateElo(winnerUserId, loserUserId);
+            Optional<EloResult> eloResult = eloService.updateElo(winnerUserId, loserUserId);
+
+            EloResult result = eloResult.orElseGet(() -> eloService.calculateEloDelta(1200, 1200));
+
+            if (winnerIndex == 0) {
+                game.setEloChangeP0(result.winnerDelta());
+                game.setEloChangeP1(result.loserDelta());
+            } else {
+                game.setEloChangeP0(result.loserDelta());
+                game.setEloChangeP1(result.winnerDelta());
+            }
         }
 
         gameRepository.save(game);
@@ -88,6 +100,30 @@ public class GameService {
 
         game.setUpdatedAt(LocalDateTime.now());
         return gameRepository.save(game);
+    }
+
+    @Transactional
+    public void surrender(UUID gameId, String playerId) {
+        GameEntity game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        if (game.getStatus() == GameStatus.FINISHED) {
+            return;
+        }
+
+        // Find surrendering player index
+        Integer surrenderingIndex = game.getPlayers().stream()
+                .filter(p -> p.getUserId().toString().equals(playerId))
+                .map(esiea.hackathon.leaders.domain.model.GamePlayerEntity::getPlayerIndex)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Player not found in this game"));
+
+        Integer winnerIndex = (surrenderingIndex == 0) ? 1 : 0;
+
+        System.out.println("DEBUG: Surrender in game " + gameId + " by player " + surrenderingIndex + ". Winner is "
+                + winnerIndex);
+
+        finishGame(gameId, winnerIndex, esiea.hackathon.leaders.domain.model.enums.VictoryType.RESIGNATION);
     }
 
     private void updateSessionStatusToFinished(UUID gameId) {
