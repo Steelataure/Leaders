@@ -1,4 +1,4 @@
-const BASE_URL = '/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient = {
     async post<T>(endpoint: string, data: unknown): Promise<T> {
