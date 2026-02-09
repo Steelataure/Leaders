@@ -421,6 +421,20 @@ export default function HexBoard(props: HexBoardProps) {
       });
     }
 
+    // ROYAL GUARD: Adjacent to Leader (Distance 1 or 2)
+    if (selectedPiece.characterId === "ROYAL_GUARD") {
+      const leader = pieces.find(p => p.ownerIndex === selectedPiece.ownerIndex && p.characterId === "LEADER");
+      if (leader) {
+        cells.forEach(cell => {
+          if (findPieceAtCell(cell.q, cell.r)) return;
+          const dist = hexDistance(cell.q, cell.r, leader.q, leader.r);
+          if (dist >= 1 && dist <= 2) {
+            dests.add(`${cell.q},${cell.r}`);
+          }
+        });
+      }
+    }
+
     return dests;
   }, [selectedPiece, pieces, cells, isLocalTurn]);
 
@@ -582,6 +596,8 @@ export default function HexBoard(props: HexBoardProps) {
         if (midPiece) targetId = midPiece.id;
       } else if (selectedPiece.characterId === "CAVALRY") {
         abilityId = "CAVALRY_CHARGE";
+      } else if (selectedPiece.characterId === "ROYAL_GUARD") {
+        abilityId = "ROYAL_GUARD_PROTECT";
       }
 
       if (abilityId) {
