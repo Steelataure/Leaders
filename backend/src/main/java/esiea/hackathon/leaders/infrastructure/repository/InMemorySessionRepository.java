@@ -51,22 +51,18 @@ public class InMemorySessionRepository implements SessionRepository {
 
     @Override
     public Optional<Session> findSuitableSession(String excludedPlayerId) {
-        System.out.println("DEBUG: Finding suitable session excluding player: " + excludedPlayerId);
+        System.out.println("DEBUG: Finding suitable session (any waiting public session)");
         return sessions.values().stream()
                 .filter(s -> {
                     boolean isWaiting = s.getStatus() == Session.SessionStatus.WAITING_FOR_PLAYER;
                     boolean notPrivate = !s.isPrivate();
 
-                    // Allow playing against oneself for testing
-                    // boolean notSelf = !s.getPlayer1().getId().equals(excludedPlayerId);
-                    boolean notSelf = !s.getPlayer1().getId().equals(excludedPlayerId);
-
-                    if (isWaiting && notPrivate && notSelf)
+                    if (isWaiting && notPrivate)
                         return true;
 
                     // Log rejection reason for debugging
                     System.out.println("DEBUG: Rejected " + s.getId() + " Waiting=" + isWaiting +
-                            " Public=" + notPrivate + " Self=" + !notSelf);
+                            " Public=" + notPrivate);
                     return false;
                 })
                 .findFirst();
