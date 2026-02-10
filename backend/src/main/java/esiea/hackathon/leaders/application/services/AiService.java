@@ -33,10 +33,93 @@ public class AiService {
     private final RecruitmentService recruitmentService;
     private final RecruitmentCardRepository cardRepository;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final AiSimulationService aiSimulationService;
 
     @org.springframework.context.annotation.Lazy
     @org.springframework.beans.factory.annotation.Autowired
     private AiService self;
+
+    // ... (rest of fields)
+
+    // ...
+
+    private double evaluateMoveHard(PieceEntity piece, HexCoord dest, List<PieceEntity> allPieces,
+            List<PieceEntity> enemyPieces) {
+        double score = 0;
+
+        // 1. MATERIAL & KILL INSTINCT
+        PieceEntity target = enemyPieces.stream()
+                .filter(e -> e.getQ() == dest.q() && e.getR() == dest.r())
+                .findFirst().orElse(null);
+
+        if (target != null) {
+            if ("LEADER".equals(target.getCharacterId()))
+                return 1000000.0; // CHECKMATE ! HUGE SCORE (1M)
+            score += 150.0; // Kill unit (Was 100) -> Encourage trading
+        }
+
+        // 1b. PASSIVE INSTANT WIN CHECKS (New)
+        PieceEntity enemyLeader = enemyPieces.stream()
+                .filter(e -> "LEADER".equals(e.getCharacterId()))
+                .findFirst().orElse(null);
+
+        if (enemyLeader != null) {
+            int distToEnemyLeader = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
+
+            // ASSASSIN: If I am Assassin and I move adjacent to Leader -> I WIN
+            if ("ASSASSIN".equals(piece.getCharacterId()) && distToEnemyLeader == 1) {
+                return 1000000.0;
+            }
+
+            // ARCHER: If I am Archer and I move to range 2 (Line) -> High Pressure (Almost
+            // Win if supported)
+            if ("ARCHER".equals(piece.getCharacterId()) && distToEnemyLeader == 2
+                    && isInLoS(piece, enemyLeader.getQ(), enemyLeader.getR())) { // Note: isInLoS uses piece Q/R, we
+                                                                                 // need dest Q/R
+                // Wait, isInLoS takes PieceEntity p1. We need to check LoS from DEST.
+                if (isInLoS(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR())) {
+                    score += 500.0; // Massive pressure
+                }
+            }
+        }
+
+        // 2. SAFETY (Deep Simulation)
+        // Check if this move leads to death (Minimax-lite)
+        if (aiSimulationService != null) {
+            double riskScore = aiSimulationService.evaluateFutureRisk(allPieces, piece, dest);
+            // Risk is negative.
+            // If risk is -100 (Lose Unit) and Score is +150 (Kill Unit) -> Net +50 -> TAKES
+            // THE TRADE.
+            // If risk is -1M (Lose Leader) -> Net Huge Negative -> AVOID.
+            score += riskScore;
+        }
+
+        // 3. POSITIONAL
+        // Control center
+        int distToCenter = distance(dest.q(), dest.r(), 0, 0);
+        score -= (distToCenter * 2.0);
+
+        // Aggression towards enemy leader
+        if (enemyLeader != null) {
+            int distError = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
+            score -= (distError * 8.0); // Closer is better (Was 5.0)
+        }
+
+        // 4. PROTECTION
+        // If I am NOT leader, am I shielding my leader?
+        if (!"LEADER".equals(piece.getCharacterId())) {
+            PieceEntity myLeader = allPieces.stream()
+                    .filter(p -> "LEADER".equals(p.getCharacterId()) && p.getOwnerIndex() == 1)
+                    .findFirst().orElse(null);
+            if (myLeader != null) {
+                int distToLeader = distance(dest.q(), dest.r(), myLeader.getQ(), myLeader.getR());
+                if (distToLeader == 1)
+                    score += 20.0; // Guarding
+            }
+        }
+
+        return score;
+    }
 
     // Fixed UUID for the AI Player
     public static final UUID AI_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
@@ -150,9 +233,13 @@ public class AiService {
                     for (PieceEntity enemy : enemyPieces) {
                         if (isInLoS(piece, enemy)
                                 && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1) {
-                            double score = 15.0;
+                            double score = 40.0; // Base: Better than simple move
                             if ("LEADER".equals(enemy.getCharacterId()))
-                                score += 1000; // Aggressive Swap
+                                score += 2000.0; // Aggressive Swap
+
+                            // If swapping puts enemy Leader in danger, boost more?
+                            // (Simple heuristic: Swap is almost always good if it disrupts enemy)
+
                             if (score > bestScore) {
                                 bestScore = score;
                                 bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
@@ -171,7 +258,7 @@ public class AiService {
                         if (distance(piece.getQ(), piece.getR(), ally.getQ(), ally.getR()) == 1) {
                             for (HexCoord d : getAdjacentCoords(ally.getQ(), ally.getR())) {
                                 if (isCellEmpty(d, allPieces)) {
-                                    double score = 5.0;
+                                    double score = 15.0; // Nice utility
                                     if (score > bestScore) {
                                         bestScore = score;
                                         bestMove = new Move(piece, d, "INNKEEPER_ASSIST", ally.getId(), d);
@@ -192,12 +279,13 @@ public class AiService {
                                 if (Math.abs(q + r) <= 3) {
                                     HexCoord d = new HexCoord((short) q, (short) r);
                                     if (isCellEmpty(d, allPieces)) {
+                                        // Prowler stealth to Range 2 of Leader = High Pressure
                                         boolean isSafe = enemyPieces.stream()
                                                 .noneMatch(e -> distance(d.q(), d.r(), e.getQ(), e.getR()) == 1);
                                         if (isSafe) {
                                             int distToLeader = distance(d.q(), d.r(), leader.getQ(), leader.getR());
                                             if (distToLeader <= 2) {
-                                                double score = 12.0;
+                                                double score = 50.0; // High threat positioning
                                                 if (score > bestScore) {
                                                     bestScore = score;
                                                     bestMove = new Move(piece, d, "PROWLER_STEALTH", null, d);
@@ -216,9 +304,10 @@ public class AiService {
                     for (PieceEntity enemy : enemyPieces) {
                         int dist = distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR());
                         if (dist > 1 && isInLoS(piece, enemy)) {
-                            double pullScore = 14.0;
+                            double pullScore = 45.0; // Strong control
                             if ("LEADER".equals(enemy.getCharacterId()))
-                                pullScore += 1000; // Aggressive Hook
+                                pullScore += 2000.0; // Aggressive Hook
+
                             int dirQ = (enemy.getQ() - piece.getQ()) / dist;
                             int dirR = (enemy.getR() - piece.getR()) / dist;
                             HexCoord pullDest = new HexCoord((short) (piece.getQ() + dirQ),
@@ -243,9 +332,9 @@ public class AiService {
                             HexCoord pushDest = new HexCoord((short) (enemy.getQ() + dirQ),
                                     (short) (enemy.getR() + dirR));
                             if (pushDest.isValid() && isCellEmpty(pushDest, allPieces)) {
-                                double score = 8.0;
+                                double score = 30.0;
                                 if ("LEADER".equals(enemy.getCharacterId()))
-                                    score += 1000; // Aggressive Push
+                                    score += 2000.0; // Aggressive Push
                                 if (score > bestScore) {
                                     bestScore = score;
                                     bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
@@ -516,64 +605,8 @@ public class AiService {
         return p1.getQ() == q2 || p1.getR() == r2 || (p1.getQ() + p1.getR() == q2 + r2);
     }
 
-    private double evaluateMoveHard(PieceEntity piece, HexCoord dest, List<PieceEntity> allPieces,
-            List<PieceEntity> enemyPieces) {
-        double score = 0;
-
-        // 1. MATERIAL & KILL INSTINCT
-        PieceEntity target = enemyPieces.stream()
-                .filter(e -> e.getQ() == dest.q() && e.getR() == dest.r())
-                .findFirst().orElse(null);
-
-        if (target != null) {
-            if ("LEADER".equals(target.getCharacterId()))
-                return 100000.0; // CHECKMATE ! HUGE SCORE
-            score += 100.0; // Kill unit
-        }
-
-        // 2. SAFETY (Simulate enemy response roughly)
-        // Would I step into a kill zone?
-        // Would I step into a kill zone?
-        // boolean isSafe = true;
-        for (PieceEntity enemy : enemyPieces) {
-            if (target != null && enemy.getId().equals(target.getId()))
-                continue; // Dead enemy can't kill back
-            if (canPotentiallyCapture(enemy, dest.q(), dest.r(), allPieces)) {
-                score -= 200.0; // High penalty for losing a unit
-                // isSafe = false;
-                if ("LEADER".equals(piece.getCharacterId()))
-                    score -= 5000.0; // LEADER MUST NOT DIE
-            }
-        }
-
-        // 3. POSITIONAL
-        // Control center
-        int distToCenter = distance(dest.q(), dest.r(), 0, 0);
-        score -= (distToCenter * 2.0);
-
-        // Aggression towards enemy leader
-        PieceEntity enemyLeader = enemyPieces.stream()
-                .filter(e -> "LEADER".equals(e.getCharacterId()))
-                .findFirst().orElse(null);
-        if (enemyLeader != null) {
-            int distError = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
-            score -= (distError * 5.0); // Closer is better
-        }
-
-        // 4. PROTECTION
-        // If I am NOT leader, am I shielding my leader?
-        if (!"LEADER".equals(piece.getCharacterId())) {
-            PieceEntity myLeader = allPieces.stream()
-                    .filter(p -> "LEADER".equals(p.getCharacterId()) && p.getOwnerIndex() == 1)
-                    .findFirst().orElse(null);
-            if (myLeader != null) {
-                int distToLeader = distance(dest.q(), dest.r(), myLeader.getQ(), myLeader.getR());
-                if (distToLeader == 1)
-                    score += 20.0; // Guarding
-            }
-        }
-
-        return score;
+    private boolean isInLoSCoords(int q1, int r1, int q2, int r2) {
+        return q1 == q2 || r1 == r2 || (q1 + r1 == q2 + r2);
     }
 
     private record Move(PieceEntity piece, HexCoord dest, String abilityId, UUID targetId, HexCoord abilityDest) {
