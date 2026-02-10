@@ -22,6 +22,19 @@ public class GameController {
     private final GameService gameService;
     private final GameQueryService gameQueryService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final esiea.hackathon.leaders.usecase.StartAiGameUseCase startAiGameUseCase;
+    private final esiea.hackathon.leaders.application.services.AiService aiService;
+
+    @PostMapping("/ai")
+    public ResponseEntity<UUID> createAiGame(@RequestBody java.util.Map<String, String> body) {
+        String playerIdStr = body.get("playerId");
+        if (playerIdStr == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        UUID playerId = UUID.fromString(playerIdStr);
+        UUID gameId = startAiGameUseCase.startAiGame(playerId);
+        return ResponseEntity.ok(gameId);
+    }
 
     @PostMapping
     public ResponseEntity<UUID> createGame(@RequestBody(required = false) CreateGameRequestDto request) {
@@ -72,6 +85,20 @@ public class GameController {
 
         // Notifier les clients via WebSocket
         messagingTemplate.convertAndSend("/topic/game/" + gameId, updatedGameState);
+
+        // TRIGGER AI (After Transaction Commit)
+        if (updatedGameState.status() == esiea.hackathon.leaders.domain.model.enums.GameStatus.IN_PROGRESS) {
+            esiea.hackathon.leaders.application.dto.response.PlayerDto currentPlayer = updatedGameState.players()
+                    .stream()
+                    .filter(p -> p.playerIndex() == updatedGameState.currentPlayerIndex())
+                    .findFirst().orElse(null);
+
+            if (currentPlayer != null && esiea.hackathon.leaders.application.services.AiService.AI_PLAYER_ID
+                    .equals(currentPlayer.userId())) {
+                System.out.println("DEBUG: Controller triggering AI interaction for game " + gameId);
+                aiService.playTurn(gameId);
+            }
+        }
 
         return ResponseEntity.ok(updatedGameState);
     }

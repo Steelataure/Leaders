@@ -46,6 +46,13 @@ public class JpaRecruitmentCardRepository implements RecruitmentCardRepository {
     }
 
     @Override
+    public List<RecruitmentCardEntity> findByGameIdAndState(UUID gameId, CardState state) {
+        return jpaRepository.findByGame_IdAndState(gameId, state).stream()
+                .map(RecruitmentCardMapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<RecruitmentCardEntity> findAllByGameId(UUID gameId) {
         return jpaRepository.findAllByGame_Id(gameId).stream()
                 .map(RecruitmentCardMapper::toDomain)

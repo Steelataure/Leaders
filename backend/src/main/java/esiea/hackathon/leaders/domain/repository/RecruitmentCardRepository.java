@@ -8,10 +8,14 @@ import java.util.UUID;
 
 public interface RecruitmentCardRepository {
     Optional<RecruitmentCardEntity> findById(UUID id);
+
     RecruitmentCardEntity save(RecruitmentCardEntity card);
 
     // Méthode métier pour la rivière
     Optional<RecruitmentCardEntity> findNextCardInDeck(UUID gameId);
+
+    List<RecruitmentCardEntity> findByGameIdAndState(UUID gameId,
+            esiea.hackathon.leaders.domain.model.enums.CardState state);
 
     List<RecruitmentCardEntity> findAllByGameId(UUID gameId);
 

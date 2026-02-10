@@ -23,11 +23,18 @@ public class JpaPieceRepository implements PieceRepository {
     public PieceEntity save(PieceEntity pieceDomain) {
         PieceJpaEntity infraEntity = PieceMapper.toEntity(pieceDomain);
 
-        // FIX: Re-attach Game Entity
+        // FIX: Re-attach entities
         if (pieceDomain.getGameId() != null) {
             esiea.hackathon.leaders.adapter.infrastructure.entity.GameJpaEntity gameRef = entityManager.getReference(
                     esiea.hackathon.leaders.adapter.infrastructure.entity.GameJpaEntity.class, pieceDomain.getGameId());
             infraEntity.setGame(gameRef);
+        }
+        if (pieceDomain.getCharacterId() != null) {
+            esiea.hackathon.leaders.adapter.infrastructure.entity.RefCharacterJpaEntity charRef = entityManager
+                    .getReference(
+                            esiea.hackathon.leaders.adapter.infrastructure.entity.RefCharacterJpaEntity.class,
+                            pieceDomain.getCharacterId());
+            infraEntity.setCharacter(charRef);
         }
 
         PieceJpaEntity saved = springRepository.save(infraEntity);
@@ -82,6 +89,13 @@ public class JpaPieceRepository implements PieceRepository {
                                 .getReference(esiea.hackathon.leaders.adapter.infrastructure.entity.GameJpaEntity.class,
                                         p.getGameId());
                         entity.setGame(gameRef);
+                    }
+                    if (p.getCharacterId() != null) {
+                        esiea.hackathon.leaders.adapter.infrastructure.entity.RefCharacterJpaEntity charRef = entityManager
+                                .getReference(
+                                        esiea.hackathon.leaders.adapter.infrastructure.entity.RefCharacterJpaEntity.class,
+                                        p.getCharacterId());
+                        entity.setCharacter(charRef);
                     }
                     return entity;
                 })

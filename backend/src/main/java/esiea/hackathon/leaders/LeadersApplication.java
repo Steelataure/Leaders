@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @EnableScheduling
+@org.springframework.scheduling.annotation.EnableAsync
 public class LeadersApplication {
 
 	public static void main(String[] args) {

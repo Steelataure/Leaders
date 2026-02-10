@@ -11,7 +11,6 @@ import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
 import esiea.hackathon.leaders.domain.model.VictoryCheckResult;
-import esiea.hackathon.leaders.domain.model.enums.GameStatus;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
@@ -19,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +33,17 @@ public class ActionService {
     private final NemesisBehavior nemesisBehavior;
     private final VictoryService victoryService; // 🆕 Injection pour Scénario 7
     private final GameService gameService;
+
+    private void log(String message) {
+        try {
+            java.nio.file.Files.write(java.nio.file.Paths.get("action_debug.log"),
+                    (java.time.LocalDateTime.now() + ": " + message + "\n").getBytes(),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+            System.out.println(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @Transactional
     public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination, UUID playerId) {
@@ -81,11 +90,9 @@ public class ActionService {
         }
 
         // Chargement de la cible (optionnel selon l'action)
-        PieceEntity target = null;
-        if (targetId != null) {
-            target = pieceRepository.findById(targetId)
-                    .orElseThrow(() -> new IllegalArgumentException("Target piece not found"));
-        }
+        final PieceEntity target = (targetId == null) ? null
+                : pieceRepository.findById(targetId)
+                        .orElseThrow(() -> new IllegalArgumentException("Target piece not found"));
 
         List<PieceEntity> allPieces = pieceRepository.findByGameId(source.getGameId());
 
@@ -102,37 +109,51 @@ public class ActionService {
 
         // Exécution de la Stratégie via Factory
         ActionAbilityStrategy strategy = actionFactory.getStrategy(abilityId);
-        System.out.println("DEBUG: Executing strategy " + abilityId);
-        if (strategy == null) {
-            throw new IllegalArgumentException("No implementation found for ability: " + abilityId);
+        log("DEBUG: Piece BEFORE action: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());
+        if (target != null) {
+            log("DEBUG: Target BEFORE action: " + target.getCharacterId() + " at " + target.getQ() + ","
+                    + target.getR());
         }
 
-        System.out.println("DEBUG: Piece BEFORE action: " + source.getCharacterId() + " at " + source.getQ() + ","
-                + source.getR());
         strategy.execute(source, target, destination, allPieces);
-        System.out.println(
-                "DEBUG: Piece AFTER action: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());
+
+        log("DEBUG: Piece AFTER strategy: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());
+        if (target != null) {
+            log("DEBUG: Target AFTER strategy: " + target.getCharacterId() + " at " + target.getQ() + ","
+                    + target.getR());
+        }
 
         // Validation de l'action
         source.setHasActedThisTurn(true);
-        PieceEntity savedSource = pieceRepository.save(source);
-        System.out.println("DEBUG: Piece AFTER save: " + savedSource.getCharacterId() + " at " + savedSource.getQ()
-                + "," + savedSource.getR() + " hasActed=" + savedSource.getHasActedThisTurn());
-
         if (target != null) {
-            pieceRepository.save(target);
+            java.util.List<PieceEntity> toSave = java.util.Arrays.asList(source, target);
+            pieceRepository.saveAll(toSave);
+            log("DEBUG: Both Source and Target saved via saveAll");
+        } else {
+            pieceRepository.save(source);
+            log("DEBUG: Source saved");
         }
 
         // 🆕 SCÉNARIO 5 : Trigger Némésis si un Leader a été déplacé par une capacité
         // Recharger les pièces car les positions ont pu changer
         List<PieceEntity> updatedPieces = pieceRepository.findByGameId(source.getGameId());
 
-        // Vérifier si la SOURCE est un Leader qui a bougé (ex: Illusionniste swap avec
-        // Leader)
+        if (target != null) {
+            final UUID tId = target.getId();
+            final String tChar = target.getCharacterId();
+            boolean found = updatedPieces.stream().anyMatch(p -> p.getId().equals(tId));
+            if (!found) {
+                log("CRITICAL: Target Piece " + tChar + " vanished after save!");
+            } else {
+                PieceEntity p = updatedPieces.stream().filter(pe -> pe.getId().equals(tId)).findFirst().get();
+                log("DEBUG: Target found in DB at " + p.getQ() + "," + p.getR());
+            }
+        }
+
+        // Vérifier si la SOURCE est un Leader qui a bougé
         triggerNemesisIfLeaderMoved(source, updatedPieces);
 
-        // Vérifier si la CIBLE est un Leader qui a été déplacé (ex: Manipulatrice,
-        // Grappler, Cogneur)
+        // Vérifier si la CIBLE est un Leader qui a été déplacé
         if (target != null) {
             triggerNemesisIfLeaderMoved(target, updatedPieces);
         }

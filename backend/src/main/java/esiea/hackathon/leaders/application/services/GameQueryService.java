@@ -71,6 +71,10 @@ public class GameQueryService {
                                                                                         ? userId.toString().substring(0,
                                                                                                         4)
                                                                                         : "Unknown");
+                                                        if (esiea.hackathon.leaders.application.services.AiService.AI_PLAYER_ID
+                                                                        .equals(userId)) {
+                                                                username = "IA";
+                                                        }
                                                         Integer elo = null;
                                                         if (userId != null) {
                                                                 var user = userCredentialsRepository.findById(userId);

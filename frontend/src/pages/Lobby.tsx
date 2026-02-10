@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { authService } from "../services/auth.service";
-import { joinPublicQueue, createPrivateSession, joinPrivateSession, cancelSearch, createGame, API_BASE_URL } from "../api/gameApi";
+import { joinPublicQueue, createPrivateSession, joinPrivateSession, cancelSearch, createGame, createAiGame, API_BASE_URL } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
 import type { User } from "../types/auth.types";
 import RankBadge from "../components/RankBadge";
@@ -350,7 +350,7 @@ export default function Lobby({
                   className="bg-slate-950 border border-white/10 text-slate-200 font-rajdhani font-bold text-lg rounded px-4 py-3 outline-none focus:border-cyan-500 min-w-full sm:min-w-[240px] appearance-none"
                 >
                   <option value={0}>⚔️ MODE CLASSÉ</option>
-                  <option value={-1} disabled>🤖 VS IA (Bientôt)</option>
+                  <option value={-1}>🤖 VS IA</option>
                 </select>
 
                 <button
@@ -360,6 +360,17 @@ export default function Lobby({
                       if (user && user.id) cancelSearch(user.id);
                       setIsSearching(false);
                     } else {
+                      // VS AI Check
+                      if (selectedScenario === -1) {
+                        try {
+                          const gameId = await createAiGame(user?.id || "GUEST"); // Support guest for AI
+                          onStartGame(gameId);
+                        } catch (e) {
+                          alert("Erreur création partie IA");
+                        }
+                        return;
+                      }
+
                       setIsSearching(true);
                       setSessionStatus("RECHERCHE...");
                       try {
@@ -390,7 +401,7 @@ export default function Lobby({
                             `}
                   style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%)' }}
                 >
-                  {isSearching ? sessionStatus : "RECHERCHER UNE PARTIE"}
+                  {isSearching ? sessionStatus : (selectedScenario === -1 ? "LANCER VS IA" : "RECHERCHER UNE PARTIE")}
                 </button>
               </div>
             </div>

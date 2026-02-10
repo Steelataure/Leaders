@@ -27,12 +27,13 @@ public class InnKeeperAction implements ActionAbilityStrategy {
         }
 
         // 2. Vérification : La cible doit être adjacente au Tavernier
-        if (areAdjacent(source.getQ(), source.getR(), target.getQ(), target.getR())) {
+        if (getDistance(source.getQ(), source.getR(), target.getQ(), target.getR()) != 1) {
             throw new IllegalArgumentException("Target ally must be adjacent to Innkeeper");
         }
 
-        // 3. Vérification : La destination doit être adjacente à la CIBLE (mouvement de 1 case)
-        if (areAdjacent(target.getQ(), target.getR(), destination.q(), destination.r())) {
+        // 3. Vérification : La destination doit être adjacente à la CIBLE (mouvement de
+        // 1 case)
+        if (getDistance(target.getQ(), target.getR(), destination.q(), destination.r()) != 1) {
             throw new IllegalArgumentException("Destination must be adjacent to the target ally");
         }
 
@@ -46,11 +47,11 @@ public class InnKeeperAction implements ActionAbilityStrategy {
         target.setR(destination.r());
     }
 
-    private boolean areAdjacent(short q1, short r1, short q2, short r2) {
+    private int getDistance(short q1, short r1, short q2, short r2) {
         int dq = Math.abs(q1 - q2);
         int dr = Math.abs(r1 - r2);
         int ds = Math.abs((q1 + r1) - (q2 + r2));
-        return (dq + dr + ds) / 2 != 1;
+        return (dq + dr + ds) / 2;
     }
 
     private boolean isOccupied(short q, short r, List<PieceEntity> pieces) {

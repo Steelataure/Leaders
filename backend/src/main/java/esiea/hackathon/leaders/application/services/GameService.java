@@ -75,6 +75,10 @@ public class GameService {
         updateSessionStatusToFinished(gameId);
     }
 
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private AiService aiService;
+
     @Transactional
     public GameEntity endTurn(UUID gameId) {
         System.out.println("DEBUG: Ending turn for game " + gameId);
@@ -96,10 +100,21 @@ public class GameService {
             game.setTurnNumber(game.getTurnNumber() + 1);
             resetPiecesActions(gameId);
             game.setRecruitmentCount(0);
+
+            // Trigger AI if it's AI turn
+            boolean isVsAi = isVsAiGame(game);
+
+            System.out.println("DEBUG: endTurn nextPlayer=" + nextPlayer + ", isVsAi=" + isVsAi);
+            // AI Trigger moved to Controller to avoid Transactional race conditions
         }
 
         game.setUpdatedAt(LocalDateTime.now());
         return gameRepository.save(game);
+    }
+
+    private boolean isVsAiGame(GameEntity game) {
+        return game.getPlayers().stream()
+                .anyMatch(p -> p.getUserId().equals(AiService.AI_PLAYER_ID));
     }
 
     @Transactional

@@ -172,6 +172,20 @@ export async function createGame(gameIdOrScenarioId?: string | number, forcedDec
   return res.json(); // Retourne l'UUID de la partie
 }
 
+export async function createAiGame(playerId: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/games/ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ playerId }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to create AI game");
+  }
+  return res.json();
+}
+
 export async function getGame(gameId: string): Promise<Game> {
   const res = await fetch(`${BASE_URL}/games/${gameId}`);
   if (!res.ok) throw new Error("Failed to get game state");

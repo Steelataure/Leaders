@@ -13,5 +13,8 @@ import java.util.UUID;
 public interface RecruitmentCardJpaRepository extends JpaRepository<RecruitmentCardJpaEntity, UUID> {
 
     Optional<RecruitmentCardJpaEntity> findFirstByGame_IdAndStateOrderByDeckOrderAsc(UUID gameId, CardState state);
+
+    List<RecruitmentCardJpaEntity> findByGame_IdAndState(UUID gameId, CardState state);
+
     List<RecruitmentCardJpaEntity> findAllByGame_Id(UUID gameId);
 }
