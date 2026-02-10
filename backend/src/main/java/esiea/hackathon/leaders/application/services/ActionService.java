@@ -126,12 +126,19 @@ public class ActionService {
         // Validation de l'action
         source.setHasActedThisTurn(true);
         if (target != null) {
-            // Pour un échange (Swap), on sauve les deux séparément pour être sûr
-            // Force Flush pour éviter les problèmes de synchro (Bug Illusionniste)
+            // FIX: On récupère l'instance gérée la plus fraîche pour éviter que les
+            // changements de position
+            // ne soient écrasés par un état stale (Bug Illusionniste/Unit Overlap)
+            PieceEntity managedTarget = pieceRepository.findById(target.getId()).get();
+            managedTarget.setQ(target.getQ());
+            managedTarget.setR(target.getR());
+
             pieceRepository.saveAndFlush(source);
-            pieceRepository.saveAndFlush(target);
+            pieceRepository.saveAndFlush(managedTarget);
+
             log("DEBUG: Source (" + source.getCharacterId() + ") saved at " + source.getQ() + "," + source.getR());
-            log("DEBUG: Target (" + target.getCharacterId() + ") saved at " + target.getQ() + "," + target.getR());
+            log("DEBUG: Target (" + target.getCharacterId() + ") saved at " + managedTarget.getQ() + ","
+                    + managedTarget.getR());
         } else {
             pieceRepository.save(source);
             log("DEBUG: Source (" + source.getCharacterId() + ") saved.");

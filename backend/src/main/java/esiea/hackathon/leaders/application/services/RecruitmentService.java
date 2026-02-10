@@ -82,11 +82,19 @@ public class RecruitmentService {
         }
 
         // 3b. VALIDATION ZONE DE RECRUTEMENT (7-Cell V-shape Edge)
+        List<PieceEntity> allPieces = pieceRepository.findByGameId(gameId);
+
         for (HexCoord pos : placements) {
             int q = pos.q();
             int r = pos.r();
-            boolean valid = false;
 
+            // Vérifier si la case est déjà occupée (Correction Bug: Case occupée)
+            boolean occupied = allPieces.stream().anyMatch(p -> p.getQ() == q && p.getR() == r);
+            if (occupied) {
+                throw new IllegalStateException("Action refusée : La case (" + q + ", " + r + ") est déjà occupée.");
+            }
+
+            boolean valid = false;
             if (playerIndex == 0) {
                 // P0 (Bas/Bleu) : Leader at (0,3). Bordures r=3 et q+r=3
                 if ((r == 3 && q <= 0 && q >= -3) || (q + r == 3 && q >= 0 && q <= 3)) {
