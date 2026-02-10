@@ -601,6 +601,10 @@ public class AiService {
         return false;
     }
 
+    private boolean isInLoS(PieceEntity p1, PieceEntity p2) {
+        return isInLoS(p1, p2.getQ(), p2.getR());
+    }
+
     private boolean isInLoS(PieceEntity p1, int q2, int r2) {
         return p1.getQ() == q2 || p1.getR() == r2 || (p1.getQ() + p1.getR() == q2 + r2);
     }
