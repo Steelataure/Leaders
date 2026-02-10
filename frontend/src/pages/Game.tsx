@@ -37,6 +37,8 @@ const CHARACTER_IMAGES: Record<string, string> = {
   ROYAL_GUARD: "/image/garderoyal.png",
   VIZIER: "/image/vizir.png",
   NEMESIS: "/image/nemesis.png",
+  OLD_BEAR: "/image/vieilours_ourson.png",
+  CUB: "/image/vieilours_ourson.png",
 };
 
 // mapping des noms de personnages
@@ -154,7 +156,7 @@ function SidebarCard({
             <img
               src={CHARACTER_IMAGES[card.characterId]}
               alt={card.name}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${card.characterId === "CUB" ? "object-bottom" : "object-center"}`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-slate-800 text-lg md:text-xl text-slate-600">
@@ -290,6 +292,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   const [placementMode, setPlacementMode] = useState<{
     cardId: string;
     cardName: string;
+    placements: { q: number; r: number }[];
+    characterId?: string;
   } | null>(null);
 
   // Scenario-specific targeting states
@@ -448,10 +452,22 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const availableSpawnCells = useMemo(() => {
     if (!gameState) return [];
-    return spawnCells.filter(
+
+    // Filter out occupied cells
+    let available = spawnCells.filter(
       (cell) => !gameState.pieces.find((p) => p.q === cell.q && p.r === cell.r),
     );
-  }, [gameState, spawnCells]);
+
+    // If placing 2nd unit of OLD_BEAR, calculate available based on remaining
+    if (placementMode?.characterId === "OLD_BEAR" && placementMode.placements.length > 0) {
+      // Filter out the first placed cell too
+      available = available.filter(cell =>
+        !placementMode.placements.some(p => p.q === cell.q && p.r === cell.r)
+      );
+    }
+
+    return available;
+  }, [gameState, spawnCells, placementMode]);
 
   const currentPlayerPieceCount = useMemo(() => {
     if (!gameState) return 0;
@@ -460,8 +476,9 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const allPiecesActed = useMemo(() => {
     if (!gameState || localPlayerIndex === null) return false;
-    const myPieces = gameState.pieces.filter(p => p.ownerIndex === localPlayerIndex);
-    if (myPieces.length === 0) return false;
+    // On exclut la Némésis car elle ne joue pas activement
+    const myPieces = gameState.pieces.filter(p => p.ownerIndex === localPlayerIndex && p.characterId !== "NEMESIS");
+    if (myPieces.length === 0) return true; // Si on a que la Némésis, on considère que tout a joué
     return myPieces.every(p => p.hasActed);
   }, [gameState?.pieces, localPlayerIndex]);
 
@@ -623,7 +640,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       const cardName = CHARACTER_NAMES[card.characterId] || card.characterId;
 
       playCharacterSelectSfx();
-      setPlacementMode({ cardId, cardName });
+      setPlacementMode({ cardId, cardName, placements: [], characterId: card.characterId });
     },
     [gameState, isRecruiting, currentPlayerPieceCount, hasAvailableSpawnCells, playCharacterSelectSfx],
   );
@@ -631,9 +648,22 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   const confirmPlacement = useCallback(
     async (q: number, r: number) => {
       if (!gameState || !placementMode) return;
+
+      const newPlacements = [...placementMode.placements, { q, r }];
+
+      // Cas Spécial: OLD_BEAR (nécessite 2 placements)
+      if (placementMode.characterId === "OLD_BEAR") {
+        if (newPlacements.length < 2) {
+          // On stocke le premier placement et on attend le second
+          setPlacementMode({ ...placementMode, placements: newPlacements });
+          return;
+        }
+      }
+
+      // Si on a atteint le nombre requis de placements (2 pour Bear, 1 pour autres)
       try {
         setIsRecruiting(true);
-        await gameApi.recruitCharacter(gameId, placementMode.cardId, [{ q, r }]);
+        await gameApi.recruitCharacter(gameId, placementMode.cardId, newPlacements);
         const game = await gameApi.getGameState(gameId);
         updateGameState(game);
       } catch (err) {
@@ -821,7 +851,12 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       {/* MODALS */}
       {placementMode && (
         <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-amber-950/90 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
-          <p className="text-amber-400 font-bold text-xs md:text-sm uppercase tracking-wider">📍 Placez {placementMode.cardName} sur une case dorée</p>
+          <p className="text-amber-400 font-bold text-xs md:text-sm uppercase tracking-wider">
+            {placementMode.characterId === "OLD_BEAR" && placementMode.placements.length === 1
+              ? "📍 Placez l'Ourson (2/2)"
+              : `📍 Placez ${placementMode.cardName} sur une case dorée`
+            }
+          </p>
           <button onClick={() => setPlacementMode(null)} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
         </div>
       )}

@@ -75,7 +75,7 @@ public class GameSetupService {
                 "ACROBAT", "ARCHER", "ASSASSIN", "BRAWLER", "CAVALRY",
                 "GRAPPLER", "ILLUSIONIST", "INNKEEPER", "JAILER",
                 "MANIPULATOR", "NEMESIS", "PROTECTOR",
-                "PROWLER", "ROYAL_GUARD", "VIZIER"));
+                "PROWLER", "ROYAL_GUARD", "VIZIER", "OLD_BEAR"));
 
         List<String> finalDeckOrder = new ArrayList<>();
 

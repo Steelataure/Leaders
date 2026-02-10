@@ -85,6 +85,8 @@ const CHARACTER_IMAGES: Record<string, string> = {
   ROYAL_GUARD: "/image/garderoyal.png",
   VIZIER: "/image/vizir.png",
   NEMESIS: "/image/nemesis.png",
+  OLD_BEAR: "/image/vieilours_ourson.png",
+  CUB: "/image/vieilours_ourson.png",
 };
 
 // === SOUS-COMPOSANTS ===
@@ -261,7 +263,7 @@ function PieceComponent({
         width={(radius - 3) * 2}
         height={(radius - 3) * 2}
         clipPath={`url(#${clipId})`}
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio={piece.characterId === "CUB" ? "xMidYMax slice" : "xMidYMid slice"}
         style={{
           filter: piece.hasActed
             ? "grayscale(100%) brightness(70%)"

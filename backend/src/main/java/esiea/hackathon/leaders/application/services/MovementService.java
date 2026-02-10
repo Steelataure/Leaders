@@ -138,11 +138,28 @@ public class MovementService {
         }
 
         // Règle : Bonus du Vizir pour le Leader
+        // Règle : Bonus du Vizir pour le Leader
         if ("LEADER".equals(character.getId())) {
             MoveAbilityStrategy leaderStrat = strategyFactory.getStrategy("VIZIER_BOOST");
             if (leaderStrat != null) {
                 validMoves.addAll(leaderStrat.getExtraMoves(piece, allPieces));
             }
+        }
+
+        // Règle : L'Ourson ne peut pas capturer le Leader (aller sur sa case)
+        if ("CUB".equals(character.getId())) {
+            validMoves.removeIf(move -> allPieces.stream()
+                    .anyMatch(p -> p.getQ() == move.q() && p.getR() == move.r()
+                            && "LEADER".equals(p.getCharacterId())
+                            && !p.getOwnerIndex().equals(piece.getOwnerIndex())));
+        }
+
+        // Règle : L'Ourson ne peut pas capturer le Leader (aller sur sa case)
+        if ("CUB".equals(character.getId())) {
+            validMoves.removeIf(move -> allPieces.stream()
+                    .anyMatch(p -> p.getQ() == move.q() && p.getR() == move.r()
+                            && "LEADER".equals(p.getCharacterId())
+                            && !p.getOwnerIndex().equals(piece.getOwnerIndex())));
         }
 
         // Règle : Compétences de mouvement spéciales (Acrobate, etc.)

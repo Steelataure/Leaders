@@ -109,7 +109,6 @@ public class RecruitmentService {
 
         // A. Combien de pièces cette carte va-t-elle ajouter ? (Toujours 1 maintenant)
         String characterId = card.getCharacter().getId();
-        int piecesToAdd = 1;
 
         // B. Combien de pièces le joueur possède-t-il DÉJÀ sur le plateau ?
         long currentPieceCount = pieceRepository.findByGameId(gameId).stream()
@@ -117,17 +116,40 @@ public class RecruitmentService {
                 .count();
 
         // C. La somme dépasse-t-elle 5 ?
-        if (currentPieceCount + piecesToAdd > 5) {
-            throw new IllegalArgumentException("Recruitment failed: You cannot exceed the limit of 5 units.");
+        // Règle Spéciale : Vieil Ours et Ourson comptent comme UN SEUL recrutement pour
+        // la limite de 5.
+        // Donc si on recrute OLD_BEAR, on considère qu'on ajoute 1 "slot" d'unité, même
+        // si on pose 2 pièces.
+        // Cependant, pour éviter les abus (avoir 10 oursons), on doit être prudent.
+        // Interprétation la plus fidèle : "Ces deux Personnages comptent comme un seul
+        // PENDANT LA PHASE DE RECRUTEMENT."
+        // Cela peut vouloir dire "Coût de recrutement" OU "Limite de population".
+        // Si max est 5, et que j'en ai 4, je peux recruter l'Ours (qui ajoute 2 pièces
+        // => total 6).
+        // Donc on compte cardsToAdd = 1.
+
+        // Ajustement pour le calcul physique si on voulait être strict (mais ici on
+        // suit la règle 'count as one')
+        // int physicalPiecesToAdd = "OLD_BEAR".equals(characterId) ? 2 : 1;
+
+        if (currentPieceCount + 1 > 5) { // On compte toujours +1 car l'Ours+Ourson prennent 1 slot de recrutement
+            throw new IllegalArgumentException("Recruitment failed: You cannot exceed the limit of 5 units (slots).");
         }
         // ==================================================================================
 
         // 5. Logique de Création des Pièces
         List<PieceEntity> createdPieces = new ArrayList<>();
 
-        // Cas Standard
-        validatePlacementCount(placements, 1);
-        createdPieces.add(createPiece(gameId, characterId, playerIndex, placements.get(0)));
+        if ("OLD_BEAR".equals(characterId)) {
+            // Cas Spécial : Vieil Ours + Ourson
+            validatePlacementCount(placements, 2);
+            createdPieces.add(createPiece(gameId, "OLD_BEAR", playerIndex, placements.get(0)));
+            createdPieces.add(createPiece(gameId, "CUB", playerIndex, placements.get(1)));
+        } else {
+            // Cas Standard
+            validatePlacementCount(placements, 1);
+            createdPieces.add(createPiece(gameId, characterId, playerIndex, placements.get(0)));
+        }
 
         // 6. Mise à jour de la carte recrutée
         Integer emptySlot = card.getVisibleSlot();
