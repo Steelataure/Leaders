@@ -32,7 +32,18 @@ public class GameController {
             return ResponseEntity.badRequest().build();
         }
         UUID playerId = UUID.fromString(playerIdStr);
-        UUID gameId = startAiGameUseCase.startAiGame(playerId);
+
+        String difficultyStr = body.get("difficulty");
+        esiea.hackathon.leaders.domain.model.enums.AiDifficulty difficulty = esiea.hackathon.leaders.domain.model.enums.AiDifficulty.EASY;
+        if (difficultyStr != null) {
+            try {
+                difficulty = esiea.hackathon.leaders.domain.model.enums.AiDifficulty.valueOf(difficultyStr);
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid difficulty, use default
+            }
+        }
+
+        UUID gameId = startAiGameUseCase.startAiGame(playerId, difficulty);
         return ResponseEntity.ok(gameId);
     }
 

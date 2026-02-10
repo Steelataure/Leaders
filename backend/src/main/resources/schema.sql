@@ -112,13 +112,15 @@ CREATE TABLE IF NOT EXISTS game (
     updated_at TIMESTAMP DEFAULT NOW(),
     scenario_id SMALLINT REFERENCES ref_scenario(id),
     elo_change_p0 INT,
-    elo_change_p1 INT
+    elo_change_p1 INT,
+    ai_difficulty VARCHAR(50) DEFAULT 'EASY'
     );
 
 -- On s'assure que les colonnes ajoutées récemment existent (pour les environnements où la table est déjà créée)
 ALTER TABLE game ADD COLUMN IF NOT EXISTS elo_change_p0 INT;
 ALTER TABLE game ADD COLUMN IF NOT EXISTS elo_change_p1 INT;
 ALTER TABLE game ADD COLUMN IF NOT EXISTS scenario_id SMALLINT REFERENCES ref_scenario(id);
+ALTER TABLE game ADD COLUMN IF NOT EXISTS ai_difficulty VARCHAR(50) DEFAULT 'EASY';
 
 CREATE TABLE IF NOT EXISTS game_player (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -50,6 +50,7 @@ public class GameMapper {
                                 .eloChangeP1(entity.getEloChangeP1())
                                 .scenarioId(entity.getScenarioId())
                                 .lastTimerUpdate(entity.getLastTimerUpdate())
+                                .aiDifficulty(entity.getAiDifficulty())
                                 .build();
         }
 
@@ -74,6 +75,7 @@ public class GameMapper {
                                 .eloChangeP1(domain.getEloChangeP1())
                                 .scenarioId(domain.getScenarioId())
                                 .lastTimerUpdate(domain.getLastTimerUpdate())
+                                .aiDifficulty(domain.getAiDifficulty())
                                 .build();
 
                 if (domain.getPlayers() != null) {

@@ -23,4 +23,6 @@ public interface PieceRepository {
     void delete(UUID id);
 
     List<PieceEntity> saveAll(List<PieceEntity> pieces);
+
+    PieceEntity saveAndFlush(PieceEntity piece);
 }

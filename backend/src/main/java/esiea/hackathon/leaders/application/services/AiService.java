@@ -102,6 +102,10 @@ public class AiService {
         if (validateGame(game) == false)
             return false;
 
+        esiea.hackathon.leaders.domain.model.enums.AiDifficulty difficulty = game.getAiDifficulty();
+        if (difficulty == null)
+            difficulty = esiea.hackathon.leaders.domain.model.enums.AiDifficulty.EASY;
+
         List<PieceEntity> allPieces = pieceRepository.findByGameId(gameId);
         List<PieceEntity> myPieces = allPieces.stream()
                 .filter(p -> p.getOwnerIndex() == 1 && !p.getHasActedThisTurn())
@@ -123,8 +127,14 @@ public class AiService {
             try {
                 List<HexCoord> validMoves = movementService.getValidMovesForPiece(piece.getId());
                 for (HexCoord dest : validMoves) {
-                    double score = evaluateMove(piece, dest, allPieces, enemyPieces);
-                    score += (new Random().nextDouble() * 0.5); // Randomness
+                    double score;
+                    if (difficulty == esiea.hackathon.leaders.domain.model.enums.AiDifficulty.HARD) {
+                        score = evaluateMoveHard(piece, dest, allPieces, enemyPieces);
+                    } else {
+                        score = evaluateMove(piece, dest, allPieces, enemyPieces);
+                        score += (new Random().nextDouble() * 0.5); // Randomness for Easy
+                    }
+
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove = new Move(piece, dest, null, null, null);
@@ -142,7 +152,7 @@ public class AiService {
                                 && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1) {
                             double score = 15.0;
                             if ("LEADER".equals(enemy.getCharacterId()))
-                                score += 20;
+                                score += 1000; // Aggressive Swap
                             if (score > bestScore) {
                                 bestScore = score;
                                 bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
@@ -208,7 +218,7 @@ public class AiService {
                         if (dist > 1 && isInLoS(piece, enemy)) {
                             double pullScore = 14.0;
                             if ("LEADER".equals(enemy.getCharacterId()))
-                                pullScore += 20;
+                                pullScore += 1000; // Aggressive Hook
                             int dirQ = (enemy.getQ() - piece.getQ()) / dist;
                             int dirR = (enemy.getR() - piece.getR()) / dist;
                             HexCoord pullDest = new HexCoord((short) (piece.getQ() + dirQ),
@@ -235,7 +245,7 @@ public class AiService {
                             if (pushDest.isValid() && isCellEmpty(pushDest, allPieces)) {
                                 double score = 8.0;
                                 if ("LEADER".equals(enemy.getCharacterId()))
-                                    score += 10;
+                                    score += 1000; // Aggressive Push
                                 if (score > bestScore) {
                                     bestScore = score;
                                     bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
@@ -504,6 +514,66 @@ public class AiService {
 
     private boolean isInLoS(PieceEntity p1, int q2, int r2) {
         return p1.getQ() == q2 || p1.getR() == r2 || (p1.getQ() + p1.getR() == q2 + r2);
+    }
+
+    private double evaluateMoveHard(PieceEntity piece, HexCoord dest, List<PieceEntity> allPieces,
+            List<PieceEntity> enemyPieces) {
+        double score = 0;
+
+        // 1. MATERIAL & KILL INSTINCT
+        PieceEntity target = enemyPieces.stream()
+                .filter(e -> e.getQ() == dest.q() && e.getR() == dest.r())
+                .findFirst().orElse(null);
+
+        if (target != null) {
+            if ("LEADER".equals(target.getCharacterId()))
+                return 100000.0; // CHECKMATE ! HUGE SCORE
+            score += 100.0; // Kill unit
+        }
+
+        // 2. SAFETY (Simulate enemy response roughly)
+        // Would I step into a kill zone?
+        // Would I step into a kill zone?
+        // boolean isSafe = true;
+        for (PieceEntity enemy : enemyPieces) {
+            if (target != null && enemy.getId().equals(target.getId()))
+                continue; // Dead enemy can't kill back
+            if (canPotentiallyCapture(enemy, dest.q(), dest.r(), allPieces)) {
+                score -= 200.0; // High penalty for losing a unit
+                // isSafe = false;
+                if ("LEADER".equals(piece.getCharacterId()))
+                    score -= 5000.0; // LEADER MUST NOT DIE
+            }
+        }
+
+        // 3. POSITIONAL
+        // Control center
+        int distToCenter = distance(dest.q(), dest.r(), 0, 0);
+        score -= (distToCenter * 2.0);
+
+        // Aggression towards enemy leader
+        PieceEntity enemyLeader = enemyPieces.stream()
+                .filter(e -> "LEADER".equals(e.getCharacterId()))
+                .findFirst().orElse(null);
+        if (enemyLeader != null) {
+            int distError = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
+            score -= (distError * 5.0); // Closer is better
+        }
+
+        // 4. PROTECTION
+        // If I am NOT leader, am I shielding my leader?
+        if (!"LEADER".equals(piece.getCharacterId())) {
+            PieceEntity myLeader = allPieces.stream()
+                    .filter(p -> "LEADER".equals(p.getCharacterId()) && p.getOwnerIndex() == 1)
+                    .findFirst().orElse(null);
+            if (myLeader != null) {
+                int distToLeader = distance(dest.q(), dest.r(), myLeader.getQ(), myLeader.getR());
+                if (distToLeader == 1)
+                    score += 20.0; // Guarding
+            }
+        }
+
+        return score;
     }
 
     private record Move(PieceEntity piece, HexCoord dest, String abilityId, UUID targetId, HexCoord abilityDest) {

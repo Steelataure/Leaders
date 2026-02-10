@@ -9,11 +9,9 @@ import { Rain } from "../components/Rain";
 import { GlitchText } from "../components/GlitchText";
 import { HexGrid } from "../components/HexGrid";
 import { SystemStatus } from "../components/SystemStatus";
-
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
 import { LogOut, Plus, Settings, Trophy, User as UserIcon } from "lucide-react";
-
 
 export default function Lobby({
   onStartGame,
@@ -350,7 +348,8 @@ export default function Lobby({
                   className="bg-slate-950 border border-white/10 text-slate-200 font-rajdhani font-bold text-lg rounded px-4 py-3 outline-none focus:border-cyan-500 min-w-full sm:min-w-[240px] appearance-none"
                 >
                   <option value={0}>⚔️ MODE CLASSÉ</option>
-                  <option value={-1}>🤖 VS IA</option>
+                  <option value={-1}>🤖 VS IA (FACILE)</option>
+                  <option value={-2}>😈 VS IA (DIFFICILE)</option>
                 </select>
 
                 <button
@@ -361,9 +360,10 @@ export default function Lobby({
                       setIsSearching(false);
                     } else {
                       // VS AI Check
-                      if (selectedScenario === -1) {
+                      if (selectedScenario === -1 || selectedScenario === -2) {
                         try {
-                          const gameId = await createAiGame(user?.id || "GUEST"); // Support guest for AI
+                          const difficulty = selectedScenario === -2 ? "HARD" : "EASY";
+                          const gameId = await createAiGame(user?.id || "GUEST", difficulty);
                           onStartGame(gameId);
                         } catch (e) {
                           alert("Erreur création partie IA");
@@ -393,15 +393,15 @@ export default function Lobby({
                     }
                   }}
                   className={`
-                            relative flex-1 py-4 px-8 font-orbitron font-bold tracking-[0.1em] uppercase transition-all duration-300
-                            clip-path-button
-                            ${isSearching
+                              relative flex-1 py-4 px-8 font-orbitron font-bold tracking-[0.1em] uppercase transition-all duration-300
+                              clip-path-button
+                              ${isSearching
                       ? 'bg-amber-600/20 border-amber-500 text-amber-500 hover:bg-amber-600/30'
                       : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(8,145,178,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]'}
-                            `}
+                              `}
                   style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%)' }}
                 >
-                  {isSearching ? sessionStatus : (selectedScenario === -1 ? "LANCER VS IA" : "RECHERCHER UNE PARTIE")}
+                  {isSearching ? sessionStatus : (selectedScenario < 0 ? "LANCER VS IA" : "RECHERCHER UNE PARTIE")}
                 </button>
               </div>
             </div>
@@ -558,7 +558,6 @@ export default function Lobby({
 
       {aboutOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          {/* About Modal - Implementation similar to others */}
           <div className="bg-slate-900 p-8 rounded-xl max-w-lg text-slate-300 relative border border-white/10">
             <button onClick={() => setAboutOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">✕</button>
             <h2 className="font-orbitron font-bold text-2xl mb-4 text-white">PROTOCOLE LEADERS</h2>

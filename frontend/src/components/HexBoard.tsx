@@ -250,7 +250,7 @@ function PieceComponent({
         cy={y}
         r={radius}
         fill="#1a1a2e"
-        stroke={isAbilityTarget ? targetColor : isBlocked ? "#ef4444" : isProtected ? "#f59e0b" : color}
+        stroke={isAbilityTarget ? targetColor : isProtected ? "#f59e0b" : color}
         strokeWidth={isAbilityTarget ? 4 : isLeader ? 4 : 3}
         filter={`url(#${glowId})`}
         opacity={piece.hasActed ? 0.6 : 1}
@@ -399,14 +399,29 @@ export default function HexBoard(props: HexBoardProps) {
       });
     }
 
-    // ACROBAT: Jump over adjacent
+    // ACROBAT: Jump over adjacent (Double Jump)
     if (selectedPiece.characterId === "ACROBAT") {
       HEX_DIRECTIONS.forEach(({ dq, dr }) => {
+        // 1er saut
         const midQ = selectedPiece.q + dq, midR = selectedPiece.r + dr;
-        const destQ = selectedPiece.q + dq * 2, destR = selectedPiece.r + dr * 2;
+        const jump1Q = selectedPiece.q + dq * 2, jump1R = selectedPiece.r + dr * 2;
+
         // Jump condition: Adjacent cell occupied, Landing cell empty & valid
-        if (isValidHex(midQ, midR) && findPieceAtCell(midQ, midR) && isValidHex(destQ, destR) && !findPieceAtCell(destQ, destR)) {
-          dests.add(`${destQ},${destR}`);
+        if (isValidHex(midQ, midR) && findPieceAtCell(midQ, midR) && isValidHex(jump1Q, jump1R) && !findPieceAtCell(jump1Q, jump1R)) {
+          dests.add(`${jump1Q},${jump1R}`);
+
+          // 2eme saut (depuis jump1)
+          HEX_DIRECTIONS.forEach(({ dq: dq2, dr: dr2 }) => {
+            const mid2Q = jump1Q + dq2, mid2R = jump1R + dr2;
+            const jump2Q = jump1Q + dq2 * 2, jump2R = jump1R + dr2 * 2;
+
+            if (isValidHex(mid2Q, mid2R) && findPieceAtCell(mid2Q, mid2R) && isValidHex(jump2Q, jump2R) && !findPieceAtCell(jump2Q, jump2R)) {
+              // On évite de revenir sur la case de départ (même si autorisé backend, c'est visuellement confus pour un "double saut")
+              if (jump2Q !== selectedPiece.q || jump2R !== selectedPiece.r) {
+                dests.add(`${jump2Q},${jump2R}`);
+              }
+            }
+          });
         }
       });
     }

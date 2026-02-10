@@ -69,6 +69,10 @@ public class GameJpaEntity {
     @Column(name = "last_timer_update")
     private java.time.LocalDateTime lastTimerUpdate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_difficulty")
+    private esiea.hackathon.leaders.domain.model.enums.AiDifficulty aiDifficulty;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

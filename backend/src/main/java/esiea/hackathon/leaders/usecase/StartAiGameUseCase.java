@@ -16,48 +16,49 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StartAiGameUseCase {
 
-    private final GameSetupService gameSetupService;
-    private final SpringGamePlayerRepository gamePlayerRepository;
-    private final SpringGameRepository springGameRepository;
+        private final GameSetupService gameSetupService;
+        private final SpringGamePlayerRepository gamePlayerRepository;
+        private final SpringGameRepository springGameRepository;
 
-    @Transactional
-    public UUID startAiGame(UUID humanPlayerId) {
-        // 1. Create Game Logic (Board, Pieces, Deck)
-        UUID gameId = UUID.randomUUID();
-        gameSetupService.createGameWithId(gameId, null);
+        @Transactional
+        public UUID startAiGame(UUID humanPlayerId,
+                        esiea.hackathon.leaders.domain.model.enums.AiDifficulty difficulty) {
+                // 1. Create Game Logic (Board, Pieces, Deck)
+                UUID gameId = UUID.randomUUID();
+                gameSetupService.createGameWithId(gameId, null);
 
-        // 2. Fetch Infrastructure Entity (GameJpaEntity) to link players
-        GameJpaEntity gameRef = springGameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("Game not found after creation: " + gameId));
+                // 2. Fetch Infrastructure Entity (GameJpaEntity) to link players
+                GameJpaEntity gameRef = springGameRepository.findById(gameId)
+                                .orElseThrow(() -> new RuntimeException("Game not found after creation: " + gameId));
 
-        // Ensure players list is initialized
-        if (gameRef.getPlayers() == null) {
-            gameRef.setPlayers(new java.util.ArrayList<>());
+                // Ensure players list is initialized
+                if (gameRef.getPlayers() == null) {
+                        gameRef.setPlayers(new java.util.ArrayList<>());
+                }
+
+                // 3. Create Human Player (Index 0)
+                GamePlayerJpaEntity humanPlayer = GamePlayerJpaEntity.builder()
+                                .game(gameRef)
+                                .userId(humanPlayerId)
+                                .playerIndex(0)
+                                .isFirstTurnCompleted(false)
+                                .build();
+                gamePlayerRepository.save(humanPlayer);
+                gameRef.getPlayers().add(humanPlayer);
+
+                // 4. Create AI Player (Index 1)
+                GamePlayerJpaEntity aiPlayer = GamePlayerJpaEntity.builder()
+                                .game(gameRef)
+                                .userId(AiService.AI_PLAYER_ID)
+                                .playerIndex(1)
+                                .isFirstTurnCompleted(false)
+                                .build();
+                gamePlayerRepository.save(aiPlayer);
+                gameRef.getPlayers().add(aiPlayer);
+
+                System.out.println("DEBUG: AI Game started! GameID=" + gameId + ", Human=" + humanPlayerId + ", AI="
+                                + AiService.AI_PLAYER_ID);
+
+                return gameId;
         }
-
-        // 3. Create Human Player (Index 0)
-        GamePlayerJpaEntity humanPlayer = GamePlayerJpaEntity.builder()
-                .game(gameRef)
-                .userId(humanPlayerId)
-                .playerIndex(0)
-                .isFirstTurnCompleted(false)
-                .build();
-        gamePlayerRepository.save(humanPlayer);
-        gameRef.getPlayers().add(humanPlayer);
-
-        // 4. Create AI Player (Index 1)
-        GamePlayerJpaEntity aiPlayer = GamePlayerJpaEntity.builder()
-                .game(gameRef)
-                .userId(AiService.AI_PLAYER_ID)
-                .playerIndex(1)
-                .isFirstTurnCompleted(false)
-                .build();
-        gamePlayerRepository.save(aiPlayer);
-        gameRef.getPlayers().add(aiPlayer);
-
-        System.out.println("DEBUG: AI Game started! GameID=" + gameId + ", Human=" + humanPlayerId + ", AI="
-                + AiService.AI_PLAYER_ID);
-
-        return gameId;
-    }
 }

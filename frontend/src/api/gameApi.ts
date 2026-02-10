@@ -172,11 +172,11 @@ export async function createGame(gameIdOrScenarioId?: string | number, forcedDec
   return res.json(); // Retourne l'UUID de la partie
 }
 
-export async function createAiGame(playerId: string): Promise<string> {
+export async function createAiGame(playerId: string, difficulty: "EASY" | "HARD" = "EASY"): Promise<string> {
   const res = await fetch(`${BASE_URL}/games/ai`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ playerId }),
+    body: JSON.stringify({ playerId, difficulty }),
   });
 
   if (!res.ok) {

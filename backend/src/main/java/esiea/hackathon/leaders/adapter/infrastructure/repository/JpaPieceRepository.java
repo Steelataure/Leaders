@@ -105,4 +105,11 @@ public class JpaPieceRepository implements PieceRepository {
                 .map(PieceMapper::toDomain)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public PieceEntity saveAndFlush(PieceEntity pieceDomain) {
+        PieceEntity saved = save(pieceDomain);
+        entityManager.flush();
+        return saved;
+    }
 }

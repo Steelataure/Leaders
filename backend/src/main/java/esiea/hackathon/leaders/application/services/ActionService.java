@@ -127,9 +127,11 @@ public class ActionService {
         source.setHasActedThisTurn(true);
         if (target != null) {
             // Pour un échange (Swap), on sauve les deux séparément pour être sûr
-            pieceRepository.save(source);
-            pieceRepository.save(target);
-            log("DEBUG: Source (" + source.getCharacterId() + ") AND target (" + target.getCharacterId() + ") saved.");
+            // Force Flush pour éviter les problèmes de synchro (Bug Illusionniste)
+            pieceRepository.saveAndFlush(source);
+            pieceRepository.saveAndFlush(target);
+            log("DEBUG: Source (" + source.getCharacterId() + ") saved at " + source.getQ() + "," + source.getR());
+            log("DEBUG: Target (" + target.getCharacterId() + ") saved at " + target.getQ() + "," + target.getR());
         } else {
             pieceRepository.save(source);
             log("DEBUG: Source (" + source.getCharacterId() + ") saved.");

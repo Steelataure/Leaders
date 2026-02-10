@@ -36,6 +36,7 @@ public class GameEntity {
     private Integer eloChangeP1;
     private LocalDateTime lastTimerUpdate;
     private Integer scenarioId;
+    private esiea.hackathon.leaders.domain.model.enums.AiDifficulty aiDifficulty;
     private List<GamePlayerEntity> players;
     private List<PieceEntity> pieces;
     private List<RecruitmentCardEntity> cards;
