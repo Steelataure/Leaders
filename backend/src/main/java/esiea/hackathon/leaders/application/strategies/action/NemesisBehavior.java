@@ -1,9 +1,11 @@
 package esiea.hackathon.leaders.application.strategies.action;
 
+import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
+import esiea.hackathon.leaders.domain.utils.HexUtils;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.*;
 
 @Component
 public class NemesisBehavior {
@@ -12,66 +14,78 @@ public class NemesisBehavior {
     private static final int SPEED = 2;
 
     public void react(PieceEntity nemesis, PieceEntity enemyLeader, List<PieceEntity> allPieces) {
-        // On effectue 2 pas successifs
-        for (int i = 0; i < SPEED; i++) {
-            PieceEntity nextStep = findBestStep(nemesis, enemyLeader, allPieces);
+        // BFS pour trouver toutes les cases atteignables en 1 ou 2 coups
+        Set<HexCoord> visited = new HashSet<>();
+        Queue<PathNode> queue = new LinkedList<>();
 
-            // Si on a trouvé une case libre qui nous rapproche
-            if (nextStep != null) {
-                // On vérifie qu'on ne marche pas SUR le Leader (on s'arrête juste avant)
-                if (nextStep.getQ() == enemyLeader.getQ() && nextStep.getR() == enemyLeader.getR()) {
-                    break; // On est au contact, on arrête de bouger
+        HexCoord start = new HexCoord(nemesis.getQ(), nemesis.getR());
+        HexCoord target = new HexCoord(enemyLeader.getQ(), enemyLeader.getR());
+
+        // Init
+        visited.add(start);
+        queue.add(new PathNode(start, 0));
+
+        List<PathNode> candidates = new ArrayList<>();
+
+        while (!queue.isEmpty()) {
+            PathNode current = queue.poll();
+
+            // Si on a fait au moins 1 pas, c'est un candidat
+            if (current.distFromStart > 0) {
+                // On exclut la case du Leader (on ne marche pas dessus)
+                if (!current.coord.equals(target)) {
+                    candidates.add(current);
                 }
-
-                // Application du mouvement
-                nemesis.setQ(nextStep.getQ());
-                nemesis.setR(nextStep.getR());
-            } else {
-                break; // Bloquée
             }
+
+            // Si on n'a pas atteint la limite de vitesse, on explore les voisins
+            if (current.distFromStart < SPEED) {
+                List<HexCoord> neighbors = getNeighbors(current.coord);
+                for (HexCoord n : neighbors) {
+                    // Vérifier validité + obstacles
+                    if (n.isValid() && !visited.contains(n)) {
+                        // Est-ce que la case est libre ? (Ou c'est la case cible pour s'en approcher)
+                        boolean isTarget = n.equals(target);
+                        if (isTarget || !HexUtils.isOccupied(n.q(), n.r(), allPieces)) {
+                            visited.add(n);
+                            queue.add(new PathNode(n, current.distFromStart + 1));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sélection du meilleur candidat
+        // Critères :
+        // 1. Distance au Leader (Minimiser)
+        // 2. Distance parcourue (Maximiser : on veut bouger de 2 cases si possible)
+        PathNode bestNode = candidates.stream()
+                .min(Comparator.comparingInt((PathNode node) -> HexUtils.getDistance(node.coord, target))
+                        .thenComparingInt(node -> -node.distFromStart)) // -dist pour maximiser (2 avant 1)
+                .orElse(null);
+
+        if (bestNode != null) {
+            nemesis.setQ(bestNode.coord.q());
+            nemesis.setR(bestNode.coord.r());
         }
     }
 
-    private PieceEntity findBestStep(PieceEntity current, PieceEntity target, List<PieceEntity> obstacles) {
-        int currentDist = esiea.hackathon.leaders.domain.utils.HexUtils.getDistance(current.getQ(), current.getR(),
-                target.getQ(), target.getR());
-        PieceEntity bestMove = null;
-        int minDist = currentDist;
-
-        // Les 6 directions hexagonales
+    private List<HexCoord> getNeighbors(HexCoord c) {
         int[][] directions = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, -1 }, { -1, 1 } };
-
+        List<HexCoord> neighbors = new ArrayList<>();
         for (int[] dir : directions) {
-            short nQ = (short) (current.getQ() + dir[0]);
-            short nR = (short) (current.getR() + dir[1]);
-
-            esiea.hackathon.leaders.domain.model.HexCoord nCoord = new esiea.hackathon.leaders.domain.model.HexCoord(nQ,
-                    nR);
-
-            // On vérifie si la case est sur le plateau
-            if (!nCoord.isValid())
-                continue;
-
-            // On vérifie si la case est libre (sauf si c'est la case du Leader lui-même,
-            // car on veut "tendre" vers lui)
-            boolean isTargetCell = (nQ == target.getQ() && nR == target.getR());
-            if (!isTargetCell && esiea.hackathon.leaders.domain.utils.HexUtils.isOccupied(nQ, nR, obstacles))
-                continue;
-
-            // Calcul de la distance potentielle
-            PieceEntity temp = new PieceEntity();
-            temp.setQ(nQ);
-            temp.setR(nR);
-
-            int newDist = esiea.hackathon.leaders.domain.utils.HexUtils.getDistance(nQ, nR, target.getQ(),
-                    target.getR());
-
-            // On cherche à RÉDUIRE la distance strictement
-            if (newDist < minDist) {
-                minDist = newDist;
-                bestMove = temp;
-            }
+            neighbors.add(new HexCoord((short) (c.q() + dir[0]), (short) (c.r() + dir[1])));
         }
-        return bestMove;
+        return neighbors;
+    }
+
+    private static class PathNode {
+        HexCoord coord;
+        int distFromStart;
+
+        public PathNode(HexCoord coord, int distFromStart) {
+            this.coord = coord;
+            this.distFromStart = distFromStart;
+        }
     }
 }
