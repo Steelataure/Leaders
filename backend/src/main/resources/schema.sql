@@ -158,24 +158,24 @@ CREATE TABLE IF NOT EXISTS recruitment_card (
 
 -- A. PERSONNAGES
 INSERT INTO ref_character (id, name, is_leader, recruitment_slots, description) VALUES
-                                                                                    ('LEADER', 'Leader', TRUE, 0, 'Votre champion. S''il est capturé ou encerclé, vous perdez.'),
-                                                                                    ('ACROBAT', 'Acrobate', FALSE, 1, 'Saute par-dessus ses voisins.'),
-                                                                                    ('ARCHER', 'Archère', FALSE, 1, 'Capture à distance.'),
-                                                                                    ('ASSASSIN', 'Assassin', FALSE, 1, 'Capture le Leader seul.'),
-                                                                                    ('BRAWLER', 'Cogneur', FALSE, 1, 'Pousse les ennemis.'),
-                                                                                    ('CAVALRY', 'Cavalier', FALSE, 1, 'Charge de 2 cases.'),
-                                                                                    ('GRAPPLER', 'Lance-Grappin', FALSE, 1, 'Attire les ennemis.'),
-                                                                                    ('ILLUSIONIST', 'Illusionniste', FALSE, 1, 'Échange sa place.'),
-                                                                                    ('INNKEEPER', 'Tavernier', FALSE, 1, 'Aide les alliés.'),
-                                                                                    ('JAILER', 'Geôlier', FALSE, 1, 'Bloque les passifs.'),
-                                                                                    ('MANIPULATOR', 'Manipulatrice', FALSE, 1, 'Force le mouvement ennemi.'),
-                                                                                    ('NEMESIS', 'Némésis', FALSE, 1, 'Réagit au mouvement du Leader.'),
-                                                                                    ('OLD_BEAR', 'Vieil Ours', FALSE, 2, 'Vient avec l''Ourson (Duo).'),
-                                                                                    ('CUB', 'Ourson', FALSE, 0, 'Ne capture pas. Vient avec le Vieil Ours.'),
-                                                                                    ('PROTECTOR', 'Protecteur', FALSE, 1, 'Empêche les déplacements forcés.'),
-                                                                                    ('PROWLER', 'Rôdeuse', FALSE, 1, 'Se téléporte sur une case libre.'),
-                                                                                    ('ROYAL_GUARD', 'Garde Royal', FALSE, 1, 'Reste proche du Leader.'),
-                                                                                    ('VIZIER', 'Vizir', FALSE, 1, 'Donne du mouvement au Leader.')
+  ('LEADER', 'Leader', TRUE, 0, 'Votre champion. S''il est capturé ou encerclé, la partie est perdue.'),
+  ('ACROBAT', 'Acrobate', FALSE, 1, 'Saute en ligne droite par-dessus un Personnage adjacent. Peut effectuer jusqu''à deux sauts consécutifs.'),
+  ('ARCHER', 'Archère', FALSE, 1, 'Participe à la capture du Leader adverse à 2 cases en ligne droite. Ne participe pas s''il lui est adjacent.'),
+  ('ASSASSIN', 'Assassin', FALSE, 1, 'Capture le Leader adverse, même sans autre allié participant à la capture.'),
+  ('BRAWLER', 'Cogneur', FALSE, 1, 'Se déplace sur la case d''un ennemi adjacent et le pousse sur l''une des cases opposées.'),
+  ('CAVALRY', 'Cavalier', FALSE, 1, 'Se déplace de deux cases en ligne droite.'),
+  ('GRAPPLER', 'Lance-Grappin', FALSE, 1, 'Se déplace jusqu’à un Personnage visible en ligne droite ou l’attire jusqu''à lui.'),
+  ('ILLUSIONIST', 'Illusionniste', FALSE, 1, 'Échange de position avec un Personnage visible en ligne droite et non-adjacent.'),
+  ('INNKEEPER', 'Tavernier', FALSE, 1, 'Déplace d''une case un allié adjacent.'),
+  ('JAILER', 'Geôlier', FALSE, 1, 'Les ennemis adjacents ayant une compétence active ne peuvent pas l''utiliser.'),
+  ('MANIPULATOR', 'Manipulatrice', FALSE, 1, 'Déplace d’une case un ennemi visible en ligne droite et non-adjacent.'),
+  ('NEMESIS', 'Némésis', FALSE, 1, 'Ne joue pas à son tour. DOIT se déplacer de 2 cases à la fin de toute action déplaçant le Leader adverse.'),
+  ('OLD_BEAR', 'Vieil Ours', FALSE, 2, 'Recruté avec l''Ourson. Déplacez l''un ou les deux à la suite.'),
+  ('CUB', 'Ourson', FALSE, 0, 'Vient avec le Vieil Ours. Ne participe pas à la capture du Leader.'),
+  ('PROTECTOR', 'Protecteur', FALSE, 1, 'Les compétences des ennemis ne peuvent déplacer ni le protecteur, ni ses alliés adjacents.'),
+  ('PROWLER', 'Rôdeuse', FALSE, 1, 'Se déplace sur n’importe quelle case non-adjacente à un ennemi.'),
+  ('ROYAL_GUARD', 'Garde Royal', FALSE, 1, 'Se déplace sur une case adjacente à votre Leader, puis peut se déplacer d''une case.'),
+  ('VIZIER', 'Vizir', FALSE, 1, 'Votre Leader peut se déplacer d’une case supplémentaire lors de son action.')
     ON CONFLICT (id) DO NOTHING;
 
 -- B. SCÉNARIOS
