@@ -12,7 +12,7 @@ import { SystemStatus } from "../components/SystemStatus";
 
 import useSound from 'use-sound';
 import buttonClickSfx from '../sounds/buttonClick.mp3';
-import { LogOut, Settings, Trophy, User as UserIcon } from "lucide-react";
+import { LogOut, Plus, Settings, Trophy, User as UserIcon } from "lucide-react";
 
 
 export default function Lobby({
@@ -226,26 +226,49 @@ export default function Lobby({
 
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="group relative border border-white/10 bg-white/5 hover:bg-white/10 px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center gap-2 md:gap-3 transition-all backdrop-blur-sm"
+            className={`group relative border px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center gap-2 md:gap-3 transition-all backdrop-blur-sm
+              ${user && user.username !== "Joueur" ? 'border-cyan-500/30 bg-cyan-900/10 hover:bg-cyan-900/20' : 'border-white/10 bg-white/5 hover:bg-white/10'}
+            `}
           >
             <div className="flex flex-col items-end leading-none hidden xs:flex">
               <span className="text-[8px] md:text-[10px] text-slate-500 font-orbitron uppercase tracking-widest text-right">Opérateur</span>
-              <span className="font-rajdhani font-bold text-sm md:text-lg text-white group-hover:text-cyan-400 transition-colors uppercase tracking-wide">
-                {user ? user.username : "INVITÉ"}
+              <span className={`font-rajdhani font-bold text-sm md:text-lg transition-colors uppercase tracking-wide ${user && user.username !== "Joueur" ? 'text-cyan-400' : 'text-slate-300'}`}>
+                {user && user.username !== "Joueur" ? user.username : "SESSION INVITÉ"}
               </span>
             </div>
             <div className="xs:hidden">
-              <UserIcon className="w-5 h-5 text-white" />
+              <UserIcon className={`w-5 h-5 ${user && user.username !== "Joueur" ? 'text-cyan-400' : 'text-slate-400'}`} />
             </div>
-            {user && <RankBadge elo={user.elo} size="sm" showElo={true} />}
+            {user && user.username !== "Joueur" && <RankBadge elo={user.elo} size="sm" showElo={true} />}
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full right-8 mt-2 w-56 bg-slate-900/95 border border-cyan-500/20 rounded backdrop-blur-xl shadow-xl z-50 overflow-hidden font-rajdhani font-semibold">
-              {!user ? (
-                <button onClick={() => { closeAllModals(); setLoginOpen(true); }} className="w-full text-left px-5 py-3 text-sm text-cyan-400 hover:bg-white/5 flex items-center gap-2"><UserIcon className="w-4 h-4" /> CONNEXION</button>
+            <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900/95 border border-cyan-500/20 rounded-xl backdrop-blur-xl shadow-2xl z-50 overflow-hidden font-rajdhani font-semibold">
+              {(!user || user.username === "Joueur") ? (
+                <div className="flex flex-col p-2 gap-1">
+                  <div className="px-3 py-2 text-xs text-slate-500 uppercase tracking-wider font-bold border-b border-white/5 mb-1">
+                    Compte Invité
+                  </div>
+                  <button onClick={() => { closeAllModals(); setLoginOpen(true); setIsRegistering(false); }} className="w-full text-left px-4 py-3 text-sm text-white hover:bg-cyan-500/20 hover:text-cyan-400 rounded transition-colors flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center"><UserIcon className="w-4 h-4" /></div>
+                    SE CONNECTER
+                  </button>
+                  <button onClick={() => { closeAllModals(); setLoginOpen(true); setIsRegistering(true); }} className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 rounded transition-colors flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><Plus className="w-4 h-4" /></div>
+                    CRÉER UN COMPTE
+                  </button>
+                </div>
               ) : (
-                <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2"><LogOut className="w-4 h-4" /> DÉCONNEXION</button>
+                <div className="flex flex-col p-2">
+                  <div className="px-3 py-2 text-xs text-cyan-500/70 uppercase tracking-wider font-bold border-b border-white/5 mb-1 flex justify-between items-center">
+                    Compte Actif
+                    <span className="text-[10px] bg-cyan-900/30 px-1.5 py-0.5 rounded text-cyan-400">{user.elo} ELO</span>
+                  </div>
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded transition-colors flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center"><LogOut className="w-4 h-4" /></div>
+                    DÉCONNEXION
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -265,13 +288,44 @@ export default function Lobby({
             <div className="absolute top-0 right-0 w-32 h-1 bg-gradient-to-l from-cyan-500/50 to-transparent" />
             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/5" />
 
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
+              {user && user.username !== "Joueur" ? (
+                <div className="flex items-center gap-4 mb-6 bg-cyan-950/20 p-4 rounded-lg border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.1)] backdrop-blur-sm animate-in fade-in slide-in-from-left duration-500">
+                  <div className="relative">
+                    <div className="w-14 h-14 bg-cyan-900/20 rounded hexagon-mask flex items-center justify-center border-2 border-cyan-500/50">
+                      <UserIcon className="w-7 h-7 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-cyan-500/80 font-orbitron tracking-widest uppercase">Identité Confirmée</span>
+                      <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20">OPERATOR</span>
+                    </div>
+                    <div className="text-2xl text-white font-bold font-orbitron tracking-wide text-shadow-neon">{user.username}</div>
+                    <div className="text-xs text-slate-400 font-mono flex items-center gap-2">
+                      <span>RANG: <span className="text-amber-400 font-bold">{user.elo}</span></span>
+                      <span className="w-px h-3 bg-white/10" />
+                      <span>ID: #{user.id.substring(0, 4).toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-4"></div>
+              )}
+
               <h2 className="font-orbitron text-2xl md:text-4xl font-black text-white mb-2 tracking-wide uppercase italic">
                 <GlitchText text="RECHERCHE DE PARTIE" />
               </h2>
-              <p className="font-rajdhani font-medium text-slate-400 max-w-lg text-base md:text-lg leading-tight">
+              <p className="font-rajdhani font-medium text-slate-400 max-w-lg text-base md:text-lg leading-tight mb-4">
                 Rejoignez le champ de bataille. Prouvez votre valeur. Dominez le classement.
               </p>
+
+              {(!user || user.username === "Joueur") && (
+                <div className="bg-amber-500/10 border-l-2 border-amber-500 pl-3 py-2 text-amber-500 text-sm font-rajdhani font-bold max-w-md animate-pulse">
+                  ⚠️ Vous devez être connecté pour gagner ou perdre de l'Elo.
+                </div>
+              )}
             </div>
 
             <div className="relative z-10 mt-8 flex flex-col gap-4">
