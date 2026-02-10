@@ -203,6 +203,14 @@ public class GameService {
             return;
         }
 
+        // 🛑 Désactiver le timer pour les parties VS AI
+        boolean isAiGame = game.getPlayers().stream()
+                .anyMatch(p -> p.getUserId() == null
+                        || p.getUserId().equals(UUID.fromString("00000000-0000-0000-0000-000000000000")));
+        if (isAiGame) {
+            return;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         if (game.getLastTimerUpdate() != null) {
             long secondsElapsed = Duration.between(game.getLastTimerUpdate(), now).toSeconds();

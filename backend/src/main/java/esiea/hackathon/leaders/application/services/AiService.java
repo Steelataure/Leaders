@@ -1,11 +1,9 @@
 package esiea.hackathon.leaders.application.services;
 
-import esiea.hackathon.leaders.domain.model.AbilityEntity;
 import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.HexCoord;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RecruitmentCardEntity;
-import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
 import esiea.hackathon.leaders.domain.model.enums.CardState;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
@@ -35,7 +33,6 @@ public class AiService {
     private final ActionService actionService;
     private final RecruitmentService recruitmentService;
     private final RecruitmentCardRepository cardRepository;
-    private final RefCharacterRepository characterRepository;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @org.springframework.context.annotation.Lazy
@@ -121,9 +118,9 @@ public class AiService {
         // HEURISTICS
         Move bestMove = null;
         double bestScore = -Double.MAX_VALUE;
-        boolean isAbility = false;
-        String abilityIdToUse = null;
-        PieceEntity targetToAbility = null;
+        String abilityToUse = null;
+        UUID targetIdForAbility = null;
+        HexCoord abilityDestination = null;
 
         for (PieceEntity piece : myPieces) {
             // A. Check Moves
@@ -135,25 +132,76 @@ public class AiService {
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove = new Move(piece, dest);
-                        isAbility = false;
+                        abilityToUse = null;
                     }
                 }
             } catch (Exception e) {
             }
 
-            // B. Check Abilities (Simplified: Only Attack for now)
-            // TODO: Add complex ability check (Heal, etc.)
+            // B. Check Abilities
+            try {
+                // Simplified logic: check for Illusionist Swap if adjacent to leader
+                if ("ILLUSIONIST".equals(piece.getCharacterId())) {
+                    for (PieceEntity enemy : enemyPieces) {
+                        // Check if in LoS and distance > 1 (Illusionist constraints)
+                        if (isInLoS(piece, enemy)
+                                && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1) {
+                            double score = 15.0; // High priority for swap if possible
+                            if ("LEADER".equals(enemy.getCharacterId()))
+                                score += 20;
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMove = new Move(piece, new HexCoord(enemy.getQ(), enemy.getR()));
+                                abilityToUse = "ILLUSIONIST_SWAP";
+                                targetIdForAbility = enemy.getId();
+                            }
+                        }
+                    }
+                }
+
+                // INNKEEPER: Assist allies
+                if ("INNKEEPER".equals(piece.getCharacterId())) {
+                    List<PieceEntity> allies = allPieces.stream()
+                            .filter(p -> p.getOwnerIndex() == 1 && !p.getId().equals(piece.getId()))
+                            .collect(Collectors.toList());
+                    for (PieceEntity ally : allies) {
+                        if (distance(piece.getQ(), piece.getR(), ally.getQ(), ally.getR()) == 1) {
+                            // Find empty adj cell for ally
+                            for (HexCoord d : getAdjacentCoords(ally.getQ(), ally.getR())) {
+                                if (isCellEmpty(d, allPieces)) {
+                                    double score = 5.0; // Support move
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestMove = new Move(piece, d);
+                                        abilityToUse = "INNKEEPER_ASSIST";
+                                        targetIdForAbility = ally.getId();
+                                        abilityDestination = d;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        if (abilityToUse != null && bestMove != null) {
+            log("AI ACTION: Using Ability " + abilityToUse + " with " + bestMove.piece.getCharacterId());
+            actionService.useAbility(bestMove.piece.getId(), targetIdForAbility, abilityToUse, abilityDestination,
+                    AI_PLAYER_ID);
+            notifyUpdate(gameId);
+            return true;
         }
 
         if (bestMove != null) {
-            System.out.println("AI ACTION: Moving " + bestMove.piece.getCharacterId());
+            log("AI ACTION: Moving " + bestMove.piece.getCharacterId() + " to " + bestMove.dest.q() + ","
+                    + bestMove.dest.r());
             movementService.movePiece(bestMove.piece.getId(), bestMove.dest.q(), bestMove.dest.r(), AI_PLAYER_ID);
             notifyUpdate(gameId);
             return true;
         }
 
-        // If no valid moves logic found (should rarely happen if list not empty), mark
-        // as acted to prevent infinite loop
         if (!myPieces.isEmpty()) {
             PieceEntity p = myPieces.get(0);
             p.setHasActedThisTurn(true);
@@ -162,6 +210,25 @@ public class AiService {
         }
 
         return false;
+    }
+
+    private boolean isInLoS(PieceEntity p1, PieceEntity p2) {
+        return p1.getQ() == p2.getQ() || p1.getR() == p2.getR() || (p1.getQ() + p1.getR() == p2.getQ() + p2.getR());
+    }
+
+    private List<HexCoord> getAdjacentCoords(short q, short r) {
+        List<HexCoord> list = new ArrayList<>();
+        list.add(new HexCoord((short) (q + 1), r));
+        list.add(new HexCoord((short) (q - 1), r));
+        list.add(new HexCoord(q, (short) (r + 1)));
+        list.add(new HexCoord(q, (short) (r - 1)));
+        list.add(new HexCoord((short) (q + 1), (short) (r - 1)));
+        list.add(new HexCoord((short) (q - 1), (short) (r + 1)));
+        return list;
+    }
+
+    private boolean isCellEmpty(HexCoord c, List<PieceEntity> pieces) {
+        return pieces.stream().noneMatch(p -> p.getQ() == c.q() && p.getR() == c.r());
     }
 
     @Transactional
@@ -283,9 +350,9 @@ public class AiService {
 
         if (target != null) {
             if ("LEADER".equals(target.getCharacterId())) {
-                score += 1000;
+                score += 2000; // Strong desire to win
             } else {
-                score += 10;
+                score += 50;
             }
         }
 
@@ -298,31 +365,82 @@ public class AiService {
             int distBefore = distance(piece.getQ(), piece.getR(), enemyLeader.getQ(), enemyLeader.getR());
             int distAfter = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
             if (distAfter < distBefore)
-                score += 2;
+                score += 5;
         }
 
         // 3. DEFENSIVE : Protect own leader
         PieceEntity myLeader = allPieces.stream()
                 .filter(p -> "LEADER".equals(p.getCharacterId()) && p.getOwnerIndex() == 1)
                 .findFirst().orElse(null);
+
         if (myLeader != null) {
+            // A. Don't leave Leader alone
             int distToLeader = distance(dest.q(), dest.r(), myLeader.getQ(), myLeader.getR());
-            if (distToLeader == 1)
-                score += 1; // Stay close
+            if (distToLeader == 1) {
+                score += 10; // Stay close as bodyguard
+            }
+
+            // B. Special check: If I AM THE LEADER, evaluate danger
+            if ("LEADER".equals(piece.getCharacterId())) {
+                // Penalty for being capturable by ANY enemy piece next turn
+                for (PieceEntity enemy : enemyPieces) {
+                    // This is approximate LoS/Distance based on common units
+                    if (canPotentiallyCapture(enemy, dest.q(), dest.r(), allPieces)) {
+                        score -= 500; // Extremely dangerous
+                        log("DEBUG: AI Leader avoiding danger from " + enemy.getCharacterId());
+                    }
+                }
+
+                // Encourage having neighbors (prevents encirclement)
+                long neighbors = allPieces.stream()
+                        .filter(p -> p.getOwnerIndex() == 1 && !p.getId().equals(piece.getId())
+                                && distance(dest.q(), dest.r(), p.getQ(), p.getR()) == 1)
+                        .count();
+                score += (neighbors * 5);
+            } else {
+                // If not leader, check if moving here helps protect the leader from
+                // encirclement
+                int distLeaderToDest = distance(dest.q(), dest.r(), myLeader.getQ(), myLeader.getR());
+                if (distLeaderToDest == 1) {
+                    score += 15; // Phalanx placement
+                }
+            }
         }
 
-        // 4. SAFETY
-        long enemiesNearby = enemyPieces.stream()
-                .filter(e -> distance(dest.q(), dest.r(), e.getQ(), e.getR()) == 1)
-                .count();
-        if (enemiesNearby > 0)
-            score -= (enemiesNearby * 1.5);
+        // 4. SAFETY : Avoid being captured myself (non-leader units)
+        if (!"LEADER".equals(piece.getCharacterId())) {
+            long enemiesNearby = enemyPieces.stream()
+                    .filter(e -> distance(dest.q(), dest.r(), e.getQ(), e.getR()) == 1)
+                    .count();
+            if (enemiesNearby > 0)
+                score -= (enemiesNearby * 10);
+        }
 
         return score;
     }
 
     private int distance(int q1, int r1, int q2, int r2) {
         return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+    }
+
+    private boolean canPotentiallyCapture(PieceEntity enemy, int targetQ, int targetR,
+            List<PieceEntity> allPieces) {
+        int dist = distance(enemy.getQ(), enemy.getR(), targetQ, targetR);
+        // Simple heuristic: most pieces capture at distance 1
+        if (dist == 1)
+            return true;
+
+        // Special units (simplified)
+        if ("CAVALRY".equals(enemy.getCharacterId()) && dist == 2)
+            return true;
+        if ("ARCHER".equals(enemy.getCharacterId()) && dist == 2 && isInLoS(enemy, targetQ, targetR))
+            return true;
+
+        return false;
+    }
+
+    private boolean isInLoS(PieceEntity p1, int q2, int r2) {
+        return p1.getQ() == q2 || p1.getR() == r2 || (p1.getQ() + p1.getR() == q2 + r2);
     }
 
     private record Move(PieceEntity piece, HexCoord dest) {

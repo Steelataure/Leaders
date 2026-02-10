@@ -339,6 +339,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   useEffect(() => {
     if (!gameState || gameState.status !== "IN_PROGRESS") return;
 
+    // 🛑 Désactiver le timer pour les parties VS AI
+    const isAiGame = gameState.players.some(p => p.userId === "00000000-0000-0000-0000-000000000000" || !p.userId);
+    if (isAiGame) return;
+
     const timer = setInterval(() => {
       if (gameState.currentPlayerIndex === 0) {
         setTimeP0(prev => Math.max(0, prev - 1));
@@ -348,7 +352,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameState?.currentPlayerIndex, gameState?.status]);
+  }, [gameState?.currentPlayerIndex, gameState?.status, gameState?.players]);
 
   const formatTime = (seconds: number) => {
     const min = Math.floor(seconds / 60);
@@ -748,8 +752,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
               {gameState.players.find(p => p.playerIndex === 0)?.username}
             </h2>
             <div className="flex items-center gap-2">
-              <div className={`font-mono text-[10px] md:text-2xl font-bold px-1.5 md:px-3 py-0.5 rounded ${timeP0 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-cyan-400 bg-cyan-500/10"}`}>
-                {formatTime(timeP0)}
+              <div className={`font-mono text-[10px] md:text-2xl font-bold px-1.5 md:px-3 py-0.5 rounded ${timeP0 < 30 && !gameState.players.some(p => !p.userId || p.userId === "00000000-0000-0000-0000-000000000000") ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-cyan-400 bg-cyan-500/10"}`}>
+                {gameState.players.some(p => !p.userId || p.userId === "00000000-0000-0000-0000-000000000000") ? "--:--" : formatTime(timeP0)}
               </div>
               <div className="scale-[0.6] md:scale-75 origin-left">
                 <RankBadge elo={gameState.players.find(p => p.playerIndex === 0)?.elo} size="sm" />
@@ -784,8 +788,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
               <div className="scale-[0.6] md:scale-75 origin-right">
                 <RankBadge elo={gameState.players.find(p => p.playerIndex === 1)?.elo} size="sm" />
               </div>
-              <div className={`font-mono text-[10px] md:text-2xl font-bold px-1.5 md:px-3 py-0.5 rounded ${timeP1 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-rose-400 bg-rose-500/10"}`}>
-                {formatTime(timeP1)}
+              <div className={`font-mono text-[10px] md:text-2xl font-bold px-1.5 md:px-3 py-0.5 rounded ${timeP1 < 30 && !gameState.players.some(p => !p.userId || p.userId === "00000000-0000-0000-0000-000000000000") ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-rose-400 bg-rose-500/10"}`}>
+                {gameState.players.some(p => !p.userId || p.userId === "00000000-0000-0000-0000-000000000000") ? "--:--" : formatTime(timeP1)}
               </div>
             </div>
           </div>
