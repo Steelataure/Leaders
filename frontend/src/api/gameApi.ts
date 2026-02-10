@@ -7,10 +7,13 @@ declare global {
 }
 
 const getBaseUrl = () => {
-  if (window.location.hostname !== "localhost") {
+  // Always use the proxy locally to avoid CORS and ensure we hit the local backend (port 8085)
+  // regardless of VITE_API_URL environment variables
+  if (window.location.hostname === "localhost") {
     return "/api";
   }
 
+  // Production/Online: dynamic configuration or fallback to /api
   const url = window.config?.API_URL || import.meta.env.VITE_API_URL || "";
   if (!url) return "/api";
 

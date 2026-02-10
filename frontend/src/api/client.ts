@@ -7,13 +7,19 @@ declare global {
 }
 
 const getBaseUrl = () => {
+    // FORCE /api proxy on localhost to use local backend (via Vite proxy)
+    // This overrides any VITE_API_URL that might point to production
+    if (window.location.hostname === 'localhost') {
+        return '/api';
+    }
+
     // If we're NOT on localhost, we MUST use the Nginx proxy (/api)
     // to avoid CORS and port issues in production.
     if (window.location.hostname !== 'localhost') {
         return '/api';
     }
 
-    // Local development: use environment variable or fallback to /api (Vite proxy)
+    // Fallback for other environments? (Likely unreachable given above logic, but kept for safety)
     const url = window.config?.API_URL || import.meta.env.VITE_API_URL || '';
     if (!url) return '/api';
 

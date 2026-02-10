@@ -9,6 +9,12 @@ declare global {
 }
 
 const getSocketUrl = () => {
+    // FORCE local WebSocket connection on localhost (via Vite proxy /api)
+    if (window.location.hostname === 'localhost') {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.host}/api/ws/websocket`;
+    }
+
     // If we're NOT on localhost, we MUST use our current host + /api/ws
     // to go through the Nginx proxy correctly.
     if (window.location.hostname !== 'localhost') {
