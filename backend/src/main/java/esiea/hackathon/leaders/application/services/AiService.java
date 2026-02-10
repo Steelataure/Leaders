@@ -77,7 +77,7 @@ public class AiService {
                     && isInLoS(piece, enemyLeader.getQ(), enemyLeader.getR())) { // Note: isInLoS uses piece Q/R, we
                                                                                  // need dest Q/R
                 // Wait, isInLoS takes PieceEntity p1. We need to check LoS from DEST.
-                if (isInLoS(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR())) {
+                if (isInLoSCoords(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR())) {
                     score += 500.0; // Massive pressure
                 }
             }
@@ -232,7 +232,11 @@ public class AiService {
                 if ("ILLUSIONIST".equals(piece.getCharacterId())) {
                     for (PieceEntity enemy : enemyPieces) {
                         if (isInLoS(piece, enemy)
-                                && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1) {
+                                && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1
+                                && esiea.hackathon.leaders.domain.utils.HexUtils.isPathClear(
+                                        new HexCoord(piece.getQ(), piece.getR()),
+                                        new HexCoord(enemy.getQ(), enemy.getR()),
+                                        allPieces)) {
                             double score = 40.0; // Base: Better than simple move
                             if ("LEADER".equals(enemy.getCharacterId()))
                                 score += 2000.0; // Aggressive Swap
@@ -303,13 +307,19 @@ public class AiService {
                 if ("GRAPPLER".equals(piece.getCharacterId())) {
                     for (PieceEntity enemy : enemyPieces) {
                         int dist = distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR());
-                        if (dist > 1 && isInLoS(piece, enemy)) {
+                        if (dist > 1 && isInLoS(piece, enemy)
+                                && esiea.hackathon.leaders.domain.utils.HexUtils.isPathClear(
+                                        new HexCoord(piece.getQ(), piece.getR()),
+                                        new HexCoord(enemy.getQ(), enemy.getR()),
+                                        allPieces)) {
                             double pullScore = 45.0; // Strong control
                             if ("LEADER".equals(enemy.getCharacterId()))
                                 pullScore += 2000.0; // Aggressive Hook
 
-                            int dirQ = (enemy.getQ() - piece.getQ()) / dist;
-                            int dirR = (enemy.getR() - piece.getR()) / dist;
+                            int dq = enemy.getQ() - piece.getQ();
+                            int dr = enemy.getR() - piece.getR();
+                            int dirQ = dq / dist;
+                            int dirR = dr / dist;
                             HexCoord pullDest = new HexCoord((short) (piece.getQ() + dirQ),
                                     (short) (piece.getR() + dirR));
                             if (isCellEmpty(pullDest, allPieces)) {
@@ -440,11 +450,22 @@ public class AiService {
         }
 
         // Perform Recruitment
-        log("AI Recruiting: " + cardToBuy.getCharacter().getId() + " at "
-                + validPlacements.get(0).q() + "," + validPlacements.get(0).r());
         try {
-            recruitmentService.recruit(gameId, (short) 1, cardToBuy.getId(),
-                    Collections.singletonList(validPlacements.get(0)));
+            List<HexCoord> placements = new ArrayList<>();
+            placements.add(validPlacements.get(0));
+
+            // Cas Spécial: OLD_BEAR nécessite 2 placements
+            if ("OLD_BEAR".equals(cardToBuy.getCharacter().getId())) {
+                if (validPlacements.size() >= 2) {
+                    placements.add(validPlacements.get(1));
+                } else {
+                    log("DEBUG: AI cannot recruit OLD_BEAR (Not enough spawn cells)");
+                    return false;
+                }
+            }
+
+            log("AI Recruiting: " + cardToBuy.getCharacter().getId() + " at " + placements);
+            recruitmentService.recruit(gameId, (short) 1, cardToBuy.getId(), placements);
             notifyUpdate(gameId);
             return true;
         } catch (Exception e) {

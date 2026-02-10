@@ -10,20 +10,26 @@ import java.util.List;
 public class IllusionistSwapAction implements ActionAbilityStrategy {
 
     @Override
-    public String getAbilityId() { return "ILLUSIONIST_SWAP"; }
+    public String getAbilityId() {
+        return "ILLUSIONIST_SWAP";
+    }
 
     @Override
     public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
-        if (target == null) throw new IllegalArgumentException("Target required for Swap");
+        if (target == null)
+            throw new IllegalArgumentException("Target required for Swap");
 
         // RÈGLE 1 : Non-Adjacent (Distance > 1)
         if (getDistance(source, target) <= 1) {
             throw new IllegalArgumentException("Target must be non-adjacent (distance > 1)");
         }
 
-        // RÈGLE 2 : Ligne de Vue (Alignés sur Q, R ou S)
-        if (!isInLineOfSight(source, target)) {
-            throw new IllegalArgumentException("Target must be visible in a straight line");
+        // RÈGLE 2 : Ligne de Vue (Alignés sur Q, R ou S + Chemin libre)
+        if (!esiea.hackathon.leaders.domain.utils.HexUtils.isPathClear(
+                new HexCoord(source.getQ(), source.getR()),
+                new HexCoord(target.getQ(), target.getR()),
+                allPieces)) {
+            throw new IllegalArgumentException("Path to target is blocked or not in line");
         }
 
         // Action : Echange

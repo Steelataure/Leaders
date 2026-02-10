@@ -41,11 +41,14 @@ public class RecruitmentService {
 
         // 2a. SÉCURITÉ : Vérification que TOUTES les pièces ont agi (Phase d'actions
         // terminée)
+        // EXCEPTION : La Némésis ne joue pas activement, on l'ignore.
         List<PieceEntity> playerPieces = pieceRepository.findByGameId(gameId).stream()
                 .filter(p -> p.getOwnerIndex().equals(playerIndex))
                 .toList();
 
-        boolean allPiecesActed = playerPieces.stream().allMatch(PieceEntity::getHasActedThisTurn);
+        boolean allPiecesActed = playerPieces.stream()
+                .filter(p -> !"NEMESIS".equals(p.getCharacterId()))
+                .allMatch(PieceEntity::getHasActedThisTurn);
         if (!allPiecesActed) {
             throw new IllegalStateException(
                     "Action refusée : Vous devez terminer vos actions (ou les passer) avant de recruter.");
