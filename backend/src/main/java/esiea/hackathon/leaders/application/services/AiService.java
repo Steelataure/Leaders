@@ -384,10 +384,6 @@ public class AiService {
         return false;
     }
 
-    private boolean isInLoS(PieceEntity p1, PieceEntity p2) {
-        return p1.getQ() == p2.getQ() || p1.getR() == p2.getR() || (p1.getQ() + p1.getR() == p2.getQ() + p2.getR());
-    }
-
     private List<HexCoord> getAdjacentCoords(short q, short r) {
         List<HexCoord> list = new ArrayList<>();
         list.add(new HexCoord((short) (q + 1), r));
@@ -620,6 +616,10 @@ public class AiService {
             return true;
 
         return false;
+    }
+
+    private boolean isInLoS(PieceEntity p1, PieceEntity p2) {
+        return isInLoS(p1, p2.getQ(), p2.getR());
     }
 
     private boolean isInLoS(PieceEntity p1, int q2, int r2) {
