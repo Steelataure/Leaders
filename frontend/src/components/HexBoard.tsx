@@ -529,14 +529,28 @@ export default function HexBoard(props: HexBoardProps) {
   }, [selectedPiece, pieces, isLocalTurn]);
 
   const grapplerMoveDestinations = useMemo(() => {
-    if (!grapplerTarget) return new Set<string>();
+    if (!grapplerTarget || !selectedPiece) return new Set<string>();
     const dest = new Set<string>();
-    HEX_DIRECTIONS.forEach(({ dq, dr }) => {
-      const q = grapplerTarget.q + dq, r = grapplerTarget.r + dr;
-      if (isValidHex(q, r) && !findPieceAtCell(q, r)) dest.add(`${q},${r}`);
-    });
+
+    const dq = grapplerTarget.q - selectedPiece.q;
+    const dr = grapplerTarget.r - selectedPiece.r;
+    const dist = hexDistance(selectedPiece.q, selectedPiece.r, grapplerTarget.q, grapplerTarget.r);
+
+    if (dist > 1) {
+      // Direction unitaire
+      const dirQ = dq / dist;
+      const dirR = dr / dist;
+
+      // La destination doit être target - dir (le grappin "tire" le grappler vers la cible)
+      const q = grapplerTarget.q - dirQ;
+      const r = grapplerTarget.r - dirR;
+
+      if (isValidHex(q, r) && !findPieceAtCell(q, r)) {
+        dest.add(`${q},${r}`);
+      }
+    }
     return dest;
-  }, [grapplerTarget, pieces]);
+  }, [grapplerTarget, selectedPiece, pieces]);
 
   const innkeeperTargets = useMemo(() => {
     if (!selectedPiece || selectedPiece.characterId !== "INNKEEPER" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();

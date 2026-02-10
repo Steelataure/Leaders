@@ -126,12 +126,13 @@ public class ActionService {
         // Validation de l'action
         source.setHasActedThisTurn(true);
         if (target != null) {
-            java.util.List<PieceEntity> toSave = java.util.Arrays.asList(source, target);
-            pieceRepository.saveAll(toSave);
-            log("DEBUG: Both Source and Target saved via saveAll");
+            // Pour un échange (Swap), on sauve les deux séparément pour être sûr
+            pieceRepository.save(source);
+            pieceRepository.save(target);
+            log("DEBUG: Source (" + source.getCharacterId() + ") AND target (" + target.getCharacterId() + ") saved.");
         } else {
             pieceRepository.save(source);
-            log("DEBUG: Source saved");
+            log("DEBUG: Source (" + source.getCharacterId() + ") saved.");
         }
 
         // 🆕 SCÉNARIO 5 : Trigger Némésis si un Leader a été déplacé par une capacité

@@ -8,7 +8,6 @@ import esiea.hackathon.leaders.domain.model.enums.CardState;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RecruitmentCardRepository;
-import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -118,9 +117,6 @@ public class AiService {
         // HEURISTICS
         Move bestMove = null;
         double bestScore = -Double.MAX_VALUE;
-        String abilityToUse = null;
-        UUID targetIdForAbility = null;
-        HexCoord abilityDestination = null;
 
         for (PieceEntity piece : myPieces) {
             // A. Check Moves
@@ -131,8 +127,7 @@ public class AiService {
                     score += (new Random().nextDouble() * 0.5); // Randomness
                     if (score > bestScore) {
                         bestScore = score;
-                        bestMove = new Move(piece, dest);
-                        abilityToUse = null;
+                        bestMove = new Move(piece, dest, null, null, null);
                     }
                 }
             } catch (Exception e) {
@@ -140,20 +135,18 @@ public class AiService {
 
             // B. Check Abilities
             try {
-                // Simplified logic: check for Illusionist Swap if adjacent to leader
+                // ILLUSIONIST: Swap
                 if ("ILLUSIONIST".equals(piece.getCharacterId())) {
                     for (PieceEntity enemy : enemyPieces) {
-                        // Check if in LoS and distance > 1 (Illusionist constraints)
                         if (isInLoS(piece, enemy)
                                 && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1) {
-                            double score = 15.0; // High priority for swap if possible
+                            double score = 15.0;
                             if ("LEADER".equals(enemy.getCharacterId()))
                                 score += 20;
                             if (score > bestScore) {
                                 bestScore = score;
-                                bestMove = new Move(piece, new HexCoord(enemy.getQ(), enemy.getR()));
-                                abilityToUse = "ILLUSIONIST_SWAP";
-                                targetIdForAbility = enemy.getId();
+                                bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
+                                        "ILLUSIONIST_SWAP", enemy.getId(), null);
                             }
                         }
                     }
@@ -166,17 +159,87 @@ public class AiService {
                             .collect(Collectors.toList());
                     for (PieceEntity ally : allies) {
                         if (distance(piece.getQ(), piece.getR(), ally.getQ(), ally.getR()) == 1) {
-                            // Find empty adj cell for ally
                             for (HexCoord d : getAdjacentCoords(ally.getQ(), ally.getR())) {
                                 if (isCellEmpty(d, allPieces)) {
-                                    double score = 5.0; // Support move
+                                    double score = 5.0;
                                     if (score > bestScore) {
                                         bestScore = score;
-                                        bestMove = new Move(piece, d);
-                                        abilityToUse = "INNKEEPER_ASSIST";
-                                        targetIdForAbility = ally.getId();
-                                        abilityDestination = d;
+                                        bestMove = new Move(piece, d, "INNKEEPER_ASSIST", ally.getId(), d);
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // PROWLER: Stealth
+                if ("PROWLER".equals(piece.getCharacterId())) {
+                    PieceEntity leader = enemyPieces.stream().filter(e -> "LEADER".equals(e.getCharacterId()))
+                            .findFirst().orElse(null);
+                    if (leader != null) {
+                        for (int q = -3; q <= 3; q++) {
+                            for (int r = -3; r <= 3; r++) {
+                                if (Math.abs(q + r) <= 3) {
+                                    HexCoord d = new HexCoord((short) q, (short) r);
+                                    if (isCellEmpty(d, allPieces)) {
+                                        boolean isSafe = enemyPieces.stream()
+                                                .noneMatch(e -> distance(d.q(), d.r(), e.getQ(), e.getR()) == 1);
+                                        if (isSafe) {
+                                            int distToLeader = distance(d.q(), d.r(), leader.getQ(), leader.getR());
+                                            if (distToLeader <= 2) {
+                                                double score = 12.0;
+                                                if (score > bestScore) {
+                                                    bestScore = score;
+                                                    bestMove = new Move(piece, d, "PROWLER_STEALTH", null, d);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // GRAPPLER: Hook
+                if ("GRAPPLER".equals(piece.getCharacterId())) {
+                    for (PieceEntity enemy : enemyPieces) {
+                        int dist = distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR());
+                        if (dist > 1 && isInLoS(piece, enemy)) {
+                            double pullScore = 14.0;
+                            if ("LEADER".equals(enemy.getCharacterId()))
+                                pullScore += 20;
+                            int dirQ = (enemy.getQ() - piece.getQ()) / dist;
+                            int dirR = (enemy.getR() - piece.getR()) / dist;
+                            HexCoord pullDest = new HexCoord((short) (piece.getQ() + dirQ),
+                                    (short) (piece.getR() + dirR));
+                            if (isCellEmpty(pullDest, allPieces)) {
+                                if (pullScore > bestScore) {
+                                    bestScore = pullScore;
+                                    bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
+                                            "GRAPPLE_HOOK", enemy.getId(), null);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // BRAWLER: Push
+                if ("BRAWLER".equals(piece.getCharacterId())) {
+                    for (PieceEntity enemy : enemyPieces) {
+                        if (distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) == 1) {
+                            int dirQ = enemy.getQ() - piece.getQ();
+                            int dirR = enemy.getR() - piece.getR();
+                            HexCoord pushDest = new HexCoord((short) (enemy.getQ() + dirQ),
+                                    (short) (enemy.getR() + dirR));
+                            if (pushDest.isValid() && isCellEmpty(pushDest, allPieces)) {
+                                double score = 8.0;
+                                if ("LEADER".equals(enemy.getCharacterId()))
+                                    score += 10;
+                                if (score > bestScore) {
+                                    bestScore = score;
+                                    bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
+                                            "BRAWLER_PUSH", enemy.getId(), pushDest);
                                 }
                             }
                         }
@@ -186,18 +249,18 @@ public class AiService {
             }
         }
 
-        if (abilityToUse != null && bestMove != null) {
-            log("AI ACTION: Using Ability " + abilityToUse + " with " + bestMove.piece.getCharacterId());
-            actionService.useAbility(bestMove.piece.getId(), targetIdForAbility, abilityToUse, abilityDestination,
-                    AI_PLAYER_ID);
+        if (bestMove != null && bestMove.abilityId() != null) {
+            log("AI ACTION: Using Ability " + bestMove.abilityId() + " with " + bestMove.piece().getCharacterId());
+            actionService.useAbility(bestMove.piece().getId(), bestMove.targetId(), bestMove.abilityId(),
+                    bestMove.abilityDest(), AI_PLAYER_ID);
             notifyUpdate(gameId);
             return true;
         }
 
         if (bestMove != null) {
-            log("AI ACTION: Moving " + bestMove.piece.getCharacterId() + " to " + bestMove.dest.q() + ","
-                    + bestMove.dest.r());
-            movementService.movePiece(bestMove.piece.getId(), bestMove.dest.q(), bestMove.dest.r(), AI_PLAYER_ID);
+            log("AI ACTION: Moving " + bestMove.piece().getCharacterId() + " to " + bestMove.dest().q() + ","
+                    + bestMove.dest().r());
+            movementService.movePiece(bestMove.piece().getId(), bestMove.dest().q(), bestMove.dest().r(), AI_PLAYER_ID);
             notifyUpdate(gameId);
             return true;
         }
@@ -443,6 +506,6 @@ public class AiService {
         return p1.getQ() == q2 || p1.getR() == r2 || (p1.getQ() + p1.getR() == q2 + r2);
     }
 
-    private record Move(PieceEntity piece, HexCoord dest) {
+    private record Move(PieceEntity piece, HexCoord dest, String abilityId, UUID targetId, HexCoord abilityDest) {
     }
 }
