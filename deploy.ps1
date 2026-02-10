@@ -27,30 +27,11 @@ function Write-Success {
 }
 
 # 1. Gestion Git
-$CurrentBranch = git branch --show-current
-$CreateNew = Read-Host "🌳 Voulez-vous créer une nouvelle branche ? (y/N)"
+# (Désactivé à la demande de l'utilisateur pour éviter les commits automatiques)
+Write-Step "Ignorer l'étape Git (mode manuel)..."
+# $CurrentBranch = git branch --show-current
+# ... Git operations removed ...
 
-if ($CreateNew -eq "y" -or $CreateNew -eq "Y") {
-    $BranchName = Read-Host "📝 Entrez le nom de la nouvelle branche"
-    if ([string]::IsNullOrWhiteSpace($BranchName)) {
-        Write-ErrorExit "Le nom de la branche ne peut pas être vide."
-    }
-    Write-Step "Création et bascule sur la branche '$BranchName'..."
-    git checkout -b $BranchName
-    if ($LASTEXITCODE -ne 0) { Write-ErrorExit "Impossible de créer la branche '$BranchName'." }
-    $TargetBranch = $BranchName
-} else {
-    Write-Host "ℹ️ Utilisation de la branche actuelle : $CurrentBranch" -ForegroundColor Blue
-    $TargetBranch = $CurrentBranch
-}
-
-Write-Step "Commit des changements actuels..."
-git add .
-git commit -m "Auto-deploy from script: modifications on $TargetBranch"
-
-Write-Step "Envoi des changements sur GitHub (origin)..."
-git push origin $TargetBranch
-# On continue même si le push échoue (ex: pas de remote configuré)
 
 # 2. Build Docker
 Write-Step "Construction de l'image Backend ($BackendImage)..."
@@ -85,8 +66,7 @@ railway redeploy --service $FrontendService -y
 if ($LASTEXITCODE -ne 0) { Write-ErrorExit "Le redéploiement Railway a échoué." }
 
 # 5. Nettoyage
-Write-Step "Retour sur la branche principale (main)..."
-git checkout main
-if ($LASTEXITCODE -ne 0) { Write-ErrorExit "Impossible de retourner sur la branche main." }
+Write-Step "Fin du script."
+# git checkout main
 
 Write-Success "Le déploiement est terminé avec succès ! 🎉"

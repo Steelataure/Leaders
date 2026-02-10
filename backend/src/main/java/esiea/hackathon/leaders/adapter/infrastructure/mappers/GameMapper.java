@@ -1,6 +1,7 @@
 package esiea.hackathon.leaders.adapter.infrastructure.mappers;
 
 import esiea.hackathon.leaders.adapter.infrastructure.entity.GameJpaEntity;
+import esiea.hackathon.leaders.adapter.infrastructure.entity.GamePlayerJpaEntity;
 import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.GamePlayerEntity;
 
@@ -89,5 +90,40 @@ public class GameMapper {
                 }
 
                 return entity;
+        }
+
+        public static GamePlayerEntity toPlayerDomain(GamePlayerJpaEntity entity) {
+                if (entity == null)
+                        return null;
+
+                return GamePlayerEntity.builder()
+                                .id(entity.getId())
+                                .userId(entity.getUserId())
+                                .playerIndex(entity.getPlayerIndex())
+                                .isFirstTurnCompleted(entity.isFirstTurnCompleted())
+                                // Note: We don't map the parent Game here to avoid infinite recursion
+                                // or we could map it with a shallow proxy if needed.
+                                // For now, we leave it null or handled by the caller/GameEntity mapping.
+                                .build();
+        }
+
+        public static GamePlayerJpaEntity toPlayerJpa(GamePlayerEntity domain) {
+                if (domain == null)
+                        return null;
+
+                GameJpaEntity gameRef = null;
+                if (domain.getGame() != null) {
+                        // Create a shallow reference to the game to satify foreign key if needed
+                        // without triggering full recursion
+                        gameRef = GameJpaEntity.builder().id(domain.getGame().getId()).build();
+                }
+
+                return GamePlayerJpaEntity.builder()
+                                .id(domain.getId())
+                                .userId(domain.getUserId())
+                                .playerIndex(domain.getPlayerIndex())
+                                .isFirstTurnCompleted(domain.isFirstTurnCompleted())
+                                .game(gameRef)
+                                .build();
         }
 }
