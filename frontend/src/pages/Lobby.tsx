@@ -83,7 +83,7 @@ export default function Lobby({
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/api/stats", { cache: "no-store", headers: { 'Accept': 'application/json' } });
+        const res = await fetch(`${API_BASE_URL}/stats`, { cache: "no-store", headers: { 'Accept': 'application/json' } });
         if (res.ok) {
           const data = await res.json();
           setStats(data);
@@ -203,20 +203,21 @@ export default function Lobby({
 
 
       {/* TOP HEADER */}
-      <div className="relative z-50 flex items-center justify-between px-8 py-6 w-full max-w-7xl mx-auto">
-        <div className="flex items-center gap-4">
-          <h1 className="font-orbitron text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-white drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
+      <div className="relative z-50 flex items-center justify-between px-4 md:px-8 py-4 md:py-6 w-full max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 md:gap-4">
+          <h1 className="font-orbitron text-2xl md:text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-white drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
             LEADERS
           </h1>
-          <div className="hidden md:flex flex-col ml-4">
+          <div className="hidden lg:flex flex-col ml-4">
             <span className="text-[10px] font-rajdhani text-cyan-500/60 uppercase tracking-[0.2em] leading-none">Tactical Interface</span>
             <span className="text-[10px] font-rajdhani text-cyan-500/40 uppercase tracking-[0.2em] leading-none">v2.1.0-STABLE</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6">
           <button onClick={onOpenRankInfo} className="text-sm font-rajdhani font-bold text-slate-400 hover:text-cyan-400 transition-colors uppercase tracking-wider flex items-center gap-2">
-            <Trophy className="w-4 h-4" /> CLASSEMENT
+            <Trophy className="w-5 h-5 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">CLASSEMENT</span>
           </button>
 
           <button onClick={() => setSettingsOpen(true)} className="text-slate-400 hover:text-white transition-colors">
@@ -225,13 +226,16 @@ export default function Lobby({
 
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="group relative border border-white/10 bg-white/5 hover:bg-white/10 px-4 py-2 rounded flex items-center gap-3 transition-all backdrop-blur-sm"
+            className="group relative border border-white/10 bg-white/5 hover:bg-white/10 px-3 md:px-4 py-1.5 md:py-2 rounded flex items-center gap-2 md:gap-3 transition-all backdrop-blur-sm"
           >
-            <div className="flex flex-col items-end leading-none">
-              <span className="text-[10px] text-slate-500 font-orbitron uppercase tracking-widest">Opérateur</span>
-              <span className="font-rajdhani font-bold text-lg text-white group-hover:text-cyan-400 transition-colors uppercase tracking-wide">
+            <div className="flex flex-col items-end leading-none hidden xs:flex">
+              <span className="text-[8px] md:text-[10px] text-slate-500 font-orbitron uppercase tracking-widest text-right">Opérateur</span>
+              <span className="font-rajdhani font-bold text-sm md:text-lg text-white group-hover:text-cyan-400 transition-colors uppercase tracking-wide">
                 {user ? user.username : "INVITÉ"}
               </span>
+            </div>
+            <div className="xs:hidden">
+              <UserIcon className="w-5 h-5 text-white" />
             </div>
             {user && <RankBadge elo={user.elo} size="sm" showElo={true} />}
           </button>
@@ -249,7 +253,7 @@ export default function Lobby({
       </div>
 
       {/* MAIN LAYOUT */}
-      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col lg:flex-row gap-8 items-stretch justify-center h-[calc(100vh-100px)] pb-12">
+      <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col lg:flex-row gap-6 md:gap-8 items-stretch justify-center lg:h-[calc(100vh-100px)] pb-12 overflow-y-auto lg:overflow-hidden">
 
         {/* LEFT: ACTION PANEL */}
         <div className="flex-[2] flex flex-col gap-6 h-full">
@@ -262,10 +266,10 @@ export default function Lobby({
             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/5" />
 
             <div className="relative z-10">
-              <h2 className="font-orbitron text-4xl font-black text-white mb-2 tracking-wide uppercase italic">
+              <h2 className="font-orbitron text-2xl md:text-4xl font-black text-white mb-2 tracking-wide uppercase italic">
                 <GlitchText text="RECHERCHE DE PARTIE" />
               </h2>
-              <p className="font-rajdhani font-medium text-slate-400 max-w-lg text-lg leading-tight">
+              <p className="font-rajdhani font-medium text-slate-400 max-w-lg text-base md:text-lg leading-tight">
                 Rejoignez le champ de bataille. Prouvez votre valeur. Dominez le classement.
               </p>
             </div>
@@ -285,11 +289,11 @@ export default function Lobby({
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 mt-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-2">
                 <select
                   value={selectedScenario}
                   onChange={(e) => setSelectedScenario(Number(e.target.value))}
-                  className="bg-slate-950 border border-white/10 text-slate-200 font-rajdhani font-bold text-lg rounded px-4 py-3 outline-none focus:border-cyan-500 min-w-[240px] appearance-none"
+                  className="bg-slate-950 border border-white/10 text-slate-200 font-rajdhani font-bold text-lg rounded px-4 py-3 outline-none focus:border-cyan-500 min-w-full sm:min-w-[240px] appearance-none"
                 >
                   <option value={0}>⚔️ MODE CLASSÉ</option>
                   <option value={-1} disabled>🤖 VS IA (Bientôt)</option>
@@ -346,18 +350,20 @@ export default function Lobby({
             </div>
 
             {joinMode ? (
-              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right">
-                {code.map((digit, i) => (
-                  <input
-                    key={i}
-                    id={`code-${i}`}
-                    type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleCodeChange(i, e.target.value)}
-                    className="w-10 h-10 bg-black border border-white/20 rounded text-center text-xl font-mono text-cyan-400 focus:border-cyan-500 outline-none uppercase"
-                  />
-                ))}
+              <div className="flex flex-wrap items-center justify-center gap-2 animate-in fade-in slide-in-from-right w-full md:w-auto">
+                <div className="flex gap-1 md:gap-2">
+                  {code.map((digit, i) => (
+                    <input
+                      key={i}
+                      id={`code-${i}`}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleCodeChange(i, e.target.value)}
+                      className="w-9 h-9 md:w-10 md:h-10 bg-black border border-white/20 rounded text-center text-lg md:text-xl font-mono text-cyan-400 focus:border-cyan-500 outline-none uppercase"
+                    />
+                  ))}
+                </div>
                 <button onClick={() => setJoinMode(false)} className="ml-2 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400">✕</button>
               </div>
             ) : createdSessionCode ? (
@@ -369,13 +375,13 @@ export default function Lobby({
                 <button onClick={() => { setCreatedSessionCode(null); setIsCreatingPrivate(false); }} className="text-xs text-red-400 hover:text-red-300 font-orbitron tracking-widest bg-red-900/10 px-3 py-2 rounded h-fit">ANNULER</button>
               </div>
             ) : (
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                 <button
                   onClick={async () => {
                     try {
                       setIsCreatingPrivate(true);
                       const s = await createPrivateSession(user?.id);
-                      setCreatedSessionCode(s.code);
+                      setCreatedSessionCode(s.code ?? null);
                       webSocketService.subscribeToSession(s.id, (us) => {
                         if (us.status === "ACTIVE") onStartGame(us.id);
                       });
@@ -384,13 +390,13 @@ export default function Lobby({
                     }
                   }}
                   disabled={isCreatingPrivate}
-                  className="px-6 py-2 border-l-2 border-emerald-500 bg-emerald-900/20 hover:bg-emerald-500/20 text-emerald-400 font-orbitron text-sm font-bold tracking-widest transition-all skew-x-[-10deg] hover:skew-x-[-15deg]"
+                  className="w-full sm:w-auto px-6 py-2 border-l-2 border-emerald-500 bg-emerald-900/20 hover:bg-emerald-500/20 text-emerald-400 font-orbitron text-sm font-bold tracking-widest transition-all skew-x-[-10deg] hover:skew-x-[-15deg]"
                 >
                   <span className="skew-x-[10deg] block">CRÉER</span>
                 </button>
                 <button
                   onClick={() => setJoinMode(true)}
-                  className="px-6 py-2 border-l-2 border-white/30 bg-white/5 hover:bg-white/10 text-slate-200 font-orbitron text-sm font-bold tracking-widest transition-all skew-x-[-10deg] hover:skew-x-[-15deg]"
+                  className="w-full sm:w-auto px-6 py-2 border-l-2 border-white/30 bg-white/5 hover:bg-white/10 text-slate-200 font-orbitron text-sm font-bold tracking-widest transition-all skew-x-[-10deg] hover:skew-x-[-15deg]"
                 >
                   <span className="skew-x-[10deg] block">REJOINDRE</span>
                 </button>
@@ -400,7 +406,7 @@ export default function Lobby({
         </div>
 
         {/* RIGHT: LEADERBOARD */}
-        <div className="flex-1 min-w-[320px] bg-black/40 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex flex-col shadow-2xl holo-corner bg-scanline">
+        <div className="flex-1 min-w-full lg:min-w-[320px] bg-black/40 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex flex-col shadow-2xl holo-corner bg-scanline lg:h-full min-h-[400px]">
           <div className="p-4 border-b border-white/5 bg-white/5">
             <h3 className="font-orbitron font-bold text-cyan-400 tracking-widest text-sm uppercase flex items-center gap-2">
               <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
@@ -418,10 +424,10 @@ export default function Lobby({
 
       {/* --- MODALS (Login/Register/Settings) - Styled consistently --- */}
       {loginOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-cyan-500/30 p-8 rounded-xl w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+          <div className="bg-slate-900 border border-cyan-500/30 p-6 md:p-8 rounded-xl w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] relative">
             <button onClick={() => setLoginOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">✕</button>
-            <h2 className="font-orbitron text-2xl font-bold text-white mb-6 uppercase tracking-wider text-center border-b border-white/10 pb-4">
+            <h2 className="font-orbitron text-xl md:text-2xl font-bold text-white mb-6 uppercase tracking-wider text-center border-b border-white/10 pb-4">
               {isRegistering ? "Initialisation" : "Authentification"}
             </h2>
 
@@ -464,9 +470,9 @@ export default function Lobby({
 
       {settingsOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/50 rounded-xl p-8 shadow-2xl" onClick={(e: any) => e.stopPropagation()}>
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/50 rounded-xl p-6 md:p-8 shadow-2xl" onClick={(e: any) => e.stopPropagation()}>
             <button onClick={() => setSettingsOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">✕</button>
-            <h2 className="text-2xl font-orbitron font-bold text-white mb-8 flex items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-orbitron font-bold text-white mb-8 flex items-center gap-3">
               <Settings className="w-6 h-6 text-slate-400" />
               PARAMÈTRES
             </h2>

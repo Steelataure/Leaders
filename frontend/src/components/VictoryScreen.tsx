@@ -343,7 +343,7 @@ export default function VictoryScreen({
   loserPieceCount = 0,
   winnerElo = 0,
   winnerEloChange = 0,
-  loserEloChange = 0,
+  // loserEloChange = 0,
 }: VictoryScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);

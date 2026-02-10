@@ -1,15 +1,51 @@
-import SockJS from 'sockjs-client';
-import { Client, Message } from '@stomp/stompjs';
+import { Client, type Message } from '@stomp/stompjs';
 
-const SOCKET_URL = '/ws';
+declare global {
+    interface Window {
+        config?: {
+            API_URL?: string;
+        };
+    }
+}
+
+const getSocketUrl = () => {
+    // If we're NOT on localhost, we MUST use our current host + /api/ws
+    // to go through the Nginx proxy correctly.
+    if (window.location.hostname !== 'localhost') {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // /websocket suffix is mandatory for some Spring SockJS configurations using standard WS
+        return `${protocol}//${window.location.host}/api/ws/websocket`;
+    }
+
+    // Local/Legacy fallback
+    const url = window.config?.API_URL || import.meta.env.VITE_API_URL || '';
+    if (!url || url.startsWith('/')) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.host}/api/ws`;
+    }
+
+    // Absolute URL case (e.g. local dev pointing to remote)
+    let normalized = url.replace(/\/$/, '');
+    if (!normalized.endsWith('/api') && !normalized.includes('/api/')) {
+        normalized += '/api';
+    }
+    const rootUrl = normalized.replace(/\/api$/, '');
+    return rootUrl.replace(/^http/, 'ws') + '/ws';
+};
+
+const SOCKET_URL = getSocketUrl();
 
 class WebSocketService {
     private client: Client;
     private connected: boolean = false;
 
     constructor() {
+        console.log('Connecting to WebSocket at:', SOCKET_URL);
         this.client = new Client({
-            webSocketFactory: () => new SockJS(SOCKET_URL),
+            brokerURL: SOCKET_URL,
+            reconnectDelay: 5000,
+            heartbeatIncoming: 4000,
+            heartbeatOutgoing: 4000,
             onConnect: () => {
                 this.connected = true;
                 console.log('Connected to WebSocket');
@@ -17,6 +53,10 @@ class WebSocketService {
             onDisconnect: () => {
                 this.connected = false;
                 console.log('Disconnected from WebSocket');
+            },
+            onStompError: (frame) => {
+                console.error('Broker reported error: ' + frame.headers['message']);
+                console.error('Additional details: ' + frame.body);
             },
             debug: (str) => {
                 console.log(str);

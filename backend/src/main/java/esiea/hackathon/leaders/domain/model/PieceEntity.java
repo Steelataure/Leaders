@@ -4,7 +4,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-@Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class PieceEntity {
 
     private UUID id;
@@ -15,5 +18,6 @@ public class PieceEntity {
     private Short ownerIndex;
     private Short q; // coordonnée hexagonale axiale
     private Short r; // coordonnée hexagonale axiale
+    @Builder.Default
     private Boolean hasActedThisTurn = false;
 }

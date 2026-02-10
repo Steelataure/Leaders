@@ -61,6 +61,7 @@ const CHARACTER_NAMES: Record<string, string> = {
   CUB: "Ourson",
 };
 
+
 // === CHARACTER DATA MAPPING ===
 const CHARACTER_DATA: Record<string, { name: string; description: string; type: "ACTIVE" | "PASSIVE" | "SPECIAL" }> = {
   ARCHER: { name: "Archère", description: "Participe à la capture à 2 cases en ligne droite", type: "PASSIVE" },
@@ -98,11 +99,13 @@ function SidebarCard({
   onClick,
   onMouseEnter,
   disabled,
+  mini = false,
 }: {
   card: CharacterCard;
   onClick: () => void;
   onMouseEnter: () => void;
   disabled: boolean;
+  mini?: boolean;
 }) {
   const icons: Record<string, string> = {
     ACTIVE: "⚡",
@@ -117,10 +120,14 @@ function SidebarCard({
       onClick={!disabled ? onClick : undefined}
       onMouseEnter={onMouseEnter}
       className={`
-        group relative w-full p-3 rounded-xl border-l-[6px] transition-all duration-300
+        group relative transition-all duration-300
+        ${mini
+          ? "w-16 h-20 p-1 rounded-lg border-l-2 bg-slate-900 shadow-lg shrink-0 overflow-hidden"
+          : "w-full p-2 md:p-3 rounded-lg md:rounded-xl border-l-4 md:border-l-[6px] bg-slate-900/80"
+        }
         ${disabled
-          ? "bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed grayscale"
-          : "bg-slate-900/80 border-cyan-500 hover:bg-slate-800 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] cursor-pointer hover:scale-[1.02]"
+          ? "border-slate-800 opacity-50 cursor-not-allowed grayscale"
+          : "border-cyan-500 hover:bg-slate-800 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] cursor-pointer hover:scale-[1.02]"
         }
       `}
     >
@@ -131,16 +138,16 @@ function SidebarCard({
 
       {disabled && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
-          <div className="bg-black/60 px-3 py-1 rounded text-[10px] font-bold tracking-widest text-slate-400 border border-slate-700 uppercase">
-            Verrouillé
+          <div className="bg-black/60 px-2 py-0.5 rounded text-[8px] font-bold tracking-widest text-slate-400 border border-slate-700 uppercase">
+            BLOQUÉ
           </div>
         </div>
       )}
 
-      <div className="flex gap-4 items-center relative z-0">
+      <div className={`flex ${mini ? "flex-col items-center" : "gap-2 md:gap-4 items-center"} relative z-0`}>
         {/* Avatar Image */}
         <div className={`
-           w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 bg-slate-950 shadow-inner
+           ${mini ? "w-10 h-10 mb-1" : "w-12 h-12 md:w-20 md:h-20"} shrink-0 rounded-lg overflow-hidden border-2 bg-slate-950 shadow-inner
            ${disabled ? "border-slate-700" : "border-cyan-500/50 group-hover:border-cyan-400"}
         `}>
           {CHARACTER_IMAGES[card.characterId] ? (
@@ -150,36 +157,43 @@ function SidebarCard({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xl text-slate-600">
+            <div className="w-full h-full flex items-center justify-center bg-slate-800 text-lg md:text-xl text-slate-600">
               {icons[charType]}
             </div>
           )}
         </div>
 
         {/* Content Info */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="flex justify-between items-baseline mb-1">
-            <span className={`font-cyber text-lg font-bold truncate ${disabled ? "text-slate-500" : "text-white group-hover:text-cyan-300"}`}>
+        {!mini ? (
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <div className="flex justify-between items-baseline mb-0.5 md:mb-1">
+              <span className={`font-cyber text-sm md:text-lg font-bold truncate ${disabled ? "text-slate-500" : "text-white group-hover:text-cyan-300"}`}>
+                {card.name}
+              </span>
+              <span className="text-[8px] md:text-[10px] text-slate-600 font-mono">
+                {charType === "ACTIVE" ? "ACTIF" : "PASSIF"}
+              </span>
+            </div>
+
+            <p className="text-[9px] md:text-[11px] text-slate-400 leading-tight line-clamp-1 md:line-clamp-2 italic pr-2">
+              "{card.description || "Information classifiée"}"
+            </p>
+
+            {!disabled && (
+              <div className="mt-1 md:mt-2 flex items-center gap-1">
+                <div className="h-1 w-8 md:w-12 bg-cyan-900 rounded-full overflow-hidden">
+                  <div className="h-full bg-cyan-500 w-2/3 animate-pulse" />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full text-center mt-auto pb-0.5">
+            <span className="text-[7px] font-black text-white uppercase tracking-tighter block truncate">
               {card.name}
             </span>
-            <span className="text-[10px] text-slate-600 font-mono">
-              {charType === "ACTIVE" ? "ACTIF" : "PASSIF"}
-            </span>
           </div>
-
-          <p className="text-[11px] text-slate-400 leading-tight line-clamp-2 italic pr-2">
-            "{card.description || "Information classifiée"}"
-          </p>
-
-          {!disabled && (
-            <div className="mt-2 flex items-center gap-1">
-              <div className="h-1 w-12 bg-cyan-900 rounded-full overflow-hidden">
-                <div className="h-full bg-cyan-500 w-2/3 animate-pulse" />
-              </div>
-              <span className="text-[8px] text-cyan-500 uppercase tracking-wider ml-2">DISPONIBLE</span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
@@ -714,7 +728,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   const activeTargetName = activeTarget ? CHARACTER_NAMES[activeTarget.characterId] || activeTarget.characterId : "";
 
   return (
-    <div className="h-screen w-screen bg-[#020617] text-white font-mono flex overflow-hidden relative selection:bg-cyan-500 selection:text-black">
+    <div className="h-[100dvh] w-screen bg-[#020617] text-white font-mono flex overflow-hidden relative selection:bg-cyan-500 selection:text-black">
       <GameBackground />
       {/* Borders - preserved for UI framing */}
       <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-cyan-500 rounded-tl-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)] z-20" />
@@ -722,119 +736,96 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       <div className="absolute bottom-6 left-6 w-8 h-8 border-b-2 border-l-2 border-cyan-500 rounded-bl-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)] z-20" />
       <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-cyan-500 rounded-br-lg pointer-events-none drop-shadow-[0_0_8px_rgba(0,245,255,0.8)] z-20" />
 
-      {/* TOP HEADER: PLAYERS & TIMERS */}
-      <div className="absolute top-0 left-0 right-0 h-36 bg-slate-900/40 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-10 z-50">
-        {/* Player 0 (Blue) */}
-        <div className={`flex items-center gap-4 p-2 rounded-xl transition-all ${gameState.currentPlayerIndex === 0 ? "bg-cyan-500/10 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "opacity-60"}`}>
-          <div className="w-10 h-10 rounded-full border-2 border-cyan-500 bg-slate-800 flex items-center justify-center overflow-hidden">
+      {/* TOP HEADER: RESPONSIVE (Rich on Desktop, Minimal on Mobile) */}
+      <div className="absolute top-0 left-0 right-0 h-10 md:h-36 bg-slate-900/40 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-2 md:px-10 z-50">
+        {/* P0 (Blue) */}
+        <div className={`flex items-center gap-1 md:gap-4 transition-all ${gameState.currentPlayerIndex === 0 ? "opacity-100" : "opacity-40"}`}>
+          <div className="w-6 h-6 md:w-16 md:h-16 rounded-full border border-cyan-500 bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
             <img src="/image/garderoyal.png" className="w-full h-full object-cover" />
           </div>
-          <div>
-            <div className="text-[10px] text-cyan-400/60 font-mono uppercase tracking-[0.3em] mb-1">Commandant Tactique</div>
-            <div className="flex items-center gap-6">
-              <h2 className="font-cyber text-3xl font-black text-white tracking-wider bg-gradient-to-r from-white via-cyan-100 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(6,182,212,0.3)] uppercase italic">
-                {gameState.players.find(p => p.playerIndex === 0)?.username || "Chargement..."}
-              </h2>
-              <RankBadge
-                elo={gameState.players.find(p => p.playerIndex === 0)?.elo}
-                size="md"
-              />
+          <div className="flex flex-col">
+            <h2 className="hidden md:block font-cyber text-xl lg:text-3xl font-black text-white tracking-wider bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent uppercase italic truncate max-w-[150px]">
+              {gameState.players.find(p => p.playerIndex === 0)?.username}
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className={`font-mono text-[10px] md:text-2xl font-bold px-1.5 md:px-3 py-0.5 rounded ${timeP0 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-cyan-400 bg-cyan-500/10"}`}>
+                {formatTime(timeP0)}
+              </div>
+              <div className="scale-[0.6] md:scale-75 origin-left">
+                <RankBadge elo={gameState.players.find(p => p.playerIndex === 0)?.elo} size="sm" />
+              </div>
             </div>
-          </div>
-          <div className={`ml-4 font-mono text-2xl font-bold px-3 py-1 rounded-lg ${timeP0 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-cyan-400 bg-cyan-500/10"}`}>
-            {formatTime(timeP0)}
           </div>
         </div>
 
-        {/* Turn indicator center */}
-        <div className="flex flex-col items-center gap-4 min-w-[280px]">
+        {/* Turn indicator - center */}
+        <div className="flex flex-col items-center">
           <div className={`
-            relative group
-            ${isMyTurn
-              ? "text-cyan-400"
-              : "text-rose-400"
-            }
+            px-3 md:px-12 py-0.5 md:py-3 font-cyber text-[10px] md:text-2xl font-black tracking-[0.1em] md:tracking-[0.3em] uppercase transition-all duration-500
+            ${isMyTurn ? "text-cyan-400 scale-100" : "text-rose-400 scale-90"}
           `}>
-            {/* Decorative corners */}
-            <div className={`absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
-            <div className={`absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
-            <div className={`absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
-            <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 transition-all duration-500 ${isMyTurn ? "border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" : "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"}`} />
-
-            <div className={`
-              px-12 py-2 font-cyber text-2xl font-black tracking-[0.25em] uppercase transition-all duration-500
-              bg-slate-950/60 backdrop-blur-sm border border-white/5
-              ${isMyTurn ? "shadow-[inset_0_0_20px_rgba(6,182,212,0.1)] animate-pulse border-cyan-500/20" : "shadow-[inset_0_0_20px_rgba(244,63,94,0.1)] border-rose-500/20"}
-            `}>
-              {isMyTurn ? "VOTRE TOUR" : "TOUR ADVERSE"}
-            </div>
+            {isMyTurn ? "VOTRE TOUR" : "ADVERSAIRE"}
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-slate-500/50" />
-            <div className="text-[11px] text-slate-300 font-mono font-bold tracking-[0.3em] uppercase">
-              TOUR n°{gameState.turnNumber}
-            </div>
-            <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-slate-500/50" />
+          <div className="hidden md:flex items-center gap-2 text-[11px] text-slate-500 font-mono font-bold tracking-[0.2em] uppercase">
+            <span>TOUR {gameState.turnNumber}</span>
           </div>
         </div>
 
-        {/* Player 1 (Red) */}
-        <div className={`flex items-center gap-4 p-2 rounded-xl transition-all flex-row-reverse ${gameState.currentPlayerIndex === 1 ? "bg-rose-500/10 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]" : "opacity-60"}`}>
-          <div className="w-10 h-10 rounded-full border-2 border-rose-500 bg-slate-800 flex items-center justify-center overflow-hidden">
+        {/* P1 (Red) */}
+        <div className={`flex flex-row-reverse items-center gap-1 md:gap-4 transition-all ${gameState.currentPlayerIndex === 1 ? "opacity-100" : "opacity-40"}`}>
+          <div className="w-6 h-6 md:w-16 md:h-16 rounded-full border border-rose-500 bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_15px_rgba(244,63,94,0.3)]">
             <img src="/image/garderoyal.png" className="w-full h-full object-cover grayscale" />
           </div>
-          <div className="text-right">
-            <div className="text-[10px] text-rose-400/60 font-mono uppercase tracking-[0.3em] mb-1">Opposant Désigné</div>
-            <div className="flex items-center gap-6 flex-row-reverse">
-              <h2 className="font-cyber text-3xl font-black text-white tracking-wider bg-gradient-to-l from-white via-rose-100 to-rose-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(244,63,94,0.3)] uppercase italic text-right">
-                {gameState.players.find(p => p.playerIndex === 1)?.username || "Chargement..."}
-              </h2>
-              <RankBadge
-                elo={gameState.players.find(p => p.playerIndex === 1)?.elo}
-                size="md"
-              />
+          <div className="flex flex-col items-end">
+            <h2 className="hidden md:block font-cyber text-xl lg:text-3xl font-black text-white tracking-wider bg-gradient-to-l from-white to-rose-400 bg-clip-text text-transparent uppercase italic truncate max-w-[150px] text-right">
+              {gameState.players.find(p => p.playerIndex === 1)?.username}
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className="scale-[0.6] md:scale-75 origin-right">
+                <RankBadge elo={gameState.players.find(p => p.playerIndex === 1)?.elo} size="sm" />
+              </div>
+              <div className={`font-mono text-[10px] md:text-2xl font-bold px-1.5 md:px-3 py-0.5 rounded ${timeP1 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-rose-400 bg-rose-500/10"}`}>
+                {formatTime(timeP1)}
+              </div>
             </div>
-          </div>
-          <div className={`mr-4 font-mono text-2xl font-bold px-3 py-1 rounded-lg ${timeP1 < 30 ? "text-rose-500 animate-pulse bg-rose-500/10" : "text-rose-400 bg-rose-500/10"}`}>
-            {formatTime(timeP1)}
           </div>
         </div>
       </div>
 
       {/* Floating Buttons */}
-      <div className="absolute top-40 left-10 flex flex-col gap-4 z-20">
+      {/* Floating Buttons */}
+      <div className="absolute top-40 md:top-40 left-4 md:left-10 flex flex-col gap-4 z-20">
         <button
           onClick={() => setShowRules(true)}
-          className="w-12 h-12 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all shadow-lg group relative overflow-hidden"
+          className="w-10 h-10 md:w-12 md:h-12 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all shadow-lg group relative overflow-hidden"
           title="Règles du jeu"
         >
-          <BookOpen size={24} />
+          <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
           <div className="absolute inset-0 bg-cyan-400/10 opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
 
         <button
           onClick={toggleMusic}
-          className={`w-12 h-12 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center transition-all shadow-lg group relative overflow-hidden ${isMusicPlaying ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white" : "bg-slate-900/80 text-slate-400 hover:bg-slate-700 hover:text-white"}`}
+          className={`w-10 h-10 md:w-12 md:h-12 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center transition-all shadow-lg group relative overflow-hidden ${isMusicPlaying ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white" : "bg-slate-900/80 text-slate-400 hover:bg-slate-700 hover:text-white"}`}
           title={isMusicPlaying ? "Couper la musique" : "Lancer la musique"}
         >
-          {isMusicPlaying ? <Volume2 size={24} /> : <VolumeX size={24} />}
+          {isMusicPlaying ? <Volume2 className="w-5 h-5 md:w-6 md:h-6" /> : <VolumeX className="w-5 h-5 md:w-6 md:h-6" />}
           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
 
       {/* MODALS */}
       {placementMode && (
-        <div className="absolute top-32 left-1/2 transform -translate-x-1/2 z-40 px-8 py-4 bg-amber-950/90 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl animate-pulse">
-          <p className="text-amber-400 font-bold text-sm uppercase tracking-wider">📍 Placez {placementMode.cardName} sur une case dorée</p>
-          <button onClick={() => setPlacementMode(null)} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">✖ ANNULER</button>
+        <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-amber-950/90 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
+          <p className="text-amber-400 font-bold text-xs md:text-sm uppercase tracking-wider">📍 Placez {placementMode.cardName} sur une case dorée</p>
+          <button onClick={() => setPlacementMode(null)} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
         </div>
       )}
 
       {activeTarget && !showGrapplerModal && (
-        <div className="absolute top-32 left-1/2 transform -translate-x-1/2 z-40 px-8 py-4 bg-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/50 rounded-2xl animate-pulse">
-          <p className="text-cyan-400 font-bold text-sm uppercase tracking-wider">🎯 {activeTargetName}: Choisissez la destination</p>
-          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">✖ ANNULER</button>
+        <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
+          <p className="text-cyan-400 font-bold text-xs md:text-sm uppercase tracking-wider">🎯 {activeTargetName}: Choisissez la destination</p>
+          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
         </div>
       )}
 
@@ -855,8 +846,35 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         <RulesModal onClose={() => setShowRules(false)} />
       )}
 
-      {/* RIVIÈRE (Sidebar Gauche) */}
-      <div className="absolute top-48 left-8 w-96 h-[calc(100vh-16rem)] flex flex-col gap-6 z-10 perspective-[1000px]">
+      {/* RIVIÈRE: RESPONSIVE */}
+      {/* MOBILE COMPACT RIVIÈRE */}
+      <div className="md:hidden absolute bottom-16 left-0 right-0 z-10 p-1 bg-slate-950/80 backdrop-blur-sm border-t border-white/10">
+        {isMyTurn && (
+          <div className="flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
+            <div className="flex gap-1 py-1 px-1">
+              {riverCards.map((card) => (
+                <SidebarCard
+                  key={card.id}
+                  card={card}
+                  onClick={() => handleRecruit(card.id)}
+                  onMouseEnter={() => { }}
+                  disabled={!isMyTurn || isRecruiting || !!placementMode || !canRecruit || !hasAvailableSpawnCells}
+                  mini={true}
+                />
+              ))}
+            </div>
+            {!allPiecesActed && (
+              <button onClick={handleSkipActions} className="bg-indigo-600/60 text-[8px] text-white px-3 py-4 mr-1 rounded-lg font-black tracking-widest uppercase border border-indigo-400/50 flex flex-col items-center justify-center h-20">
+                <span>PASS</span>
+                <span className="text-[6px] opacity-60">ACTIONS</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP SIDEBAR RIVIÈRE */}
+      <div className="hidden md:flex absolute top-48 left-8 w-96 h-[calc(100vh-16rem)] flex-col gap-6 z-10 perspective-[1000px]">
         <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(0,0,0,0.5)] transform -rotate-y-2 hover:rotate-0 transition-transform duration-500">
           <div className="flex justify-between items-center mb-2">
             <h2 className="font-cyber font-bold text-2xl text-white tracking-wider flex items-center gap-2">
@@ -866,77 +884,28 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
               {availableSpawnCells.length} ZONE(S)
             </div>
           </div>
-
-          <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden mb-3">
-            <div
-              className={`h-full transition-all duration-500 ${currentPlayerPieceCount >= 5 ? "bg-rose-500 w-full" : "bg-cyan-500"}`}
-              style={{ width: `${(currentPlayerPieceCount / 5) * 100}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-slate-400 uppercase tracking-widest flex justify-between">
+          <p className="flex text-[10px] text-slate-400 uppercase tracking-widest justify-between mb-3">
             <span>Effectif: {currentPlayerPieceCount}/5</span>
             <span>{isMyTurn ? "SESSION ACTIVE" : "EN ATTENTE"}</span>
           </p>
-
           {isMyTurn && (
             <div className="mt-4 flex flex-col gap-2 bg-slate-950/50 p-3 rounded-lg border border-white/5">
-              {(!canRecruit || !hasAvailableSpawnCells) ? (
-                <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase">
-                  <span className="animate-pulse">⛔</span> RECRUTEMENT INDISPONIBLE
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase">
-                  <span className="animate-pulse">🟢</span> RECRUTEMENT AUTORISÉ
-                </div>
-              )}
-              {allPiecesActed ? (
-                <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase">
-                  <span>⏳</span> UNITÉS ÉPUISÉES
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase">
-                  <span>⚡</span> ACTIONS POSSIBLES
-                </div>
-              )}
-
+              <div className="flex flex-col gap-1">
+                {(!canRecruit || !hasAvailableSpawnCells) ? (
+                  <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase"><span>⛔</span> INDISPONIBLE</div>
+                ) : (
+                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase"><span>🟢</span> RECRUTEMENT OK</div>
+                )}
+              </div>
               {!allPiecesActed && (
-                <button
-                  onClick={handleSkipActions}
-                  className="relative group mt-4 w-full py-3 px-6 bg-slate-900 overflow-hidden rounded-sm border-l-4 border-indigo-500 transition-all active:scale-95 shadow-lg"
-                >
-                  {/* Glitch Overlay Effect */}
-                  <div className="absolute inset-0 bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-[linear-gradient(45deg,transparent_25%,rgba(99,102,241,0.1)_50%,transparent_75%)] bg-[size:200%_200%] animate-scan-fast pointer-events-none" />
-
-                  {/* Button Content */}
-                  <div className="relative flex items-center justify-between pointer-events-none">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-indigo-500 animate-pulse rounded-full shadow-[0_0_8px_#6366f1]" />
-                      <span className="font-cyber text-[10px] font-black tracking-[0.2em] text-white uppercase italic">
-                        Phase d'Action
-                      </span>
-                    </div>
-                    <span className="text-indigo-400 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
-
-                  {/* Corner Decoration */}
-                  <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-indigo-400 opacity-50" />
-                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-indigo-400 opacity-50" />
-
-                  {/* Supplemental text below main label */}
-                  <div className="absolute bottom-1 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[7px] font-mono text-indigo-300 uppercase tracking-tighter">Skip remaining pulses</span>
-                  </div>
+                <button onClick={handleSkipActions} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-cyber text-[10px] font-black tracking-widest uppercase rounded shadow-lg transition-all active:scale-95">
+                  Terminer Actions
                 </button>
               )}
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-cyan-600 scrollbar-track-slate-900/50 hover:scrollbar-thumb-cyan-400 transition-colors">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2 scrollbar-thin">
           {riverCards.map((card) => (
             <SidebarCard
               key={card.id}
@@ -950,10 +919,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       </div>
 
       {/* HEXBOARD (Centre) */}
-      <div className="flex-1 flex flex-col items-center justify-center relative p-20">
+      <div className="flex-1 flex flex-col items-center justify-center relative p-1 md:p-36 lg:p-48 overflow-hidden">
         {/* ACTION MODE TOGGLE */}
         {selectedPiece && hasActiveAbility && isMyTurn && !selectedPiece.hasActed && (
-          <div className="absolute top-24 z-50 flex p-1.5 bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] left-1/2 transform -translate-x-1/2 scale-110">
+          <div className="absolute top-10 md:top-24 z-50 flex p-1 bg-slate-900/90 backdrop-blur-xl rounded-xl md:rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] left-1/2 transform -translate-x-1/2 scale-90 md:scale-110">
             <button
               onClick={() => { setActionMode("MOVE"); playButtonClickSfx(); }}
               className={`
@@ -1017,21 +986,56 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         />
       </div>
 
-      {/* TACTICAL SCANNER (Sidebar Droite) */}
-      <div className="absolute top-40 right-10 w-80 z-10 perspective-[1000px]">
+      {/* TACTICAL SCANNER: MOBILE MINI-BAR */}
+      {selectedPiece && (
+        <div className="md:hidden absolute top-12 left-0 right-0 z-40 px-2 pointer-events-none">
+          <div className={`
+             flex items-center gap-3 p-1.5 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl pointer-events-auto animate-in slide-in-from-top-4 duration-300
+             ${selectedPiece.ownerIndex === 0 ? "border-l-4 border-l-cyan-500" : "border-l-4 border-l-rose-500"}
+          `}>
+            <div className="w-8 h-8 rounded border border-white/10 overflow-hidden shrink-0">
+              {selectedPiece.characterId === "LEADER" ? (
+                <img src={selectedPiece.ownerIndex === 0 ? CHARACTER_IMAGES.LEADER_BLUE : CHARACTER_IMAGES.LEADER_RED} className="w-full h-full object-cover" />
+              ) : (
+                <img src={CHARACTER_IMAGES[selectedPiece.characterId]} className="w-full h-full object-cover" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-cyber text-[10px] font-bold text-white uppercase italic truncate">
+                  {CHARACTER_NAMES[selectedPiece.characterId]}
+                </span>
+                <span className={`text-[8px] font-mono px-1 rounded ${selectedPiece.hasActed ? "bg-rose-500/20 text-rose-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+                  {selectedPiece.hasActed ? "WAIT" : "READY"}
+                </span>
+              </div>
+              <p className="text-[8px] text-slate-400 truncate italic">"{CHARACTER_DATA[selectedPiece.characterId]?.description}"</p>
+            </div>
+            <button onClick={() => setSelectedPiece(null)} className="p-2 text-slate-500">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* TACTICAL SCANNER (Sidebar Droite - DESKTOP ONLY) */}
+      <div className={`
+        hidden md:block absolute top-40 right-10 w-80 z-10 perspective-[1000px]
+        transition-all duration-300 pointer-events-auto
+        ${selectedPiece ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}
+      `}>
         <div className={`
-          relative w-full transition-all duration-500 transform-style-3d
+          relative w-full transition-all duration-500 transform-style-3d pointer-events-auto
           ${selectedPiece ? "rotate-y-0 opacity-100" : "opacity-90"}
         `}>
-          {selectedPiece ? (
+          {selectedPiece && (
             <div className={`
-              bg-slate-900/90 backdrop-blur-xl border-2 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-colors duration-500
+              bg-slate-900/95 md:bg-slate-900/90 backdrop-blur-xl border-2 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-colors duration-500
               ${selectedPiece.characterId === "LEADER"
                 ? (selectedPiece.ownerIndex === 0 ? "border-cyan-500/50 shadow-cyan-500/20" : "border-red-500/50 shadow-red-500/20")
                 : "border-amber-500/30 shadow-amber-500/10"
               }
             `}>
-              <div className="relative w-full aspect-[4/5] bg-slate-950">
+              <div className="relative w-full aspect-[4/5] md:aspect-[4/5] bg-slate-950">
+                <button onClick={() => setSelectedPiece(null)} className="md:hidden absolute top-2 right-2 z-30 p-2 bg-black/40 rounded-full text-white">✕</button>
                 {selectedPiece.characterId === "LEADER" ? (
                   <img
                     src={selectedPiece.ownerIndex === 0 ? CHARACTER_IMAGES.LEADER_BLUE : CHARACTER_IMAGES.LEADER_RED}
@@ -1043,7 +1047,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-6xl text-slate-700">?</div>
                 )}
-
+                {/* ... (rest of scanner UI remains mostly same but with some responsiveness) ... */}
                 {selectedPiece.hasActed && (
                   <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
                     <div className="bg-emerald-500 text-white px-4 py-1.5 rounded-full font-cyber font-bold text-sm tracking-widest shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-white/20 animate-pulse">
@@ -1051,84 +1055,43 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
                     </div>
                   </div>
                 )}
-
-                {/* Tech Overlays */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90" />
-                <div className={`absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_30%,black_100%)]`} />
-                <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,rgba(255,255,255,0.03)_2px)] bg-[size:100%_4px] pointer-events-none" />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_2px,rgba(255,255,255,0.01)_2px)] bg-[size:4px_100%] pointer-events-none" />
-
-                {/* Scanning Line */}
-                <div className={`
-                  absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(6,182,212,0.2)_50%,transparent_100%)] bg-[size:100%_200%] pointer-events-none animate-scan-fast
-                  ${selectedPiece.characterId === "LEADER" ? (selectedPiece.ownerIndex === 0 ? "opacity-40" : "hue-rotate-[140deg] opacity-40") : "opacity-20"}
-                `} />
-
                 <div className="absolute bottom-4 left-4 right-4 z-10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`h-1 w-8 rounded-full ${selectedPiece.characterId === "LEADER" ? (selectedPiece.ownerIndex === 0 ? "bg-cyan-400" : "bg-red-400") : "bg-amber-400"}`} />
-                    <span className="text-[10px] font-mono text-white/40 tracking-[0.2em] uppercase">Tactical Link</span>
-                  </div>
-                  <h3 className="font-cyber text-3xl font-bold text-white tracking-wider drop-shadow-lg uppercase">
+                  <h3 className="font-cyber text-lg md:text-3xl font-bold text-white tracking-wider drop-shadow-lg uppercase">
                     {CHARACTER_NAMES[selectedPiece.characterId] || selectedPiece.characterId}
                   </h3>
                 </div>
               </div>
-
-              <div className="p-5 space-y-4">
-                <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5">
-                  <p className="text-sm text-slate-300 italic leading-relaxed text-center">
-                    "{CHARACTER_DATA[selectedPiece.characterId]?.description || "Données inconnues..."}"
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-800/40 p-2 rounded-lg border border-white/5 flex flex-col items-center">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">CAPACITÉ</span>
-                      {selectedPiece.characterId === "LEADER" ? (
-                        <span className="font-mono text-[9px] font-black px-2 py-0.5 rounded border bg-slate-500/10 border-slate-500/50 text-slate-400">
-                          AUCUNE
-                        </span>
-                      ) : (
-                        <span className={`font-mono text-[9px] font-black px-2 py-0.5 rounded border ${CHARACTER_DATA[selectedPiece.characterId]?.type === "ACTIVE" ? "bg-cyan-500/10 border-cyan-500/50 text-cyan-400" : "bg-purple-500/10 border-purple-500/50 text-purple-400"}`}>
-                          {CHARACTER_DATA[selectedPiece.characterId]?.type || "SPÉCIAL"}
-                        </span>
-                      )}
-                    </div>
-                    <div className={`p-2 rounded-lg border flex flex-col items-center justify-center ${selectedPiece.hasActed ? "bg-rose-950/30 border-rose-500/30 text-rose-400" : "bg-emerald-950/30 border-emerald-500/30 text-emerald-400"}`}>
-                      <span className="text-[10px] uppercase tracking-widest mb-1">ÉTAT</span>
-                      <span className="font-bold text-xs">{selectedPiece.hasActed ? "ÉPUISÉ" : "OPÉRATIONNEL"}</span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/40 p-2 rounded-lg border border-white/5 flex items-center justify-between px-4">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest">Coordonnées Tactiques</span>
-                    <span className="font-mono text-amber-500 font-bold text-sm">
-                      Q:{selectedPiece.q} R:{selectedPiece.r}
+              <div className="p-3 md:p-5 space-y-2 md:space-y-4">
+                <p className="text-[10px] md:text-sm text-slate-300 italic leading-snug md:leading-relaxed text-center">
+                  "{CHARACTER_DATA[selectedPiece.characterId]?.description || "Données inconnues..."}"
+                </p>
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
+                  <div className="bg-slate-800/40 p-1.5 md:p-2 rounded-lg border border-white/5 flex flex-col items-center">
+                    <span className="text-[8px] md:text-[10px] text-slate-500 uppercase tracking-widest mb-1">TYPE</span>
+                    <span className={`font-mono text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded border ${CHARACTER_DATA[selectedPiece.characterId]?.type === "ACTIVE" ? "bg-cyan-500/10 border-cyan-500/50 text-cyan-400" : "bg-purple-500/10 border-purple-500/50 text-purple-400"}`}>
+                      {CHARACTER_DATA[selectedPiece.characterId]?.type || "SPÉCIAL"}
                     </span>
                   </div>
+                  <div className={`p-1.5 md:p-2 rounded-lg border flex flex-col items-center justify-center ${selectedPiece.hasActed ? "bg-rose-950/30 border-rose-500/30 text-rose-400" : "bg-emerald-950/30 border-emerald-500/30 text-emerald-400"}`}>
+                    <span className="text-[8px] md:text-[10px] uppercase tracking-widest mb-1">ÉTAT</span>
+                    <span className="font-bold text-[10px] md:text-xs">{selectedPiece.hasActed ? "ÉPUISÉ" : "READY"}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="h-96 flex flex-col items-center justify-center bg-slate-900/20 backdrop-blur-sm border border-white/10 rounded-2xl border-dashed">
-              <div className="w-20 h-20 rounded-full border-2 border-cyan-500/20 flex items-center justify-center mb-4 animate-pulse">
-                <span className="text-3xl grayscale opacity-50">⌖</span>
-              </div>
-              <p className="font-cyber text-sm tracking-[0.2em] text-cyan-500/40 uppercase">Scanner en attente</p>
-              <p className="text-[10px] text-slate-600 mt-2">Sélectionnez une unité</p>
             </div>
           )}
         </div>
       </div>
 
       {/* ACTION BAR (Bottom) */}
-      <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-20 flex gap-4">
+      <div className="absolute bottom-4 md:bottom-10 left-1/2 transform -translate-x-1/2 z-20 flex gap-2 md:gap-8 w-full md:w-auto px-4 md:px-0 justify-center">
         {isMyTurn && (
           <button
             onClick={handleEndTurn}
-            className={`px-10 py-4 font-bold rounded-2xl shadow-xl transition-all uppercase tracking-widest text-lg border-2 ${allActionsCompleted ? "bg-amber-600 border-amber-400 text-white animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-110" : "bg-cyan-600 border-cyan-400/50 text-white hover:bg-cyan-500"}`}
+            className={`flex-1 md:flex-none px-6 md:px-16 py-3 md:py-5 font-black rounded-xl md:rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm md:text-xl border-2 ${allActionsCompleted ? "bg-amber-600 border-amber-400 text-white animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.5)] scale-105 md:scale-110" : "bg-cyan-600 border-cyan-400/50 text-white hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"}`}
           >
-            Terminer le tour
+            {allActionsCompleted ? "TERMINER" : "FIN DU TOUR"}
           </button>
         )}
         <button
@@ -1141,9 +1104,9 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
             }
             playButtonClickSfx();
           }}
-          className="px-8 py-3 bg-rose-900/40 border border-rose-500/50 text-rose-500 font-bold rounded-xl hover:bg-rose-500 hover:text-white transition-all uppercase tracking-widest"
+          className="px-4 md:px-10 py-3 bg-rose-900/40 border border-rose-500/50 text-rose-500 font-bold rounded-xl hover:bg-rose-500 hover:text-white transition-all uppercase tracking-widest text-[10px] md:text-sm"
         >
-          Quitter
+          {gameState.status === "IN_PROGRESS" ? "ABANDON" : "QUITTER"}
         </button>
       </div>
 

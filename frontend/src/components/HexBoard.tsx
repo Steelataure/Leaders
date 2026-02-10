@@ -653,7 +653,13 @@ export default function HexBoard(props: HexBoardProps) {
   };
 
   return (
-    <svg width={SVG_WIDTH} height={SVG_HEIGHT} className="drop-shadow-2xl overflow-visible">
+    <svg
+      viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+      width="100%"
+      height="100%"
+      preserveAspectRatio="xMidYMid meet"
+      className="drop-shadow-2xl overflow-visible"
+    >
       <defs>
         <filter id="glow-player1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         <filter id="glow-player2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>

@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/sessions")
+@RequestMapping("/sessions")
 public class SessionController {
 
     private final MatchmakingUseCase matchmakingUseCase;

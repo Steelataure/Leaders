@@ -12,4 +12,9 @@ public class LeadersApplication {
 		SpringApplication.run(LeadersApplication.class, args);
 	}
 
+	@jakarta.annotation.PostConstruct
+	public void onStart() {
+		System.out.println("DEBUG: LeadersApplication successfully started on Railway!");
+	}
+
 }

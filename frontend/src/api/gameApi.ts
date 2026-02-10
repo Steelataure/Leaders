@@ -1,5 +1,29 @@
-export const API_BASE_URL = "/api";
-const BASE_URL = "/api";
+declare global {
+  interface Window {
+    config?: {
+      API_URL?: string;
+    };
+  }
+}
+
+const getBaseUrl = () => {
+  if (window.location.hostname !== "localhost") {
+    return "/api";
+  }
+
+  const url = window.config?.API_URL || import.meta.env.VITE_API_URL || "";
+  if (!url) return "/api";
+
+  let normalized = url.replace(/\/$/, "");
+  if (!normalized.startsWith("/") && !normalized.endsWith("/api") && !normalized.includes("/api/")) {
+    normalized += "/api";
+  }
+  return normalized;
+};
+
+// On utilise la variable Railway en priorité
+export const API_BASE_URL = getBaseUrl();
+const BASE_URL = getBaseUrl();
 
 // ============================================================================
 // INTERFACES - Mapping des DTOs backend

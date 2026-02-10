@@ -142,7 +142,7 @@ function Card({ card, isDisabled, isLeaving, isEntering, onClick }: CardProps) {
 
   // Récupération de l'icône du personnage
   const charIcon = CHARACTER_ICONS[card.characterId] || CHARACTER_ICONS.DEFAULT;
-  const typeStyle = TYPE_STYLES[card.type];
+  // const typeStyle = TYPE_STYLES[card.type];
 
   // Classes d'animation
   const animationClasses = isLeaving
@@ -160,11 +160,11 @@ function Card({ card, isDisabled, isLeaving, isEntering, onClick }: CardProps) {
       onMouseEnter={() => {
         setIsHovered(true);
 
-        if (!isDisabled){
+        if (!isDisabled) {
           console.log('Son du personnage en hover');
           playCharacterHoverSfx();
         }
-                
+
       }}
       onMouseLeave={() => setIsHovered(false)}
       className={`
@@ -173,10 +173,9 @@ function Card({ card, isDisabled, isLeaving, isEntering, onClick }: CardProps) {
         rounded-xl
         transition-all duration-300 ease-out
         ${animationClasses}
-        ${
-          isDisabled
-            ? "cursor-not-allowed opacity-50 grayscale"
-            : "cursor-pointer hover:scale-105 hover:-translate-y-2"
+        ${isDisabled
+          ? "cursor-not-allowed opacity-50 grayscale"
+          : "cursor-pointer hover:scale-105 hover:-translate-y-2"
         }
       `}
       style={{
@@ -202,13 +201,12 @@ function Card({ card, isDisabled, isLeaving, isEntering, onClick }: CardProps) {
         bg-gradient-to-b from-slate-800 to-slate-900
         border-2 rounded-xl overflow-hidden
         transition-all duration-300
-        ${
-          isDisabled
+        ${isDisabled
             ? "border-slate-700"
             : isHovered
               ? "border-white/50 shadow-lg"
               : "border-slate-600 hover:border-slate-400"
-        }
+          }
       `}
         style={{
           borderColor: isHovered && !isDisabled ? charIcon.color : undefined,
@@ -437,11 +435,10 @@ export default function River({
           <div
             className={`
             px-4 py-2 rounded-full text-sm font-semibold
-            ${
-              isDisabled
+            ${isDisabled
                 ? "bg-slate-700 text-slate-400"
                 : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-            }
+              }
           `}
           >
             {isDisabled ? "⏳ Phase Actions" : "✅ Recrutement ouvert"}

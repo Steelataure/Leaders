@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+// import { useEffect, useState } from "react";
 
 const SYSTEM_MESSAGES = [
     "SYSTEME: EN LIGNE",
@@ -12,7 +12,7 @@ const SYSTEM_MESSAGES = [
 ];
 
 export const SystemStatus = () => {
-    const [msgIndex, setMsgIndex] = useState(0);
+    // const [msgIndex, setMsgIndex] = useState(0);
 
     return (
         <div className="fixed bottom-0 left-0 w-full bg-black/80 backdrop-blur-md border-t border-white/10 z-50 h-8 flex items-center overflow-hidden font-mono text-xs">

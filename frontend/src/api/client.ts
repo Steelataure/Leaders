@@ -1,4 +1,34 @@
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+declare global {
+    interface Window {
+        config?: {
+            API_URL?: string;
+        };
+    }
+}
+
+const getBaseUrl = () => {
+    // If we're NOT on localhost, we MUST use the Nginx proxy (/api)
+    // to avoid CORS and port issues in production.
+    if (window.location.hostname !== 'localhost') {
+        return '/api';
+    }
+
+    // Local development: use environment variable or fallback to /api (Vite proxy)
+    const url = window.config?.API_URL || import.meta.env.VITE_API_URL || '';
+    if (!url) return '/api';
+
+    // Normalize: remove trailing slash
+    let normalized = url.replace(/\/$/, '');
+
+    // Ensure /api suffix if missing from absolute URL
+    if (!normalized.startsWith('/') && !normalized.endsWith('/api') && !normalized.includes('/api/')) {
+        normalized += '/api';
+    }
+
+    return normalized;
+};
+
+const BASE_URL = getBaseUrl();
 
 export const apiClient = {
     async post<T>(endpoint: string, data: unknown): Promise<T> {

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/games/{gameId}")
+@RequestMapping("/games/{gameId}")
 @RequiredArgsConstructor
 public class ActionController {
 

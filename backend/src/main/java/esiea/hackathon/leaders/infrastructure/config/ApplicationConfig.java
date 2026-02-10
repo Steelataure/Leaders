@@ -11,23 +11,26 @@ import esiea.hackathon.leaders.usecase.StatsUseCase;
 import esiea.hackathon.leaders.application.services.GameSetupService;
 import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGamePlayerRepository;
 import esiea.hackathon.leaders.adapter.infrastructure.repository.SpringGameRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class ApplicationConfig implements WebMvcConfigurer {
 
+    @Value("${app.allowed-origins}")
+    private String[] allowedOrigins;
+
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(
+            @org.springframework.lang.NonNull org.springframework.web.servlet.config.annotation.CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175",
-                        "http://localhost:3000") // Explicit origins to fix
-                // IllegalArgumentException
+                .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 
     @Bean

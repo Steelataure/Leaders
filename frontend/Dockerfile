@@ -1,27 +1,28 @@
-# ---- Étape 1 : Build ----
+# Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
-
-# On installe les dépendances
 COPY package*.json ./
 RUN npm install
-
-# On copie le reste du code et on build
 COPY . .
-RUN npx vite build
+# Build variable for API URL (Railway injects this at build time if defined)
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
 
-# ---- Étape 2 : Production (Image légère) ----
-FROM node:20-alpine
-WORKDIR /app
+# Production stage
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
 
-# On installe uniquement le serveur statique
-RUN npm install -g serve
+# On copie le dossier buildé
+COPY --from=build /app/dist .
 
-# On récupère UNIQUEMENT le dossier buildé de l'étape précédente
-COPY --from=build /app/dist ./dist
+# On utilise les templates Nginx pour le support des variables d'environnement
+# Railway injectera BACKEND_URL
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# EXIGENCE ESIEA.CLOUD : Port 80
+# Valeur par défaut pour le backend (nom du service dans compose)
+ENV BACKEND_URL=http://backend:8080
+
 EXPOSE 80
 
-# On lance le serveur sur le port 80
-CMD ["serve", "-s", "dist", "-l", "80"]
+CMD ["nginx", "-g", "daemon off;"]
