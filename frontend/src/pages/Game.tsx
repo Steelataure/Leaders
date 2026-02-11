@@ -526,7 +526,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   }, [gameState?.pieces, localPlayerIndex]);
 
   const canRecruit = useMemo(() => {
-    const piecesOk = currentPlayerPieceCount < 5;
+    const piecesOk = currentPlayerPieceCount < 4;
 
     // Si la propriété est absente (backend non redémarré), on utilise 'false' 
     // par défaut pour ne pas bloquer l'utilisateur.
@@ -674,8 +674,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         alert("Action impossible: Vous avez déjà recruté une unité ce tour-ci.");
         return;
       }
-      if (currentPlayerPieceCount >= 5) {
-        alert("Limite atteinte: Vous ne pouvez pas avoir plus de 5 personnages");
+      if (currentPlayerPieceCount >= 4) {
+        alert("Limite atteinte: Vous ne pouvez pas avoir plus de 4 personnages");
         return;
       }
       if (!hasAvailableSpawnCells) {
@@ -731,7 +731,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
     // Vérification : Recrutement obligatoire si possible
     if (!gameState.hasRecruitedThisTurn) {
-      const canRecruitResult = currentPlayerPieceCount < 5 && hasAvailableSpawnCells;
+      const canRecruitResult = currentPlayerPieceCount < 4 && hasAvailableSpawnCells;
 
       if (canRecruitResult) {
         alert("Action impossible : Vous devez recruter une unité avant de terminer votre tour !");
@@ -947,7 +947,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
           </div>
           {/* Mobile Population Indicator */}
           <div className="flex gap-1 h-1.5 mt-1 px-1">
-            {[...Array(5)].map((_, i) => (
+            {[...Array(4)].map((_, i) => (
               <div key={i} className={`flex-1 ${i < currentPlayerPieceCount ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]' : 'bg-slate-800'}`} />
             ))}
           </div>
@@ -1002,10 +1002,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
             <div>
               <div className="flex justify-between items-end mb-2">
                 <span className="text-[9px] font-cyber font-bold text-slate-500 tracking-widest uppercase">Effectif Global</span>
-                <span className="font-mono text-base font-black text-white">{currentPlayerPieceCount}<span className="text-slate-700">/5</span></span>
+                <span className="font-mono text-base font-black text-white">{currentPlayerPieceCount}<span className="text-slate-700">/4</span></span>
               </div>
-              <div className="grid grid-cols-5 gap-1">
-                {[...Array(5)].map((_, i) => (
+              <div className="grid grid-cols-4 gap-1">
+                {[...Array(4)].map((_, i) => (
                   <div
                     key={i}
                     className={`h-3 border ${i < currentPlayerPieceCount

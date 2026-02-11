@@ -18,15 +18,28 @@ interface ChatPanelProps {
 
 export default function ChatPanel({ sessionId, user, isMyTurn }: ChatPanelProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [inputValue, setInputValue] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const isOpenRef = useRef(isOpen);
+
+    // Sync ref with state for use in the WebSocket callback
+    useEffect(() => {
+        isOpenRef.current = isOpen;
+        if (isOpen) {
+            setUnreadCount(0);
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (!sessionId) return;
 
         webSocketService.subscribeToChat(sessionId, (message) => {
             setMessages((prev) => [...prev, message]);
+            if (!isOpenRef.current) {
+                setUnreadCount((prev) => prev + 1);
+            }
         });
     }, [sessionId]);
 
@@ -57,9 +70,16 @@ export default function ChatPanel({ sessionId, user, isMyTurn }: ChatPanelProps)
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="w-12 h-12 bg-slate-950 border-t border-b border-l-4 border-r border-cyan-500 flex items-center justify-center text-cyan-400 hover:bg-slate-900 shadow-2xl transition-all"
+                    className="relative w-12 h-12 bg-slate-950 border-t border-b border-l-4 border-r border-cyan-500 flex items-center justify-center text-cyan-400 hover:bg-slate-900 shadow-2xl transition-all"
                 >
                     <MessageSquare className="w-6 h-6" />
+                    {unreadCount > 0 && (
+                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-rose-600 rounded-full flex items-center justify-center border border-white/20 shadow-[0_0_10px_rgba(225,29,72,0.5)]">
+                            <span className="text-[10px] font-black text-white leading-none">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        </div>
+                    )}
                 </button>
             )}
 

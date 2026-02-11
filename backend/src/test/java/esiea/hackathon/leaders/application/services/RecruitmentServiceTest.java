@@ -73,14 +73,14 @@ class RecruitmentServiceTest {
         }
 
         @Test
-        @DisplayName("Recrutement autorisé avec 4 unités existantes (total d'unités = 4 + 1 = 5)")
-        void recruit_With4Units_Success() {
-                // Mock pieces: 1 Leader (acted!) + 4 units (acted!)
+        @DisplayName("Recrutement autorisé avec 3 unités existantes (total d'unités = 3 + 1 = 4)")
+        void recruit_With3Units_Success() {
+                // Mock pieces: 1 Leader (acted!) + 3 units (acted!)
                 List<PieceEntity> pieces = new ArrayList<>();
                 pieces.add(PieceEntity.builder().characterId("LEADER").ownerIndex((short) 0).hasActedThisTurn(true)
                                 .q((short) 0)
                                 .r((short) 0).build());
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < 3; i++) {
                         pieces.add(PieceEntity.builder().characterId("ARCHER").ownerIndex((short) 0)
                                         .hasActedThisTurn(true)
                                         .q((short) 10).r((short) 10).build());
@@ -96,14 +96,14 @@ class RecruitmentServiceTest {
         }
 
         @Test
-        @DisplayName("Recrutement bloqué avec 5 unités existantes (total d'unités = 5 + 1 = 6)")
-        void recruit_With5Units_ThrowsException() {
-                // Mock pieces: 1 Leader (acted!) + 5 units (acted!)
+        @DisplayName("Recrutement bloqué avec 4 unités existantes (total d'unités = 4 + 1 = 5)")
+        void recruit_With4Units_ThrowsException() {
+                // Mock pieces: 1 Leader (acted!) + 4 units (acted!)
                 List<PieceEntity> pieces = new ArrayList<>();
                 pieces.add(PieceEntity.builder().characterId("LEADER").ownerIndex((short) 0).hasActedThisTurn(true)
                                 .q((short) 0)
                                 .r((short) 0).build());
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 4; i++) {
                         pieces.add(PieceEntity.builder().characterId("ARCHER").ownerIndex((short) 0)
                                         .hasActedThisTurn(true)
                                         .q((short) 10).r((short) 10).build());
@@ -116,7 +116,7 @@ class RecruitmentServiceTest {
                 IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                                 () -> recruitmentService.recruit(gameId, (short) 0, cardId, placements));
 
-                assertTrue(exception.getMessage().contains("You cannot exceed the limit of 5 units"));
+                assertTrue(exception.getMessage().contains("You cannot exceed the limit of 4 units"));
                 assertTrue(exception.getMessage().contains("Current units found: ["));
         }
 

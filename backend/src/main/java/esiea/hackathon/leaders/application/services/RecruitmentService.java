@@ -162,12 +162,12 @@ public class RecruitmentService {
 
         // B. La somme dépasse-t-elle 5 ?
         // Note: Old Bear and Cub count as ONE slot for recruitment limit.
-        if (currentUnitCount + 1 > 5) {
+        if (currentUnitCount + 1 > 4) {
             String unitList = ownedUnits.stream()
                     .map(PieceEntity::getCharacterId)
                     .collect(java.util.stream.Collectors.joining(", "));
             throw new IllegalArgumentException(
-                    "Recruitment failed: You cannot exceed the limit of 5 units. Current units found: [" + unitList
+                    "Recruitment failed: You cannot exceed the limit of 4 units. Current units found: [" + unitList
                             + "]");
         }
         // ==================================================================================

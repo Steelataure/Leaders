@@ -59,11 +59,24 @@ Push-WithRetry $BackendImage
 Push-WithRetry $FrontendImage
 
 # 4. Déploiement Railway
-Write-Step "Déclenchement du redéploiement sur Railway..."
-# On cible spécifiquement les services. Si vous avez une erreur, vérifiez les noms avec 'railway status'
+Write-Step "Redéploiement du Backend ($BackendService)..."
 railway redeploy --service $BackendService -y
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️ Échec du redéploiement du Backend via CLI. Tentative de déploiement automatique par image..." -ForegroundColor Yellow
+}
+else {
+    Write-Success "Redéploiement du Backend envoyé avec succès."
+}
+
+Write-Step "Redéploiement du Frontend ($FrontendService)..."
 railway redeploy --service $FrontendService -y
-if ($LASTEXITCODE -ne 0) { Write-ErrorExit "Le redéploiement Railway a échoué." }
+if ($LASTEXITCODE -ne 0) {
+    Write-ErrorExit "Le redéploiement du Frontend a échoué."
+}
+else {
+    Write-Success "Redéploiement du Frontend envoyé avec succès."
+}
+
 
 # 5. Nettoyage
 Write-Step "Fin du script."
