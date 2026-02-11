@@ -19,6 +19,7 @@ import mainMusic from "../sounds/mainMenu.mp3";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
+
 const CHARACTER_IMAGES: Record<string, string> = {
   LEADER_RED: "/image/leaders/leader_red.png",
   LEADER_BLUE: "/image/leaders/leader_blue.png",
@@ -110,97 +111,116 @@ function SidebarCard({
   disabled: boolean;
   mini?: boolean;
 }) {
-  const icons: Record<string, string> = {
-    ACTIVE: "⚡",
-    PASSIVE: "🛡️",
-    SPECIAL: "✨",
-  };
-
   const charType = card.type || "ACTIVE";
+
+  const charTypeLabel = {
+    ACTIVE: "ACTIVE",
+    PASSIVE: "PASSIVE",
+    SPECIAL: "SPÉCIAL"
+  }[charType] || charType;
+
+  const theme = {
+    ACTIVE: { accent: "cyan", text: "text-cyan-400", border: "border-cyan-500/50", badge: "bg-cyan-500/20", icon: "⚡" },
+    PASSIVE: { accent: "amber", text: "text-amber-400", border: "border-amber-500/50", badge: "bg-amber-500/20", icon: "🛡️" },
+    SPECIAL: { accent: "purple", text: "text-purple-400", border: "border-purple-500/50", badge: "bg-purple-500/20", icon: "✨" }
+  }[charType];
 
   return (
     <div
       onClick={!disabled ? onClick : undefined}
       onMouseEnter={onMouseEnter}
       className={`
-        group relative transition-all duration-300
+        relative transition-all duration-200 
         ${mini
-          ? "w-16 h-20 p-1 rounded-lg border-l-2 bg-slate-900 shadow-lg shrink-0 overflow-hidden"
-          : "w-full p-2 md:p-3 rounded-lg md:rounded-xl border-l-4 md:border-l-[6px] bg-slate-900/80"
+          ? "w-16 h-18 p-1 bg-slate-900 border-l-2"
+          : "w-full p-3 bg-slate-950/90 border-t border-b border-r border-white/5 border-l-4"
         }
         ${disabled
-          ? "border-slate-800 opacity-50 cursor-not-allowed grayscale"
-          : "border-cyan-500 hover:bg-slate-800 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] cursor-pointer hover:scale-[1.02]"
+          ? "border-slate-800 opacity-30 cursor-not-allowed grayscale bg-slate-900/40"
+          : `${theme.border} cursor-pointer hover:bg-slate-900 shadow-xl group`
         }
       `}
     >
-      {/* Background Tech Pattern */}
-      {!disabled && (
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(6,182,212,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-shine opacity-0 group-hover:opacity-100 transition-opacity" />
-      )}
-
+      {/* Static Diagonal Hatch for Locked */}
       {disabled && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
-          <div className="bg-black/60 px-2 py-0.5 rounded text-[8px] font-bold tracking-widest text-slate-400 border border-slate-700 uppercase">
-            BLOQUÉ
-          </div>
-        </div>
+        <div className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 2px, transparent 2px, transparent 10px)' }} />
       )}
 
-      <div className={`flex ${mini ? "flex-col items-center" : "gap-2 md:gap-4 items-center"} relative z-0`}>
-        {/* Avatar Image */}
+      {/* Content */}
+      <div className={`flex ${mini ? "flex-col items-center" : "gap-5 items-center"} relative z-10`}>
+        {/* Avatar Section */}
         <div className={`
-           ${mini ? "w-10 h-10 mb-1" : "w-12 h-12 md:w-20 md:h-20"} shrink-0 rounded-lg overflow-hidden border-2 bg-slate-950 shadow-inner
-           ${disabled ? "border-slate-700" : "border-cyan-500/50 group-hover:border-cyan-400"}
+           relative shrink-0 border-2 bg-slate-950 shadow-inner
+           ${mini ? "w-10 h-10 mb-1 rounded" : "w-14 h-14 md:w-20 md:h-20 rounded"}
+           ${disabled ? "border-slate-800" : "border-white/10 group-hover:border-white/30"}
         `}>
           {CHARACTER_IMAGES[card.characterId] ? (
             <img
               src={CHARACTER_IMAGES[card.characterId]}
               alt={card.name}
-              className={`w-full h-full object-cover ${card.characterId === "CUB" ? "object-bottom" : "object-center"}`}
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-800 text-lg md:text-xl text-slate-600">
-              {icons[charType]}
+            <div className={`w-full h-full flex items-center justify-center bg-slate-900 text-xl text-slate-700`}>
+              {theme.icon}
             </div>
+          )}
+
+          {/* Static Corner Ornament */}
+          {!disabled && !mini && (
+            <div className={`absolute top-0 right-0 w-3 h-3 ${theme.badge} border-b border-l border-white/20`} />
           )}
         </div>
 
-        {/* Content Info */}
+        {/* Text Section */}
         {!mini ? (
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <div className="flex justify-between items-baseline mb-0.5 md:mb-1">
-              <span className={`font-cyber text-sm md:text-lg font-bold truncate ${disabled ? "text-slate-500" : "text-white group-hover:text-cyan-300"}`}>
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex justify-between items-start mb-1">
+              <h3 className={`font-cyber text-lg font-black uppercase tracking-wider transition-colors ${disabled ? "text-slate-600" : "text-white group-hover:" + theme.text}`}>
                 {card.name}
-              </span>
-              <span className="text-[8px] md:text-[10px] text-slate-600 font-mono">
-                {charType === "ACTIVE" ? "ACTIF" : "PASSIF"}
-              </span>
+              </h3>
+              <div className={`px-2 py-0.5 rounded text-[7px] font-mono font-bold tracking-widest border ${disabled ? "border-slate-800 text-slate-700" : theme.border + " " + theme.text}`}>
+                {charTypeLabel}
+              </div>
             </div>
 
-            <p className="text-[9px] md:text-[11px] text-slate-400 leading-tight line-clamp-1 md:line-clamp-2 italic pr-2">
-              "{card.description || "Information classifiée"}"
+            <p className="text-[10px] text-slate-500 font-medium leading-tight font-mono line-clamp-2 italic uppercase opacity-70">
+              // {card.description || "DONNÉES_CHIFFRÉES"}
             </p>
 
+            {/* Industrial Data Bar */}
             {!disabled && (
-              <div className="mt-1 md:mt-2 flex items-center gap-1">
-                <div className="h-1 w-8 md:w-12 bg-cyan-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-cyan-500 w-2/3 animate-pulse" />
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex-1 h-0.5 bg-slate-900 flex gap-0.5">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className={`h-full flex-1 ${i < 2 ? 'bg-cyan-500/40' : 'bg-slate-800'}`} />
+                  ))}
                 </div>
+                <span className="text-[6px] font-mono text-slate-700">PRÊT</span>
               </div>
             )}
           </div>
         ) : (
-          <div className="w-full text-center mt-auto pb-0.5">
-            <span className="text-[7px] font-black text-white uppercase tracking-tighter block truncate">
+          <div className="w-full text-center">
+            <span className={`text-[8px] font-black font-cyber ${disabled ? "text-slate-700" : "text-white"} uppercase truncate block`}>
               {card.name}
             </span>
           </div>
         )}
       </div>
+
+      {/* Industrial Rivets (Decorative) */}
+      {!mini && (
+        <>
+          <div className="absolute top-2 left-2 w-1 h-1 rounded-full bg-white/5 shadow-inner" />
+          <div className="absolute bottom-2 right-2 w-1 h-1 rounded-full bg-white/5 shadow-inner" />
+        </>
+      )}
     </div>
   );
 }
+
 
 export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }: { gameId: string; sessionId?: string; onBackToLobby: () => void }) {
   const sessionId = propSessionId || gameId;
@@ -230,7 +250,6 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
     setActionMode("MOVE");
     setManipulatorTarget(null);
     setBrawlerTarget(null);
-    setBrawlerLandingCell(null);
     setGrapplerTarget(null);
     setGrapplerMode(null);
     setInnkeeperTarget(null);
@@ -307,7 +326,6 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   // Scenario-specific targeting states
   const [manipulatorTarget, setManipulatorTarget] = useState<PieceFrontend | null>(null);
   const [brawlerTarget, setBrawlerTarget] = useState<PieceFrontend | null>(null);
-  const [brawlerLandingCell, setBrawlerLandingCell] = useState<{ q: number; r: number } | null>(null);
   const [grapplerTarget, setGrapplerTarget] = useState<PieceFrontend | null>(null);
   const [grapplerMode, setGrapplerMode] = useState<"PULL" | "MOVE" | null>(null);
   const [showGrapplerModal, setShowGrapplerModal] = useState(false);
@@ -480,7 +498,11 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const currentPlayerPieceCount = useMemo(() => {
     if (!gameState) return 0;
-    return gameState.pieces.filter((p) => p.ownerIndex === gameState.currentPlayerIndex).length;
+    return gameState.pieces.filter((p) =>
+      p.ownerIndex === gameState.currentPlayerIndex &&
+      p.characterId !== "CUB" &&
+      p.characterId !== "LEADER"
+    ).length;
   }, [gameState]);
 
   const allPiecesActed = useMemo(() => {
@@ -539,6 +561,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const handleMove = useCallback(
     async (pieceId: string, toQ: number, toR: number) => {
+      const currentUser = user || authService.getUser();
+      const playerId = currentUser?.id || sessionId;
       try {
         const piece = gameState?.pieces.find((p) => p.id === pieceId);
         if (!piece) return;
@@ -556,7 +580,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
             }
             targetId = targetPiece.id;
           }
-          await gameApi.useAbility(gameId, pieceId, abilityId, targetId, { q: toQ, r: toR });
+          await gameApi.useAbility(gameId, pieceId, abilityId, targetId, { q: toQ, r: toR }, undefined, playerId);
         } else {
           await gameApi.movePiece(pieceId, toQ, toR);
         }
@@ -566,7 +590,6 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         setSelectedPiece(null);
         setManipulatorTarget(null);
         setBrawlerTarget(null);
-        setBrawlerLandingCell(null);
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
@@ -580,8 +603,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   const handleAbilityUse = useCallback(
     async (pieceId: string, abilityId: string, targetId?: string, destination?: { q: number; r: number }, secondaryDest?: { q: number; r: number }) => {
       console.log("Game: handleAbilityUse called", { pieceId, abilityId, targetId, destination, secondaryDest });
+      const currentUser = user || authService.getUser();
+      const playerId = currentUser?.id || sessionId;
       try {
-        await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination, secondaryDest);
+        await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination, secondaryDest, playerId);
         console.log("Game: Ability API call success");
         const game = await gameApi.getGameState(gameId);
         const mappedGame = gameApi.mapGameToFrontend(game);
@@ -589,7 +614,6 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         setSelectedPiece(null);
         setManipulatorTarget(null);
         setBrawlerTarget(null);
-        setBrawlerLandingCell(null);
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
@@ -847,27 +871,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         </div>
       </div>
 
-      {/* Floating Buttons */}
-      {/* Floating Buttons */}
-      <div className="absolute top-40 md:top-40 left-4 md:left-10 flex flex-col gap-4 z-20">
-        <button
-          onClick={() => setShowRules(true)}
-          className="w-10 h-10 md:w-12 md:h-12 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all shadow-lg group relative overflow-hidden"
-          title="Règles du jeu"
-        >
-          <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
-          <div className="absolute inset-0 bg-cyan-400/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
-
-        <button
-          onClick={toggleMusic}
-          className={`w-10 h-10 md:w-12 md:h-12 backdrop-blur-md border border-white/10 rounded-xl flex items-center justify-center transition-all shadow-lg group relative overflow-hidden ${isMusicPlaying ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white" : "bg-slate-900/80 text-slate-400 hover:bg-slate-700 hover:text-white"}`}
-          title={isMusicPlaying ? "Couper la musique" : "Lancer la musique"}
-        >
-          {isMusicPlaying ? <Volume2 className="w-5 h-5 md:w-6 md:h-6" /> : <VolumeX className="w-5 h-5 md:w-6 md:h-6" />}
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
-      </div>
+      {/* UTILITY MODALS & OVERLAYS move below or kept here */}
 
       {/* MODALS */}
       {placementMode && (
@@ -882,12 +886,12 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         </div>
       )}
 
-      {(activeTarget || brawlerLandingCell) && !showGrapplerModal && (
+      {activeTarget && !showGrapplerModal && (
         <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
           <p className="text-cyan-400 font-bold text-xs md:text-sm uppercase tracking-wider">
-            🎯 {brawlerLandingCell ? "Brawler : Choisissez la case de poussée" : `${activeTargetName}: Choisissez la destination`}
+            🎯 {activeTargetName}: Choisissez la destination
           </p>
-          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setBrawlerLandingCell(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
+          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
         </div>
       )}
 
@@ -910,10 +914,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
       {/* RIVIÈRE: RESPONSIVE */}
       {/* MOBILE COMPACT RIVIÈRE */}
-      <div className="md:hidden absolute bottom-16 left-0 right-0 z-10 p-1 bg-slate-950/80 backdrop-blur-sm border-t border-white/10">
-        {isMyTurn && (
-          <div className="flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
-            <div className="flex gap-1 py-1 px-1">
+      {isMyTurn && (
+        <div className="md:hidden absolute bottom-16 left-0 right-0 z-50 p-2 bg-slate-950/90 border-t border-white/20 shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex gap-2 py-1 px-1">
               {riverCards.map((card) => (
                 <SidebarCard
                   key={card.id}
@@ -925,48 +929,121 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
                 />
               ))}
             </div>
+
             {!allPiecesActed && (
-              <button onClick={handleSkipActions} className="bg-indigo-600/60 text-[8px] text-white px-3 py-4 mr-1 rounded-lg font-black tracking-widest uppercase border border-indigo-400/50 flex flex-col items-center justify-center h-20">
-                <span>PASS</span>
-                <span className="text-[6px] opacity-60">ACTIONS</span>
+              <button
+                onClick={handleSkipActions}
+                className="shrink-0 bg-indigo-600/30 text-[9px] text-white px-4 py-3 rounded font-black tracking-widest uppercase border border-indigo-500/40 flex flex-col items-center justify-center h-[80px]"
+              >
+                <span className="opacity-60">FINI</span>
+                <span className="text-xs">⚡</span>
               </button>
             )}
           </div>
-        )}
-      </div>
+          {/* Mobile Population Indicator */}
+          <div className="flex gap-1 h-1.5 mt-1 px-1">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className={`flex-1 ${i < currentPlayerPieceCount ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]' : 'bg-slate-800'}`} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* DESKTOP SIDEBAR RIVIÈRE */}
-      <div className="hidden md:flex absolute top-48 left-8 w-96 h-[calc(100vh-16rem)] flex-col gap-6 z-10 perspective-[1000px]">
-        <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(0,0,0,0.5)] transform -rotate-y-2 hover:rotate-0 transition-transform duration-500">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-cyber font-bold text-2xl text-white tracking-wider flex items-center gap-2">
-              <span className="text-cyan-400 animate-pulse">◈</span> RIVIÈRE
-            </h2>
-            <div className="px-3 py-1 bg-slate-950 rounded text-[10px] font-mono text-cyan-500 border border-cyan-900">
-              {availableSpawnCells.length} ZONE(S)
+      <div className="hidden md:flex absolute top-48 left-8 w-96 h-[calc(100vh-16rem)] flex-col gap-4 z-10">
+        {/* Utility Bar (Sound & Rules) */}
+        <div className="flex justify-end gap-2 mb-1">
+          <button
+            onClick={() => setShowRules(true)}
+            className="w-8 h-8 bg-slate-950 border border-white/10 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all"
+            title="Règles du jeu"
+          >
+            <BookOpen className="w-4 h-4" />
+          </button>
+          <button
+            onClick={toggleMusic}
+            className={`w-8 h-8 bg-slate-950 border border-white/10 flex items-center justify-center transition-all ${isMusicPlaying ? "text-cyan-400 border-cyan-500/50" : "text-slate-500 hover:text-white"}`}
+            title={isMusicPlaying ? "Couper la musique" : "Lancer la musique"}
+          >
+            {isMusicPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {/* Modular Command Panel - Compact & Solid */}
+        <div className="relative bg-slate-950/95 border-l-4 border-cyan-500 shadow-[20px_0_50px_rgba(0,0,0,0.8)]">
+          {/* Header Section */}
+          <div className="p-4 border-b border-white/5">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="font-cyber font-black text-2xl text-white tracking-[0.1em] uppercase">
+                  RECRUTEMENT
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-1.5 h-1.5 bg-cyan-500" />
+                  <span className="text-[9px] font-mono text-slate-400 tracking-widest uppercase">PROTOCOLE_ACTIF // v4.2.1</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="px-2 py-0.5 bg-cyan-500/10 text-cyan-500 text-[9px] font-bold border border-cyan-500/30">
+                  CONNECTÉ
+                </div>
+              </div>
             </div>
           </div>
-          <p className="flex text-[10px] text-slate-400 uppercase tracking-widest justify-between mb-3">
-            <span>Effectif: {currentPlayerPieceCount}/5</span>
-            <span>{isMyTurn ? "SESSION ACTIVE" : "EN ATTENTE"}</span>
-          </p>
-          {isMyTurn && (
-            <div className="mt-4 flex flex-col gap-2 bg-slate-950/50 p-3 rounded-lg border border-white/5">
-              <div className="flex flex-col gap-1">
-                {(!canRecruit || !hasAvailableSpawnCells) ? (
-                  <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase"><span>⛔</span> INDISPONIBLE</div>
-                ) : (
-                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase"><span>🟢</span> RECRUTEMENT OK</div>
+
+          {/* Data Section */}
+          <div className="p-4 space-y-4">
+            {/* Population Grid */}
+            <div>
+              <div className="flex justify-between items-end mb-2">
+                <span className="text-[9px] font-cyber font-bold text-slate-500 tracking-widest uppercase">Effectif Global</span>
+                <span className="font-mono text-base font-black text-white">{currentPlayerPieceCount}<span className="text-slate-700">/5</span></span>
+              </div>
+              <div className="grid grid-cols-5 gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-3 border ${i < currentPlayerPieceCount
+                      ? 'bg-cyan-500/30 border-cyan-400 shadow-[inset_0_0_10px_rgba(6,182,212,0.3)]'
+                      : 'bg-black/40 border-slate-800'}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {isMyTurn ? (
+              <div className="space-y-3">
+                <div className="p-2 bg-black/40 border-l-2 border-slate-700 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${canRecruit && hasAvailableSpawnCells ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+                    <span className={`text-[9px] font-black tracking-widest uppercase ${canRecruit && hasAvailableSpawnCells ? 'text-white' : 'text-slate-600'}`}>
+                      {canRecruit && hasAvailableSpawnCells ? 'ACCÈS : AUTORISÉ' : 'ACCÈS : REFUSÉ'}
+                    </span>
+                  </div>
+                  <div className="text-[8px] font-mono text-slate-700">SPW.{availableSpawnCells.length}</div>
+                </div>
+
+                {!allPiecesActed && (
+                  <button
+                    onClick={handleSkipActions}
+                    className="w-full py-3 bg-slate-900 text-cyan-400 hover:bg-cyan-500 hover:text-black font-cyber text-[10px] font-black tracking-[0.3em] uppercase transition-all duration-200 border border-cyan-500/20 hover:border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.1)]"
+                  >
+                    Terminer le Tour
+                  </button>
                 )}
               </div>
-              {!allPiecesActed && (
-                <button onClick={handleSkipActions} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-cyber text-[10px] font-black tracking-widest uppercase rounded shadow-lg transition-all active:scale-95">
-                  Terminer Actions
-                </button>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className="py-4 text-center border-t border-white/5 mt-2">
+                <span className="text-slate-600 font-mono text-[9px] tracking-[0.4em] uppercase">SYNCHRONISATION...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Corner Rivet Details (Static) */}
+          <div className="absolute top-2 right-2 w-1 h-1 bg-white/10" />
+          <div className="absolute bottom-2 right-2 w-1 h-1 bg-white/10" />
         </div>
+
         <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2 scrollbar-thin">
           {riverCards.map((card) => (
             <SidebarCard
@@ -1036,8 +1113,6 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
           onManipulatorTargetSelect={actionMode === "ABILITY" ? setManipulatorTarget : undefined}
           brawlerTarget={actionMode === "ABILITY" ? brawlerTarget : null}
           onBrawlerTargetSelect={actionMode === "ABILITY" ? setBrawlerTarget : undefined}
-          brawlerLandingCell={actionMode === "ABILITY" ? brawlerLandingCell : null}
-          onBrawlerLandingCellSelect={actionMode === "ABILITY" ? setBrawlerLandingCell : undefined}
           grapplerTarget={actionMode === "ABILITY" ? grapplerTarget : null}
           onGrapplerTargetSelect={actionMode === "ABILITY" ? setGrapplerTarget : undefined}
           grapplerMode={grapplerMode}

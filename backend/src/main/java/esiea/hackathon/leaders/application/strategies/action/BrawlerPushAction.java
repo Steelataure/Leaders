@@ -26,6 +26,16 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
         if (secondaryDestination == null)
             throw new IllegalArgumentException("Secondary destination is required (where to push?)");
 
+        try {
+            String logMsg = String.format(
+                    "DEBUG: BrawlerPushAction source=(%d,%d) target=(%d,%d) dest=(%d,%d) secDest=(%d,%d)\n",
+                    source.getQ(), source.getR(), target.getQ(), target.getR(), dest.q(), dest.r(),
+                    secondaryDestination.q(), secondaryDestination.r());
+            java.nio.file.Files.write(java.nio.file.Paths.get("brawler_debug.log"), logMsg.getBytes(),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception e) {
+        }
+
         // PROTECTION CHECK: Cannot move a protected piece
         if (HexUtils.isProtected(target, allPieces)) {
             throw new IllegalArgumentException("Target is protected by a Protector's aura!");
@@ -34,22 +44,19 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
         HexCoord sourceCoord = new HexCoord(source.getQ(), source.getR());
         HexCoord targetCoord = new HexCoord(target.getQ(), target.getR());
 
-        // 1. Le Cogneur doit pouvoir se téléporter (dist 1 ou 2)
+        // 1. Le Cogneur doit être à portée (dist 1 ou 2)
         if (HexUtils.getDistance(sourceCoord, targetCoord) > 2) {
             throw new IllegalArgumentException("Target is too far for Brawler Push (max distance 2)");
         }
 
-        // 2. Vérifier que la Destination (dest) est la case où le Cogneur arrivera
-        // Elle doit être adjacente à la cible
-        if (HexUtils.getDistance(targetCoord, dest) != 1) {
-            throw new IllegalArgumentException(
-                    "Destination must be adjacent to the target (this is where Brawler lands)");
+        // 2. Le Cogneur prend la place de l'ennemi (dest doit être targetCoord)
+        if (!dest.equals(targetCoord)) {
+            throw new IllegalArgumentException("Brawler must land on the target's position");
         }
 
         // 3. La case de poussée (secondaryDestination) doit être adjacente à la cible
-        // et à l'opposé du Cogneur (souvent 3 cases possibles dans la règle)
         if (HexUtils.getDistance(targetCoord, secondaryDestination) != 1) {
-            throw new IllegalArgumentException("Push destination must be adjacent to the target");
+            throw new IllegalArgumentException("Push destination must be adjacent to the target's current position");
         }
 
         // 4. Case de poussée doit être VIDE et VALIDE
@@ -60,21 +67,16 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
             throw new IllegalArgumentException("Push destination cell is occupied");
         }
 
-        // 5. Case d'arrivée du Cogneur doit être VIDE (ou sa position actuelle)
-        if (!dest.isValid()) {
-            throw new IllegalArgumentException("Brawler destination is off-board");
-        }
-        if (!dest.equals(sourceCoord) && HexUtils.isOccupied(dest, allPieces)) {
-            throw new IllegalArgumentException("Brawler destination cell is occupied");
-        }
-
         // 6. APPLICATION DU MOUVEMENT
-        // A. Le Cogneur se déplace sur la case choisie (à côté de la cible)
-        source.setQ(dest.q());
-        source.setR(dest.r());
-
-        // B. La Victime est propulsée sur la case choisie
+        // A. La Victime est propulsée sur la case choisie AVANT que le Cogneur ne
+        // prenne sa place
+        // pour éviter tout conflit de position dans l'état intermédiaire si nécessaire
+        // (Bien que ici on mette à jour les objets en mémoire)
         target.setQ(secondaryDestination.q());
         target.setR(secondaryDestination.r());
+
+        // B. Le Cogneur prend la place de l'ennemi
+        source.setQ(targetCoord.q());
+        source.setR(targetCoord.r());
     }
 }

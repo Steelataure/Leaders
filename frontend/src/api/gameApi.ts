@@ -261,6 +261,7 @@ export async function useAbility(
   targetId?: string,
   destination?: HexCoord,
   secondaryDestination?: HexCoord,
+  playerId?: string,
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/games/${gameId}/action`, {
     method: "POST",
@@ -271,6 +272,7 @@ export async function useAbility(
       targetId: targetId || null,
       destination: destination || null,
       secondaryDestination: secondaryDestination || null,
+      playerId: playerId || null,
     }),
   });
 

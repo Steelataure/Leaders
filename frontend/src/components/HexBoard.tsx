@@ -313,8 +313,6 @@ export default function HexBoard(props: HexBoardProps) {
     onManipulatorTargetSelect,
     brawlerTarget,
     onBrawlerTargetSelect,
-    brawlerLandingCell,
-    onBrawlerLandingCellSelect,
     grapplerTarget,
     onGrapplerTargetSelect,
     grapplerMode,
@@ -547,45 +545,20 @@ export default function HexBoard(props: HexBoardProps) {
     return targets;
   }, [selectedPiece, pieces, isLocalTurn, isPieceProtected]);
 
-  const brawlerDestinations = useMemo(() => {
+  const brawlerPushDestinations = useMemo(() => {
     if (!brawlerTarget || !selectedPiece) return new Set<string>();
     const dests = new Set<string>();
 
-    // Case 1: Select Landing Cell
-    if (!brawlerLandingCell) {
-      HEX_DIRECTIONS.forEach(({ dq, dr }) => {
-        const lQ = brawlerTarget.q + dq, lR = brawlerTarget.r + dr;
-        if (isValidHex(lQ, lR)) {
-          const pieceAtL = findPieceAtCell(lQ, lR);
-          const isBrawlerCurrentPos = (lQ === selectedPiece.q && lR === selectedPiece.r);
-          if (!pieceAtL || isBrawlerCurrentPos) {
-            dests.add(`${lQ},${lR}`);
-          }
-        }
-      });
-    }
-    return dests;
-  }, [brawlerTarget, brawlerLandingCell, selectedPiece, pieces]);
-
-  const brawlerPushDestinations = useMemo(() => {
-    if (!brawlerTarget || !brawlerLandingCell) return new Set<string>();
-    const dests = new Set<string>();
-
-    // Step 2: Select Push Cell (adjacent to target, "opposite" to landing cell)
-    // We allow adjacency for now as requested by user ("three steps")
+    // Step 2: Select Push Cell (any adjacent empty cell to target)
     HEX_DIRECTIONS.forEach(({ dq, dr }) => {
       const pQ = brawlerTarget.q + dq, pR = brawlerTarget.r + dr;
       if (isValidHex(pQ, pR) && !findPieceAtCell(pQ, pR)) {
-        // Rule: must be adjacent to target (already checked)
-        // and usually not the landing cell
-        if (pQ !== brawlerLandingCell.q || pR !== brawlerLandingCell.r) {
-          dests.add(`${pQ},${pR}`);
-        }
+        dests.add(`${pQ},${pR}`);
       }
     });
 
     return dests;
-  }, [brawlerTarget, brawlerLandingCell, pieces]);
+  }, [brawlerTarget, selectedPiece, pieces]);
 
   const grapplerTargets = useMemo(() => {
     if (!selectedPiece || selectedPiece.characterId !== "GRAPPLER" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
@@ -659,13 +632,10 @@ export default function HexBoard(props: HexBoardProps) {
       return;
     }
 
-    if (brawlerTarget && !brawlerLandingCell && brawlerDestinations.has(`${cell.q},${cell.r}`) && onBrawlerLandingCellSelect) {
-      onBrawlerLandingCellSelect({ q: cell.q, r: cell.r });
-      return;
-    }
-
-    if (brawlerTarget && brawlerLandingCell && brawlerPushDestinations.has(`${cell.q},${cell.r}`) && onAbilityUse && selectedPiece) {
-      onAbilityUse(selectedPiece.id, "BRAWLER_PUSH", brawlerTarget.id, brawlerLandingCell, { q: cell.q, r: cell.r });
+    if (brawlerTarget && brawlerPushDestinations.has(`${cell.q},${cell.r}`) && onAbilityUse && selectedPiece) {
+      // Landing cell is the target's current position
+      const landingCell = { q: brawlerTarget.q, r: brawlerTarget.r };
+      onAbilityUse(selectedPiece.id, "BRAWLER_PUSH", brawlerTarget.id, landingCell, { q: cell.q, r: cell.r });
       return;
     }
 
@@ -761,7 +731,6 @@ export default function HexBoard(props: HexBoardProps) {
         const isPlacement = placementMode && availablePlacementCells.some(c => c.q === cell.q && c.r === cell.r);
         const isAbility = actionMode === "ABILITY" && (
           manipulatorDestinations.has(`${cell.q},${cell.r}`) ||
-          brawlerDestinations.has(`${cell.q},${cell.r}`) ||
           brawlerPushDestinations.has(`${cell.q},${cell.r}`) ||
           grapplerMoveDestinations.has(`${cell.q},${cell.r}`) ||
           innkeeperDestinations.has(`${cell.q},${cell.r}`) ||

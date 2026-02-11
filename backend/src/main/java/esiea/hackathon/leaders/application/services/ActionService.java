@@ -110,12 +110,15 @@ public class ActionService {
 
         // Exécution de la Stratégie via Factory
         ActionAbilityStrategy strategy = actionFactory.getStrategy(abilityId);
-        log("DEBUG: Piece BEFORE action: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());
+        log("DEBUG: Piece BEFORE action: " + source.getCharacterId() + " using " + abilityId + " at " + source.getQ()
+                + "," + source.getR());
         if (target != null) {
-            log("DEBUG: Target BEFORE action: " + target.getCharacterId() + " at " + target.getQ() + ","
-                    + target.getR());
+            log("DEBUG: Target BEFORE action: " + target.getCharacterId() + " (" + target.getId() + ") at "
+                    + target.getQ() + "," + target.getR());
         }
-
+        log("DEBUG: Params: dest=" + (destination != null ? destination.q() + "," + destination.r() : "null")
+                + " secDest="
+                + (secondaryDestination != null ? secondaryDestination.q() + "," + secondaryDestination.r() : "null"));
         strategy.execute(source, target, destination, secondaryDestination, allPieces);
 
         log("DEBUG: Piece AFTER strategy: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());

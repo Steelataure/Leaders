@@ -9,9 +9,11 @@ import esiea.hackathon.leaders.domain.model.AbilityEntity;
 import esiea.hackathon.leaders.domain.model.GameEntity;
 import esiea.hackathon.leaders.domain.model.PieceEntity;
 import esiea.hackathon.leaders.domain.model.RefCharacterEntity;
+import esiea.hackathon.leaders.domain.model.VictoryCheckResult;
 import esiea.hackathon.leaders.domain.repository.GameRepository;
 import esiea.hackathon.leaders.domain.repository.PieceRepository;
 import esiea.hackathon.leaders.domain.repository.RefCharacterRepository;
+import esiea.hackathon.leaders.application.strategies.action.NemesisBehavior;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import esiea.hackathon.leaders.domain.model.GamePlayerEntity;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,6 +52,12 @@ class ActionServiceTest {
         private GameRepository gameRepository;
         @Mock
         private PassiveFactory passiveFactory;
+        @Mock
+        private GameService gameService;
+        @Mock
+        private NemesisBehavior nemesisBehavior;
+        @Mock
+        private VictoryService victoryService;
 
         @Mock
         private ActionAbilityStrategy strategy;
@@ -55,7 +66,9 @@ class ActionServiceTest {
         private GameEntity game;
         private final UUID gameId = UUID.randomUUID();
         private final UUID pieceId = UUID.randomUUID();
+        private final UUID userId = UUID.randomUUID();
         private RefCharacterEntity character;
+        private GamePlayerEntity gamePlayer;
 
         @BeforeEach
         void setUp() {
@@ -71,12 +84,19 @@ class ActionServiceTest {
                                 .build();
 
                 // Initialisation du Jeu (pour la validation du tour)
+                gamePlayer = mock(GamePlayerEntity.class);
+                when(gamePlayer.getPlayerIndex()).thenReturn(0);
+                when(gamePlayer.getUserId()).thenReturn(userId);
+
                 game = GameEntity.builder()
                                 .id(gameId)
                                 .currentPlayerIndex(0) // C'est le tour du joueur 0
+                                .players(List.of(gamePlayer))
                                 .build();
 
                 character = mock(RefCharacterEntity.class);
+                lenient().when(victoryService.checkVictory(any()))
+                                .thenReturn(new VictoryCheckResult(false, null, null));
         }
 
         @Test
@@ -99,11 +119,11 @@ class ActionServiceTest {
                 when(actionFactory.getStrategy(abilityId)).thenReturn(strategy);
 
                 // 4. Execution
-                actionService.useAbility(pieceId, null, abilityId, null, null);
+                actionService.useAbility(pieceId, null, abilityId, null, null, userId);
 
                 // 5. Verification
-                verify(strategy).execute(eq(piece), isNull(), isNull(), anyList());
-                verify(pieceRepository).save(piece);
+                verify(strategy).execute(eq(piece), isNull(), isNull(), isNull(), anyList());
+                verify(pieceRepository).saveAndFlush(any());
                 assertTrue(piece.getHasActedThisTurn());
         }
 
@@ -143,7 +163,7 @@ class ActionServiceTest {
 
                 // Assertion
                 assertThrows(IllegalStateException.class,
-                                () -> actionService.useAbility(pieceId, null, abilityId, null, null));
+                                () -> actionService.useAbility(pieceId, null, abilityId, null, null, userId));
         }
 
         @Test
@@ -190,6 +210,6 @@ class ActionServiceTest {
 
                 // Assertion
                 assertThrows(IllegalStateException.class,
-                                () -> actionService.useAbility(pieceId, target.getId(), abilityId, null, null));
+                                () -> actionService.useAbility(pieceId, target.getId(), abilityId, null, null, userId));
         }
 }
