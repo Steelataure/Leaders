@@ -104,9 +104,9 @@ CREATE TABLE IF NOT EXISTS game (
     winner_player_index SMALLINT,
     winner_victory_type VARCHAR(50),                 -- Ex: 'CAPTURE'
     banishment_count SMALLINT DEFAULT 0,
-    recruitment_count SMALLINT DEFAULT 0,
-    remaining_time_p0 INT DEFAULT 300,
-    remaining_time_p1 INT DEFAULT 300,
+    recruitment_count INT DEFAULT 0,
+    remaining_time_p0 INT DEFAULT 420,
+    remaining_time_p1 INT DEFAULT 420,
     last_timer_update TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -121,6 +121,11 @@ ALTER TABLE game ADD COLUMN IF NOT EXISTS elo_change_p0 INT;
 ALTER TABLE game ADD COLUMN IF NOT EXISTS elo_change_p1 INT;
 ALTER TABLE game ADD COLUMN IF NOT EXISTS scenario_id SMALLINT REFERENCES ref_scenario(id);
 ALTER TABLE game ADD COLUMN IF NOT EXISTS ai_difficulty VARCHAR(50) DEFAULT 'EASY';
+ALTER TABLE game ADD COLUMN IF NOT EXISTS recruitment_count INT DEFAULT 0;
+ALTER TABLE game ADD COLUMN IF NOT EXISTS remaining_time_p0 INT DEFAULT 420;
+ALTER TABLE game ADD COLUMN IF NOT EXISTS remaining_time_p1 INT DEFAULT 420;
+ALTER TABLE game ADD COLUMN IF NOT EXISTS last_timer_update TIMESTAMP;
+ALTER TABLE user_credentials ADD COLUMN IF NOT EXISTS elo INT DEFAULT 1000;
 
 CREATE TABLE IF NOT EXISTS game_player (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

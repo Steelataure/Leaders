@@ -16,12 +16,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: always
+    ports:
+      - "8085:8085"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-leaders_db}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-admin}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-password123}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
-      PORT: 8080
+      PORT: 8085
     depends_on:
       - database
 
@@ -29,8 +31,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    ports:
+      - "80:80"
     environment:
-      BACKEND_URL: http://backend:8080
+      BACKEND_URL: http://backend:8085
     depends_on:
       - backend
     restart: always

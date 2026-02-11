@@ -32,4 +32,8 @@ public class GamePlayerJpaEntity {
 
     @Column(name = "is_first_turn_completed")
     private boolean isFirstTurnCompleted;
+
+    @Column(name = "pieces_count")
+    @Builder.Default
+    private int piecesCount = 0;
 }
