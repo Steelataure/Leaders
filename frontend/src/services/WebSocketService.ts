@@ -101,6 +101,28 @@ class WebSocketService {
         }
     }
 
+    subscribeToChat(sessionId: string, callback: (message: any) => void) {
+        if (!this.connected) {
+            const checkInterval = setInterval(() => {
+                if (this.connected) {
+                    clearInterval(checkInterval);
+                    this.doSubscribe(`/topic/chat/${sessionId}`, callback);
+                }
+            }, 100);
+        } else {
+            this.doSubscribe(`/topic/chat/${sessionId}`, callback);
+        }
+    }
+
+    sendMessage(sessionId: string, payload: any) {
+        if (this.connected) {
+            this.client.publish({
+                destination: `/app/chat/${sessionId}`,
+                body: JSON.stringify(payload),
+            });
+        }
+    }
+
     private doSubscribe(topic: string, callback: (data: any) => void) {
         console.log(`Attempting to subscribe to ${topic}`);
         this.client.subscribe(topic, (message: Message) => {

@@ -1,5 +1,6 @@
 import type { GameFrontend, PieceFrontend } from "../api/gameApi";
 import { gameApi } from "../api/gameApi";
+import ChatPanel from '../components/ChatPanel';
 import { authService } from "../services/auth.service";
 import { webSocketService } from "../services/WebSocketService";
 import RankBadge from "../components/RankBadge";
@@ -1286,6 +1287,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
           </div>
         </div>
       )}
+      {/* MULTIPLAYER CHAT */}
+      <ChatPanel sessionId={sessionId} user={user} isMyTurn={!!isMyTurn} />
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap');
