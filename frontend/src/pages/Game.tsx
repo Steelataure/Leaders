@@ -230,6 +230,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
     setActionMode("MOVE");
     setManipulatorTarget(null);
     setBrawlerTarget(null);
+    setBrawlerLandingCell(null);
     setGrapplerTarget(null);
     setGrapplerMode(null);
     setInnkeeperTarget(null);
@@ -306,6 +307,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   // Scenario-specific targeting states
   const [manipulatorTarget, setManipulatorTarget] = useState<PieceFrontend | null>(null);
   const [brawlerTarget, setBrawlerTarget] = useState<PieceFrontend | null>(null);
+  const [brawlerLandingCell, setBrawlerLandingCell] = useState<{ q: number; r: number } | null>(null);
   const [grapplerTarget, setGrapplerTarget] = useState<PieceFrontend | null>(null);
   const [grapplerMode, setGrapplerMode] = useState<"PULL" | "MOVE" | null>(null);
   const [showGrapplerModal, setShowGrapplerModal] = useState(false);
@@ -564,6 +566,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         setSelectedPiece(null);
         setManipulatorTarget(null);
         setBrawlerTarget(null);
+        setBrawlerLandingCell(null);
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
@@ -575,10 +578,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   );
 
   const handleAbilityUse = useCallback(
-    async (pieceId: string, abilityId: string, targetId?: string, destination?: { q: number; r: number }) => {
-      console.log("Game: handleAbilityUse called", { pieceId, abilityId, targetId, destination });
+    async (pieceId: string, abilityId: string, targetId?: string, destination?: { q: number; r: number }, secondaryDest?: { q: number; r: number }) => {
+      console.log("Game: handleAbilityUse called", { pieceId, abilityId, targetId, destination, secondaryDest });
       try {
-        await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination);
+        await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination, secondaryDest);
         console.log("Game: Ability API call success");
         const game = await gameApi.getGameState(gameId);
         const mappedGame = gameApi.mapGameToFrontend(game);
@@ -586,6 +589,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         setSelectedPiece(null);
         setManipulatorTarget(null);
         setBrawlerTarget(null);
+        setBrawlerLandingCell(null);
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
@@ -878,10 +882,12 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         </div>
       )}
 
-      {activeTarget && !showGrapplerModal && (
+      {(activeTarget || brawlerLandingCell) && !showGrapplerModal && (
         <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
-          <p className="text-cyan-400 font-bold text-xs md:text-sm uppercase tracking-wider">🎯 {activeTargetName}: Choisissez la destination</p>
-          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
+          <p className="text-cyan-400 font-bold text-xs md:text-sm uppercase tracking-wider">
+            🎯 {brawlerLandingCell ? "Brawler : Choisissez la case de poussée" : `${activeTargetName}: Choisissez la destination`}
+          </p>
+          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setBrawlerLandingCell(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
         </div>
       )}
 
@@ -1030,6 +1036,8 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
           onManipulatorTargetSelect={actionMode === "ABILITY" ? setManipulatorTarget : undefined}
           brawlerTarget={actionMode === "ABILITY" ? brawlerTarget : null}
           onBrawlerTargetSelect={actionMode === "ABILITY" ? setBrawlerTarget : undefined}
+          brawlerLandingCell={actionMode === "ABILITY" ? brawlerLandingCell : null}
+          onBrawlerLandingCellSelect={actionMode === "ABILITY" ? setBrawlerLandingCell : undefined}
           grapplerTarget={actionMode === "ABILITY" ? grapplerTarget : null}
           onGrapplerTargetSelect={actionMode === "ABILITY" ? setGrapplerTarget : undefined}
           grapplerMode={grapplerMode}

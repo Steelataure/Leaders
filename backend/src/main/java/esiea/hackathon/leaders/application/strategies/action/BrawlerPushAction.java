@@ -17,11 +17,14 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
     }
 
     @Override
-    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
+    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, HexCoord secondaryDestination,
+            List<PieceEntity> allPieces) {
         if (target == null)
             throw new IllegalArgumentException("Target is required for Brawler Push");
         if (dest == null)
-            throw new IllegalArgumentException("Destination is required (where to push?)");
+            throw new IllegalArgumentException("Destination is required (where to land?)");
+        if (secondaryDestination == null)
+            throw new IllegalArgumentException("Secondary destination is required (where to push?)");
 
         // PROTECTION CHECK: Cannot move a protected piece
         if (HexUtils.isProtected(target, allPieces)) {
@@ -31,43 +34,47 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
         HexCoord sourceCoord = new HexCoord(source.getQ(), source.getR());
         HexCoord targetCoord = new HexCoord(target.getQ(), target.getR());
 
-        // 1. Vérifier que la Cible est adjacente au Cogneur
-        if (HexUtils.getDistance(sourceCoord, targetCoord) != 1) {
-            throw new IllegalArgumentException("Target must be adjacent to Brawler");
+        // 1. Le Cogneur doit pouvoir se téléporter (dist 1 ou 2)
+        if (HexUtils.getDistance(sourceCoord, targetCoord) > 2) {
+            throw new IllegalArgumentException("Target is too far for Brawler Push (max distance 2)");
         }
 
-        // 2. Vérifier que la Destination est adjacente à la Cible (poussée d'une case)
-        if (HexUtils.getDistance(target.getQ(), target.getR(), dest.q(), dest.r()) != 1) {
-            throw new IllegalArgumentException("Destination must be adjacent to the target");
+        // 2. Vérifier que la Destination (dest) est la case où le Cogneur arrivera
+        // Elle doit être adjacente à la cible
+        if (HexUtils.getDistance(targetCoord, dest) != 1) {
+            throw new IllegalArgumentException(
+                    "Destination must be adjacent to the target (this is where Brawler lands)");
         }
 
-        // 3. Vérifier la direction "Opposée" (Straight Line Push)
-        // La case de destination doit être alignée avec Source -> Target
-        // Et s'éloigner de la Source.
-        // Donc: Dest - Source = 2 * (Target - Source)
-        // En vecteur : (destQ - srcQ) sous-entend alignement.
-
-        // Plus simple avec HexUtils : la distance Source -> Dest doit être de 2.
-        if (HexUtils.getDistance(sourceCoord, dest) != 2) {
-            throw new IllegalArgumentException("Must push target away (to a distance of 2 from Brawler)");
+        // 3. La case de poussée (secondaryDestination) doit être adjacente à la cible
+        // et à l'opposé du Cogneur (souvent 3 cases possibles dans la règle)
+        if (HexUtils.getDistance(targetCoord, secondaryDestination) != 1) {
+            throw new IllegalArgumentException("Push destination must be adjacent to the target");
         }
 
-        // 4. Validations standards (Case vide et valide)
+        // 4. Case de poussée doit être VIDE et VALIDE
+        if (!secondaryDestination.isValid()) {
+            throw new IllegalArgumentException("Push destination is off-board");
+        }
+        if (HexUtils.isOccupied(secondaryDestination, allPieces)) {
+            throw new IllegalArgumentException("Push destination cell is occupied");
+        }
+
+        // 5. Case d'arrivée du Cogneur doit être VIDE (ou sa position actuelle)
         if (!dest.isValid()) {
-            throw new IllegalArgumentException("Cannot push target off the board");
+            throw new IllegalArgumentException("Brawler destination is off-board");
         }
-        if (HexUtils.isOccupied(dest, allPieces)) {
-            throw new IllegalArgumentException("Cannot push: destination cell is occupied");
+        if (!dest.equals(sourceCoord) && HexUtils.isOccupied(dest, allPieces)) {
+            throw new IllegalArgumentException("Brawler destination cell is occupied");
         }
 
-        // 5. APPLICATION DU MOUVEMENT
+        // 6. APPLICATION DU MOUVEMENT
+        // A. Le Cogneur se déplace sur la case choisie (à côté de la cible)
+        source.setQ(dest.q());
+        source.setR(dest.r());
 
-        // A. Le Cogneur prend la place de la victime
-        source.setQ(target.getQ());
-        source.setR(target.getR());
-
-        // B. La Victime est propulsée sur la destination choisie
-        target.setQ(dest.q());
-        target.setR(dest.r());
+        // B. La Victime est propulsée sur la case choisie
+        target.setQ(secondaryDestination.q());
+        target.setR(secondaryDestination.r());
     }
 }

@@ -49,6 +49,7 @@ public class ActionController {
                 request.targetId(),
                 request.abilityId(),
                 request.destination(),
+                request.secondaryDestination(),
                 request.playerId());
 
         broadcastUpdate(gameId);

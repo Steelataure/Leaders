@@ -16,7 +16,8 @@ public class AcrobatJumpAction implements ActionAbilityStrategy {
     }
 
     @Override
-    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
+    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, HexCoord secondaryDestination,
+            List<PieceEntity> allPieces) {
         if (target == null) {
             throw new IllegalArgumentException("Target to jump over is required");
         }

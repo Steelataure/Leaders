@@ -24,7 +24,8 @@ public class GrappleHookAction implements ActionAbilityStrategy {
     }
 
     @Override
-    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
+    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, HexCoord secondaryDestination,
+            List<PieceEntity> allPieces) {
         if (target == null) {
             throw new IllegalArgumentException("Target required for Grapple");
         }

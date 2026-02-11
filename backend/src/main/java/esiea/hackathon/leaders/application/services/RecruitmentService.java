@@ -148,8 +148,10 @@ public class RecruitmentService {
         String characterId = card.getCharacter().getId();
 
         // B. Combien de pièces le joueur possède-t-il DÉJÀ sur le plateau ?
-        long currentPieceCount = pieceRepository.findByGameId(gameId).stream()
-                .filter(p -> p.getOwnerIndex().equals(playerIndex)) // On filtre les pièces du joueur
+        long currentUnitCount = pieceRepository.findByGameId(gameId).stream()
+                .filter(p -> p.getOwnerIndex().equals(playerIndex))
+                .filter(p -> !"CUB".equals(p.getCharacterId())) // Companion doesn't count
+                .filter(p -> !"LEADER".equals(p.getCharacterId())) // Leader doesn't count
                 .count();
 
         // C. La somme dépasse-t-elle 5 ?
@@ -169,7 +171,7 @@ public class RecruitmentService {
         // suit la règle 'count as one')
         // int physicalPiecesToAdd = "OLD_BEAR".equals(characterId) ? 2 : 1;
 
-        if (currentPieceCount + 1 > 5) { // On compte toujours +1 car l'Ours+Ourson prennent 1 slot de recrutement
+        if (currentUnitCount + 1 > 5) { // On compte toujours +1 car l'Ours+Ourson prennent 1 slot de recrutement
             throw new IllegalArgumentException("Recruitment failed: You cannot exceed the limit of 5 units (slots).");
         }
         // ==================================================================================

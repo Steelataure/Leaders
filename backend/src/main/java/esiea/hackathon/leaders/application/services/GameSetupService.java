@@ -76,6 +76,7 @@ public class GameSetupService {
         if (scenarioId != null) {
             // Fetch characters for this specific scenario
             allCharacters = characterRepository.findByScenarioId(scenarioId).stream()
+                    .filter(c -> c.getRecruitmentSlots() > 0) // Exclure l'Ourson (Slots=0) et les compagnons futurs
                     .map(RefCharacterEntity::getId)
                     .filter(id -> !"LEADER".equals(id)) // Le leader est déjà placé
                     .collect(java.util.stream.Collectors.toList());

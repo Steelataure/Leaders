@@ -177,7 +177,7 @@ INSERT INTO ref_character (id, name, is_leader, recruitment_slots, description) 
   ('JAILER', 'Geôlier', FALSE, 1, 'Les ennemis adjacents ayant une compétence active ne peuvent pas l''utiliser.'),
   ('MANIPULATOR', 'Manipulatrice', FALSE, 1, 'Déplace d’une case un ennemi visible en ligne droite et non-adjacent.'),
   ('NEMESIS', 'Némésis', FALSE, 1, 'Ne joue pas à son tour. DOIT se déplacer de 2 cases à la fin de toute action déplaçant le Leader adverse.'),
-  ('OLD_BEAR', 'Vieil Ours', FALSE, 2, 'Recruté avec l''Ourson. Déplacez l''un ou les deux à la suite.'),
+  ('OLD_BEAR', 'Vieil Ours', FALSE, 1, 'Recruté avec l''Ourson. Déplacez l''un ou les deux à la suite.'),
   ('CUB', 'Ourson', FALSE, 0, 'Vient avec le Vieil Ours. Ne participe pas à la capture du Leader.'),
   ('PROTECTOR', 'Protecteur', FALSE, 1, 'Les compétences des ennemis ne peuvent déplacer ni le protecteur, ni ses alliés adjacents.'),
   ('PROWLER', 'Rôdeuse', FALSE, 1, 'Se déplace sur n’importe quelle case non-adjacente à un ennemi.'),

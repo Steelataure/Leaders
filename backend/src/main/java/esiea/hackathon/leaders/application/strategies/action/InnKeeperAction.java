@@ -16,7 +16,8 @@ public class InnKeeperAction implements ActionAbilityStrategy {
     }
 
     @Override
-    public void execute(PieceEntity source, PieceEntity target, HexCoord destination, List<PieceEntity> allPieces) {
+    public void execute(PieceEntity source, PieceEntity target, HexCoord destination, HexCoord secondaryDestination,
+            List<PieceEntity> allPieces) {
         if (target == null || destination == null) {
             throw new IllegalArgumentException("Target and Destination required");
         }

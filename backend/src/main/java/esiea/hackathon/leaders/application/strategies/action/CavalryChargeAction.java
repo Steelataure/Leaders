@@ -16,7 +16,8 @@ public class CavalryChargeAction implements ActionAbilityStrategy {
     }
 
     @Override
-    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, List<PieceEntity> allPieces) {
+    public void execute(PieceEntity source, PieceEntity target, HexCoord dest, HexCoord secondaryDestination,
+            List<PieceEntity> allPieces) {
         if (dest == null) {
             throw new IllegalArgumentException("Destination is required for Charge");
         }

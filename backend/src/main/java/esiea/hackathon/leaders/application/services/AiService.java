@@ -361,7 +361,7 @@ public class AiService {
         if (bestMove != null && bestMove.abilityId() != null) {
             log("AI ACTION: Using Ability " + bestMove.abilityId() + " with " + bestMove.piece().getCharacterId());
             actionService.useAbility(bestMove.piece().getId(), bestMove.targetId(), bestMove.abilityId(),
-                    bestMove.abilityDest(), AI_PLAYER_ID);
+                    bestMove.abilityDest(), null, AI_PLAYER_ID);
             notifyUpdate(gameId);
             return true;
         }

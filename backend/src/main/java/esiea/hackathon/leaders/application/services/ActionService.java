@@ -46,7 +46,8 @@ public class ActionService {
     }
 
     @Transactional
-    public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination, UUID playerId) {
+    public void useAbility(UUID sourceId, UUID targetId, String abilityId, HexCoord destination,
+            HexCoord secondaryDestination, UUID playerId) {
         // 1. Chargement de la source
         PieceEntity source = pieceRepository.findById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Source piece not found"));
@@ -115,7 +116,7 @@ public class ActionService {
                     + target.getR());
         }
 
-        strategy.execute(source, target, destination, allPieces);
+        strategy.execute(source, target, destination, secondaryDestination, allPieces);
 
         log("DEBUG: Piece AFTER strategy: " + source.getCharacterId() + " at " + source.getQ() + "," + source.getR());
         if (target != null) {
