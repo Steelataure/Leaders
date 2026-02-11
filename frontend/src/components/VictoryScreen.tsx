@@ -1,7 +1,4 @@
 import { useEffect, useState } from "react";
-import RankBadge from "./RankBadge";
-import MoveHistory from "./MoveHistory"; // 🆕
-import type { GameFrontend } from "../api/gameApi"; // 🆕
 
 /**
  * Composant VictoryScreen - Écran de victoire DYNAMIQUE
@@ -19,7 +16,6 @@ interface VictoryScreenProps {
   onPlayAgain: () => void;
   onBackToLobby: () => void;
   // 🆕 Props dynamiques
-  game?: GameFrontend; // 🆕 Added for history
   turnNumber?: number;
   winnerPieceCount?: number;
   loserPieceCount?: number;
@@ -312,30 +308,6 @@ function StyledButton({
   );
 }
 
-/**
- * 🆕 Carte de statistique
- */
-function StatCard({
-  value,
-  label,
-  icon,
-}: {
-  value: number | string;
-  label: string;
-  icon: string;
-}) {
-  return (
-    <div className="text-center px-4">
-      <div className="flex items-center justify-center gap-3 mb-2">
-        <span className="text-2xl">{icon}</span>
-        <p className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{value}</p>
-      </div>
-      <p className="text-slate-300 text-sm uppercase tracking-widest font-rajdhani font-bold flex items-center justify-center gap-1 opacity-80">
-        {label}
-      </p>
-    </div>
-  );
-}
 
 /**
  * Composant principal VictoryScreen - DYNAMIQUE
@@ -348,12 +320,10 @@ export default function VictoryScreen({
   turnNumber = 0,
   winnerPieceCount = 0,
   loserPieceCount = 0,
-  winnerElo = 0,
   winnerEloChange = 0,
   isLocalPlayerWinner = true, // Default to true for backward compatibility
   winnerName = "Joueur",
   reason = "",
-  game, // 🆕
 }: VictoryScreenProps & { isLocalPlayerWinner?: boolean; winnerName?: string; reason?: string }) {
   const [isVisible, setIsVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -547,12 +517,6 @@ export default function VictoryScreen({
               </div>
             </div>
 
-            {/* RIGHT PANEL: HISTORY (ALWAYS VISIBLE) */}
-            {game && (
-              <div className="w-full md:w-96 flex-shrink-0 animate-slide-up-delayed-2 h-64 md:h-auto">
-                <MoveHistory game={game} variant="embedded" />
-              </div>
-            )}
 
           </div>
         )}

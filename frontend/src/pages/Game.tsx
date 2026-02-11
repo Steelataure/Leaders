@@ -734,7 +734,6 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       const loserPieces = gameState.pieces.filter((p) => p.ownerIndex === loserIndex);
       const victoryType = gameState.winnerVictoryType || (gameState.status === "FINISHED_CAPTURE" ? "CAPTURE" : "ENCIRCLEMENT");
       const winnerPlayer = gameState.players.find((p) => p.playerIndex === winnerIndex);
-      const winnerElo = winnerPlayer?.elo;
 
       // Determine if local player is winner
       // If localPlayerIndex is undefined (spectator?), default to viewing as is
@@ -749,11 +748,9 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
           turnNumber={gameState.turnNumber}
           winnerPieceCount={winnerPieces.length}
           loserPieceCount={loserPieces.length}
-          winnerElo={winnerElo}
           winnerEloChange={winnerIndex === 0 ? gameState.eloChangeP0 : gameState.eloChangeP1}
           isLocalPlayerWinner={isLocalPlayerWinner}
           winnerName={winnerPlayer?.username || "Joueur"}
-          game={gameState}
           reason={
             (victoryType as string) === "RESIGNATION"
               ? (isLocalPlayerWinner ? "Abandon de l'adversaire" : "Vous avez abandonné")
