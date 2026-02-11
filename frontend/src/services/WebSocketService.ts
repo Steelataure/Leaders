@@ -9,35 +9,14 @@ declare global {
 }
 
 const getSocketUrl = () => {
-    // FORCE local WebSocket connection on localhost (via Vite proxy /api)
-    if (window.location.hostname === 'localhost') {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        return `${protocol}//${window.location.host}/api/ws/websocket`;
-    }
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
-    // If we're NOT on localhost, we MUST use our current host + /api/ws
-    // to go through the Nginx proxy correctly.
-    if (window.location.hostname !== 'localhost') {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // /websocket suffix is mandatory for some Spring SockJS configurations using standard WS
-        return `${protocol}//${window.location.host}/api/ws/websocket`;
-    }
-
-    // Local/Legacy fallback
-    const url = window.config?.API_URL || import.meta.env.VITE_API_URL || '';
-    if (!url || url.startsWith('/')) {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        return `${protocol}//${window.location.host}/api/ws`;
-    }
-
-    // Absolute URL case (e.g. local dev pointing to remote)
-    let normalized = url.replace(/\/$/, '');
-    if (!normalized.endsWith('/api') && !normalized.includes('/api/')) {
-        normalized += '/api';
-    }
-    const rootUrl = normalized.replace(/\/api$/, '');
-    return rootUrl.replace(/^http/, 'ws') + '/ws';
+    // In production, we go through the Nginx proxy which targets /api
+    // In local dev, Vite proxy handles /api
+    // We now use the raw endpoint /ws-raw which is more robust through proxies
+    return `${protocol}//${window.location.host}/api/ws-raw`;
 };
+
 
 const SOCKET_URL = getSocketUrl();
 

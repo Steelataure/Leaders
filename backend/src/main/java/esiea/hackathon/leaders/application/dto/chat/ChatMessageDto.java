@@ -1,16 +1,14 @@
 package esiea.hackathon.leaders.application.dto.chat;
 
-import java.time.LocalDateTime;
-
 public class ChatMessageDto {
     private String sessionId;
     private String senderId;
     private String senderName;
     private String content;
-    private LocalDateTime timestamp;
+    private long timestamp;
 
     public ChatMessageDto() {
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = System.currentTimeMillis();
     }
 
     public ChatMessageDto(String sessionId, String senderId, String senderName, String content) {
@@ -18,7 +16,7 @@ public class ChatMessageDto {
         this.senderId = senderId;
         this.senderName = senderName;
         this.content = content;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = System.currentTimeMillis();
     }
 
     // Getters and Setters
@@ -54,11 +52,11 @@ public class ChatMessageDto {
         this.content = content;
     }
 
-    public LocalDateTime getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(LocalDateTime timestamp) {
+    public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 }

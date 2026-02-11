@@ -498,13 +498,14 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   }, [gameState, spawnCells, placementMode]);
 
   const currentPlayerPieceCount = useMemo(() => {
-    if (!gameState) return 0;
-    return gameState.pieces.filter((p) =>
-      p.ownerIndex === gameState.currentPlayerIndex &&
-      p.characterId !== "CUB" &&
-      p.characterId !== "LEADER"
+    if (!gameState || localPlayerIndex === null) return 0;
+    return gameState.pieces.filter(
+      (p) => p.ownerIndex === localPlayerIndex &&
+        p.characterId !== "LEADER" &&
+        p.characterId !== "CUB"
     ).length;
-  }, [gameState]);
+  }, [gameState, localPlayerIndex]);
+
 
   const allPiecesActed = useMemo(() => {
     if (!gameState || localPlayerIndex === null) return false;
@@ -594,8 +595,9 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Move error:", err);
+        alert("Erreur de déplacement: " + (err.message || err));
       }
     },
     [gameId, gameState, updateGameState],
@@ -708,12 +710,14 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
       // Si on a atteint le nombre requis de placements (2 pour Bear, 1 pour autres)
       try {
+        if (isRecruiting) return; // Guard against rapid duplicate clicks (race condition)
         setIsRecruiting(true);
         await gameApi.recruitCharacter(gameId, placementMode.cardId, newPlacements);
         const game = await gameApi.getGameState(gameId);
         updateGameState(game);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Recruitment error:", err);
+        alert(err.message || "Erreur lors du recrutement.");
       } finally {
         setIsRecruiting(false);
         setPlacementMode(null);

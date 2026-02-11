@@ -23,8 +23,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(
             org.springframework.web.socket.config.annotation.StompEndpointRegistry registry) {
+        // Standard endpoint with SockJS for legacy/local support
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+
+        // Raw WebSocket endpoint for better production reliability through proxies
+        registry.addEndpoint("/ws-raw")
+                .setAllowedOriginPatterns("*");
     }
+
 }

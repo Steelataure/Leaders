@@ -215,9 +215,11 @@ export async function recruitCharacter(
     body: JSON.stringify({ cardId, placements }),
   });
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to recruit character: ${errorText}`);
+    const errorData = await res.json().catch(() => ({}));
+    const message = errorData.message || `HTTP Error ${res.status}`;
+    throw new Error(message);
   }
+
 }
 
 // --- Pieces API ---

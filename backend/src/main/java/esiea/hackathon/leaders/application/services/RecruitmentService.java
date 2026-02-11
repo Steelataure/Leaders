@@ -144,35 +144,31 @@ public class RecruitmentService {
         // 4. 👇 VERIFICATION DE LA LIMITE (Max 5 pièces) - AJOUT IMPORTANT 👇
         // ==================================================================================
 
-        // A. Combien de pièces cette carte va-t-elle ajouter ? (Toujours 1 maintenant)
+        // A. Combien de pièces le joueur possède-t-il DÉJÀ sur le plateau ?
         String characterId = card.getCharacter().getId();
+        List<PieceEntity> allPiecesInGame = pieceRepository.findByGameId(gameId);
+        System.out.println("DEBUG: Recruitment check for player " + playerIndex);
 
-        // B. Combien de pièces le joueur possède-t-il DÉJÀ sur le plateau ?
-        long currentUnitCount = pieceRepository.findByGameId(gameId).stream()
-                .filter(p -> p.getOwnerIndex().equals(playerIndex))
+        List<PieceEntity> ownedUnits = allPiecesInGame.stream()
+                .filter(p -> p.getOwnerIndex().intValue() == playerIndex.intValue())
+                .peek(p -> System.out.println(
+                        "DEBUG: Found piece " + p.getCharacterId() + " at (" + p.getQ() + "," + p.getR() + ")"))
                 .filter(p -> !"CUB".equals(p.getCharacterId())) // Companion doesn't count
                 .filter(p -> !"LEADER".equals(p.getCharacterId())) // Leader doesn't count
-                .count();
+                .collect(java.util.stream.Collectors.toList());
 
-        // C. La somme dépasse-t-elle 5 ?
-        // Règle Spéciale : Vieil Ours et Ourson comptent comme UN SEUL recrutement pour
-        // la limite de 5.
-        // Donc si on recrute OLD_BEAR, on considère qu'on ajoute 1 "slot" d'unité, même
-        // si on pose 2 pièces.
-        // Cependant, pour éviter les abus (avoir 10 oursons), on doit être prudent.
-        // Interprétation la plus fidèle : "Ces deux Personnages comptent comme un seul
-        // PENDANT LA PHASE DE RECRUTEMENT."
-        // Cela peut vouloir dire "Coût de recrutement" OU "Limite de population".
-        // Si max est 5, et que j'en ai 4, je peux recruter l'Ours (qui ajoute 2 pièces
-        // => total 6).
-        // Donc on compte cardsToAdd = 1.
+        long currentUnitCount = ownedUnits.size();
+        System.out.println("DEBUG: Current unit count (excluding Cub and Leader): " + currentUnitCount);
 
-        // Ajustement pour le calcul physique si on voulait être strict (mais ici on
-        // suit la règle 'count as one')
-        // int physicalPiecesToAdd = "OLD_BEAR".equals(characterId) ? 2 : 1;
-
-        if (currentUnitCount + 1 > 5) { // On compte toujours +1 car l'Ours+Ourson prennent 1 slot de recrutement
-            throw new IllegalArgumentException("Recruitment failed: You cannot exceed the limit of 5 units (slots).");
+        // B. La somme dépasse-t-elle 5 ?
+        // Note: Old Bear and Cub count as ONE slot for recruitment limit.
+        if (currentUnitCount + 1 > 5) {
+            String unitList = ownedUnits.stream()
+                    .map(PieceEntity::getCharacterId)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            throw new IllegalArgumentException(
+                    "Recruitment failed: You cannot exceed the limit of 5 units. Current units found: [" + unitList
+                            + "]");
         }
         // ==================================================================================
 

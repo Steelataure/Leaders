@@ -10,7 +10,6 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 
 @Controller
@@ -61,9 +60,17 @@ public class WebSocketController {
     }
 
     @MessageMapping("/chat/{sessionId}")
-    public void handleChatMessage(@DestinationVariable String sessionId, ChatMessageDto message) {
-        System.out.println("Received chat message for session " + sessionId + ": " + message.getContent());
-        message.setTimestamp(LocalDateTime.now());
-        messagingTemplate.convertAndSend("/topic/chat/" + sessionId, message);
+    public void handleChatMessage(@DestinationVariable String sessionId,
+            @org.springframework.messaging.handler.annotation.Payload ChatMessageDto message) {
+        System.out.println(
+                "Processing chat message for session[" + sessionId + "] from[" + message.getSenderName() + "]");
+        try {
+            message.setTimestamp(System.currentTimeMillis());
+            messagingTemplate.convertAndSend("/topic/chat/" + sessionId, message);
+            System.out.println("Chat message broadcasted to /topic/chat/" + sessionId);
+        } catch (Exception e) {
+            System.err.println("Error broadcasting chat message: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
