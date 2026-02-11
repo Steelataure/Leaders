@@ -38,7 +38,7 @@ public class MatchmakingTest {
         );
 
         matchmakingUseCase = new MatchmakingUseCase(sessionRepository, createGameSessionUseCase, connectPlayerUseCase,
-                gameSetupService);
+                gameSetupService, mock(org.springframework.messaging.simp.SimpMessagingTemplate.class));
     }
 
     @Test

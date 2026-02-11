@@ -28,4 +28,11 @@ public class JpaRefCharacterRepository implements RefCharacterRepository {
                 .map(RefCharacterMapper::toDomain)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<RefCharacterEntity> findByScenarioId(Integer scenarioId) {
+        return springRepository.findByScenarioId(scenarioId).stream()
+                .map(RefCharacterMapper::toDomain)
+                .collect(Collectors.toList());
+    }
 }

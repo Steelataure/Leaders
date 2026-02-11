@@ -31,14 +31,14 @@ public class GameSetupService {
     private final PieceRepository pieceRepository;
 
     @Transactional
-    public UUID createGame(List<String> forcedDeck) {
-        return createGameWithId(UUID.randomUUID(), forcedDeck);
+    public UUID createGame(List<String> forcedDeck, Integer scenarioId) {
+        return createGameWithId(UUID.randomUUID(), forcedDeck, scenarioId);
     }
 
     @Transactional
-    public UUID createGameWithId(UUID gameId, List<String> forcedDeck) {
+    public UUID createGameWithId(UUID gameId, List<String> forcedDeck, Integer scenarioId) {
         try {
-            System.out.println("DEBUG: Starting createGameWithId for " + gameId);
+            System.out.println("DEBUG: Starting createGameWithId for " + gameId + " with scenario " + scenarioId);
             GameEntity game = GameEntity.builder()
                     .id(gameId)
                     .mode(GameMode.CLASSIC)
@@ -55,7 +55,7 @@ public class GameSetupService {
             GameEntity savedGame = gameRepository.save(game);
             System.out.println("DEBUG: Game entity saved");
 
-            initializeDeck(savedGame, forcedDeck);
+            initializeDeck(savedGame, forcedDeck, scenarioId);
             System.out.println("DEBUG: Deck initialized");
 
             placeLeaders(savedGame.getId());
@@ -69,33 +69,41 @@ public class GameSetupService {
         }
     }
 
-    private void initializeDeck(GameEntity game, List<String> forcedDeck) {
-        // A. Liste complète de tous les personnages du jeu
-        List<String> allCharacters = new ArrayList<>(List.of(
-                "ACROBAT", "ARCHER", "ASSASSIN", "BRAWLER", "CAVALRY",
-                "GRAPPLER", "ILLUSIONIST", "INNKEEPER", "JAILER",
-                "MANIPULATOR", "NEMESIS", "PROTECTOR",
-                "PROWLER", "ROYAL_GUARD", "VIZIER", "OLD_BEAR"));
+    private void initializeDeck(GameEntity game, List<String> forcedDeck, Integer scenarioId) {
+        // A. Liste des personnages à inclure dans le deck
+        List<String> allCharacters;
+
+        if (scenarioId != null) {
+            // Fetch characters for this specific scenario
+            allCharacters = characterRepository.findByScenarioId(scenarioId).stream()
+                    .map(RefCharacterEntity::getId)
+                    .filter(id -> !"LEADER".equals(id)) // Le leader est déjà placé
+                    .collect(java.util.stream.Collectors.toList());
+            System.out.println("DEBUG: Using scenario " + scenarioId + " characters: " + allCharacters);
+        } else {
+            // Fallback to all characters if no scenario (LEGACY / DEFAULT)
+            allCharacters = new ArrayList<>(List.of(
+                    "ACROBAT", "ARCHER", "ASSASSIN", "BRAWLER", "CAVALRY",
+                    "GRAPPLER", "ILLUSIONIST", "INNKEEPER", "JAILER",
+                    "MANIPULATOR", "NEMESIS", "PROTECTOR",
+                    "PROWLER", "ROYAL_GUARD", "VIZIER", "OLD_BEAR"));
+        }
 
         List<String> finalDeckOrder = new ArrayList<>();
 
         // B. Si un ordre forcé est fourni, on le traite
         if (forcedDeck != null && !forcedDeck.isEmpty()) {
-            // On ajoute les cartes forcées en premier
             finalDeckOrder.addAll(forcedDeck);
-
-            // On les retire de la liste principale pour ne pas avoir de doublons
-            // (La méthode removeAll gère l'égalité des Strings)
             allCharacters.removeAll(forcedDeck);
         }
 
-        // C. On mélange ce qu'il reste (le hasard reste présent pour la fin du paquet)
+        // C. On mélange ce qu'il reste
         Collections.shuffle(allCharacters);
 
-        // D. On complète le deck avec le reste mélangé
+        // D. On complète le deck
         finalDeckOrder.addAll(allCharacters);
 
-        // --- Création des entités (Inchangé) ---
+        // --- Création des entités ---
         int order = 1;
         for (String charId : finalDeckOrder) {
             RefCharacterEntity character = characterRepository.findById(charId)

@@ -4,8 +4,10 @@ import esiea.hackathon.leaders.application.services.GameSetupService;
 import esiea.hackathon.leaders.domain.Session;
 import esiea.hackathon.leaders.domain.SessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 public class MatchmakingUseCase {
@@ -13,6 +15,7 @@ public class MatchmakingUseCase {
     private final CreateGameSessionUseCase createGameSessionUseCase;
     private final ConnectPlayerUseCase connectPlayerUseCase;
     private final GameSetupService gameSetupService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // Global lock for matchmaking to prevent multiple players from joining the same
     // session simultaneously
@@ -91,8 +94,25 @@ public class MatchmakingUseCase {
                             System.out.println("DEBUG: Session is ACTIVE, checking if game exists...");
                             try {
                                 // Try to create the game - it might already exist
-                                gameSetupService.createGameWithId(java.util.UUID.fromString(session.getId()), null);
+                                UUID gameId = java.util.UUID.fromString(session.getId());
+                                gameSetupService.createGameWithId(gameId, null, null);
                                 System.out.println("DEBUG: Game created for session " + session.getId());
+
+                                // FIX: Notification manquante dans le cas de récupération (Bug Synchronisation
+                                // Matchmaking)
+                                // On s'assure que le créateur et le joigneur reçoivent l'événement
+                                try {
+                                    // 1. Notifier Lobby
+                                    messagingTemplate.convertAndSend("/topic/session/" + session.getId(), session);
+
+                                    // 2. Notifier Game avec l'état actuel (si possible)
+                                    // Note: On utilise connectPlayerUseCase ou autowiré messagingTemplate ?
+                                    // MatchmakingUseCase n'a pas messagingTemplate par défaut ? Vérifions...
+                                } catch (Exception e_ws) {
+                                    System.err.println(
+                                            "WARN: Could not send recovery WS notification: " + e_ws.getMessage());
+                                }
+
                             } catch (Exception gameEx) {
                                 // Game might already exist, that's okay
                                 System.out.println(

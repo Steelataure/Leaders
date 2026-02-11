@@ -52,6 +52,7 @@ public class GameController {
         // 1. Extraction des données du DTO
         List<String> forcedDeck = (request != null) ? request.forcedDeck() : null;
         UUID requestedId = (request != null) ? request.gameId() : null;
+        Integer scenarioId = (request != null) ? request.scenarioId() : null;
 
         // 2. Logique de création sécurisée
         UUID finalGameId;
@@ -64,11 +65,11 @@ public class GameController {
                 finalGameId = requestedId;
             } catch (Exception e) {
                 // Si elle n'existe pas (exception), on la crée avec l'ID demandé
-                finalGameId = setupService.createGameWithId(requestedId, forcedDeck);
+                finalGameId = setupService.createGameWithId(requestedId, forcedDeck, scenarioId);
             }
         } else {
             // Pas d'ID fourni : création classique avec UUID généré par le serveur
-            finalGameId = setupService.createGame(forcedDeck);
+            finalGameId = setupService.createGame(forcedDeck, scenarioId);
         }
 
         return ResponseEntity.ok(finalGameId);

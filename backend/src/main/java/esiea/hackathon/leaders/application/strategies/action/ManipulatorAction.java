@@ -24,6 +24,11 @@ public class ManipulatorAction implements ActionAbilityStrategy {
             throw new IllegalArgumentException("Manipulator can only move enemies");
         }
 
+        // PROTECTION CHECK
+        if (HexUtils.isProtected(target, allPieces)) {
+            throw new IllegalArgumentException("Target is protected by a Protector's aura!");
+        }
+
         HexCoord sourceCoord = new HexCoord(source.getQ(), source.getR());
         HexCoord targetCoord = new HexCoord(target.getQ(), target.getR());
 

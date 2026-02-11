@@ -225,9 +225,15 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   const [timeP0, setTimeP0] = useState<number>(300);
   const [timeP1, setTimeP1] = useState<number>(300);
 
-  // Reset du mode quand on change de pièce
+  // Reset du mode et des cibles quand on change de pièce (Bug Fix Sync UI)
   useEffect(() => {
     setActionMode("MOVE");
+    setManipulatorTarget(null);
+    setBrawlerTarget(null);
+    setGrapplerTarget(null);
+    setGrapplerMode(null);
+    setInnkeeperTarget(null);
+    setShowGrapplerModal(false);
   }, [selectedPiece]);
 
   // Détermine si la pièce sélectionnée a une capacité ACTIVE qui nécessite un ciblage
@@ -477,10 +483,20 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const allPiecesActed = useMemo(() => {
     if (!gameState || localPlayerIndex === null) return false;
-    // On exclut la Némésis car elle ne joue pas activement
     const myPieces = gameState.pieces.filter(p => p.ownerIndex === localPlayerIndex && p.characterId !== "NEMESIS");
-    if (myPieces.length === 0) return true; // Si on a que la Némésis, on considère que tout a joué
-    return myPieces.every(p => p.hasActed);
+    if (myPieces.length === 0) return true;
+
+    // Règle Spéciale : Duo Ours/Ourson
+    const bears = myPieces.filter(p => p.characterId === "OLD_BEAR" || p.characterId === "CUB");
+    const others = myPieces.filter(p => p.characterId !== "OLD_BEAR" && p.characterId !== "CUB");
+
+    const othersActed = others.every(p => p.hasActed);
+    if (bears.length > 0) {
+      // Au moins l'un des deux doit avoir agi
+      return othersActed && bears.some(p => p.hasActed);
+    }
+
+    return othersActed;
   }, [gameState?.pieces, localPlayerIndex]);
 
   const canRecruit = useMemo(() => {

@@ -46,12 +46,38 @@ public class RecruitmentService {
                 .filter(p -> p.getOwnerIndex().equals(playerIndex))
                 .toList();
 
-        boolean allPiecesActed = playerPieces.stream()
-                .filter(p -> !"NEMESIS".equals(p.getCharacterId()))
-                .allMatch(PieceEntity::getHasActedThisTurn);
+        // RÈGLE SPÉCIALE : Vieil Ours et Ourson (Duo)
+        // Pour pouvoir recruter, il faut que toutes les pièces aient agi.
+        // Mais pour l'Ours et l'Ourson, la règle est "l'un ou les deux".
+        // Donc si au moins l'un des deux a agi, on considère le "slot" du duo comme
+        // complété
+        // pour autoriser le recrutement.
+        boolean bearOrCubPresent = playerPieces.stream()
+                .anyMatch(p -> "OLD_BEAR".equals(p.getCharacterId()) || "CUB".equals(p.getCharacterId()));
+        boolean bearOrCubActed = playerPieces.stream()
+                .filter(p -> "OLD_BEAR".equals(p.getCharacterId()) || "CUB".equals(p.getCharacterId()))
+                .anyMatch(PieceEntity::getHasActedThisTurn);
+
+        boolean allPiecesActed;
+        if (bearOrCubPresent) {
+            // Toutes les pièces NON-OURS doivent avoir agi, ET au moins une pièce du duo
+            // OURS.
+            allPiecesActed = playerPieces.stream()
+                    .filter(p -> !"NEMESIS".equals(p.getCharacterId()))
+                    .filter(p -> !"OLD_BEAR".equals(p.getCharacterId()) && !"CUB".equals(p.getCharacterId()))
+                    .allMatch(PieceEntity::getHasActedThisTurn) && bearOrCubActed;
+        } else {
+            // Logique standard
+            allPiecesActed = playerPieces.stream()
+                    .filter(p -> !"NEMESIS".equals(p.getCharacterId()))
+                    .allMatch(PieceEntity::getHasActedThisTurn);
+        }
+
         if (!allPiecesActed) {
             throw new IllegalStateException(
-                    "Action refusée : Vous devez terminer vos actions (ou les passer) avant de recruter.");
+                    "Action refusée : Vous devez terminer vos actions (ou les passer) avant de recruter. " +
+                            (bearOrCubPresent && !bearOrCubActed ? "(Règle Duo : Déplacez au moins l'Ours ou l'Ourson)"
+                                    : ""));
         }
 
         // 2b. SÉCURITÉ : Limite de recrutement par tour

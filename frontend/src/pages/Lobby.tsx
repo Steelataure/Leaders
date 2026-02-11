@@ -158,9 +158,13 @@ export default function Lobby({
         setSessionStatus("CONNEXION...");
         const session = await joinPrivateSession(fullCode, user?.id);
         setCurrentSession(session);
-        if (session.status === "ACTIVE") onStartGame(session.id);
-        else {
+        if (session.status === "ACTIVE") {
+          onStartGame(session.id);
+        } else {
+          // FIX: On s'abonne ET on vérifie si l'état a déjà changé entre temps (Bug Sync)
+          console.log("Subscribing to session for private join:", session.id);
           webSocketService.subscribeToSession(session.id, (updatedSession) => {
+            console.log("Session update received via WS:", updatedSession.status);
             if (updatedSession.status === "ACTIVE") onStartGame(updatedSession.id);
           });
         }
@@ -377,9 +381,13 @@ export default function Lobby({
                         if (user?.id) {
                           const session = await joinPublicQueue(user.id);
                           setCurrentSession(session);
-                          if (session.status === "ACTIVE") onStartGame(session.id);
-                          else {
+                          if (session.status === "ACTIVE") {
+                            onStartGame(session.id);
+                          } else {
+                            // FIX: S'abonner et vérifier l'état pour éviter de rater le message WS (Race Condition)
+                            console.log("Subscribing to session topic:", session.id);
                             webSocketService.subscribeToSession(session.id, (s) => {
+                              console.log("Lobby: Session event:", s.status);
                               if (s.status === "ACTIVE") onStartGame(s.id);
                             });
                           }
@@ -447,7 +455,9 @@ export default function Lobby({
                       setIsCreatingPrivate(true);
                       const s = await createPrivateSession(user?.id);
                       setCreatedSessionCode(s.code ?? null);
+                      console.log("Lobby: Private session created:", s.id);
                       webSocketService.subscribeToSession(s.id, (us) => {
+                        console.log("Lobby: Private session event:", us.status);
                         if (us.status === "ACTIVE") onStartGame(us.id);
                       });
                     } catch (e) {

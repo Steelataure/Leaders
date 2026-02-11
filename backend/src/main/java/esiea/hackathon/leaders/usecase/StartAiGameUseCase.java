@@ -25,7 +25,7 @@ public class StartAiGameUseCase {
                         esiea.hackathon.leaders.domain.model.enums.AiDifficulty difficulty) {
                 // 1. Create Game Logic (Board, Pieces, Deck)
                 UUID gameId = UUID.randomUUID();
-                gameSetupService.createGameWithId(gameId, null);
+                gameSetupService.createGameWithId(gameId, null, null);
 
                 // 2. Fetch Infrastructure Entity (GameJpaEntity) to link players
                 GameJpaEntity gameRef = springGameRepository.findById(gameId)

@@ -68,12 +68,17 @@ public class VictoryService {
 
         for (PieceEntity enemy : enemies) {
             // L'Ourson (CUB) ne participe jamais à la capture
-            if ("CUB".equals(enemy.getCharacterId())) continue;
+            if ("CUB".equals(enemy.getCharacterId()))
+                continue;
 
             boolean standardAdjacency = areAdjacent(enemy, leader);
 
             // --- CAS 1 : ADJACENCE STANDARD (Distance 1) ---
             if (standardAdjacency) {
+                // L'archère ne peut pas participer à la capture si elle est ADJACENTE
+                if ("ARCHER".equals(enemy.getCharacterId())) {
+                    continue;
+                }
                 // Si c'est un Assassin, il vaut 2 points (Capture immédiate)
                 if ("ASSASSIN".equals(enemy.getCharacterId()) && assassinStrat != null
                         && assassinStrat.canCaptureLeaderAlone(enemy, leader)) {
@@ -100,7 +105,7 @@ public class VictoryService {
      * Logique d'Encerclement : Les 6 cases autour sont bloquées.
      */
     private boolean isEncircled(PieceEntity leader, List<PieceEntity> allPieces) {
-        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, -1}, {-1, 1}};
+        int[][] directions = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, -1 }, { -1, 1 } };
         int blockedSides = 0;
 
         for (int[] dir : directions) {

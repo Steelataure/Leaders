@@ -57,7 +57,7 @@ public class ConnectPlayerUseCase {
         if (session.getStatus() == Session.SessionStatus.ACTIVE) {
             System.out.println("DEBUG: Creating game with ID: " + session.getId());
             UUID gameId = UUID.fromString(session.getId());
-            gameSetupService.createGameWithId(gameId, null);
+            gameSetupService.createGameWithId(gameId, null, null);
             System.out.println("DEBUG: Game created successfully!");
 
             // Save players to game_player table and notify
@@ -116,8 +116,10 @@ public class ConnectPlayerUseCase {
 
                 // 2. Notify Game components with initial state
                 GameStateDto gameState = gameQueryService.getGameState(gameId);
+                System.out
+                        .println("DEBUG: Sending game state to /topic/game/" + session.getId() + " for game " + gameId);
                 messagingTemplate.convertAndSend("/topic/game/" + session.getId(), gameState);
-                System.out.println("DEBUG: Game state sent via WebSocket to /topic/game/" + session.getId());
+                System.out.println("DEBUG: Game state sent successfully.");
 
             } catch (Exception e) {
                 System.err.println("ERROR: Failed to save players or send game state: " + e.getMessage());

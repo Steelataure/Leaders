@@ -36,9 +36,10 @@ public class ApplicationConfig implements WebMvcConfigurer {
     @Bean
     public MatchmakingUseCase matchmakingUseCase(SessionRepository sessionRepository,
             CreateGameSessionUseCase createGameSessionUseCase, ConnectPlayerUseCase connectPlayerUseCase,
-            GameSetupService gameSetupService) {
+            GameSetupService gameSetupService,
+            org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
         return new MatchmakingUseCase(sessionRepository, createGameSessionUseCase, connectPlayerUseCase,
-                gameSetupService);
+                gameSetupService, messagingTemplate);
     }
 
     @Bean

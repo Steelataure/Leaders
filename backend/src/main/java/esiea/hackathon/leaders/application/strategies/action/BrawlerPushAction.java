@@ -23,6 +23,11 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
         if (dest == null)
             throw new IllegalArgumentException("Destination is required (where to push?)");
 
+        // PROTECTION CHECK: Cannot move a protected piece
+        if (HexUtils.isProtected(target, allPieces)) {
+            throw new IllegalArgumentException("Target is protected by a Protector's aura!");
+        }
+
         HexCoord sourceCoord = new HexCoord(source.getQ(), source.getR());
         HexCoord targetCoord = new HexCoord(target.getQ(), target.getR());
 
@@ -43,9 +48,8 @@ public class BrawlerPushAction implements ActionAbilityStrategy {
         // En vecteur : (destQ - srcQ) sous-entend alignement.
 
         // Plus simple avec HexUtils : la distance Source -> Dest doit être de 2.
-        // Et il faut être aligné.
-        if (HexUtils.getDistance(sourceCoord, dest) != 2 || !HexUtils.isAligned(sourceCoord, dest)) {
-            throw new IllegalArgumentException("Must push target straight away (linear push)");
+        if (HexUtils.getDistance(sourceCoord, dest) != 2) {
+            throw new IllegalArgumentException("Must push target away (to a distance of 2 from Brawler)");
         }
 
         // 4. Validations standards (Case vide et valide)

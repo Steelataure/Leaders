@@ -19,6 +19,11 @@ public class IllusionistSwapAction implements ActionAbilityStrategy {
         if (target == null)
             throw new IllegalArgumentException("Target required for Swap");
 
+        // PROTECTION CHECK
+        if (esiea.hackathon.leaders.domain.utils.HexUtils.isProtected(target, allPieces)) {
+            throw new IllegalArgumentException("Target is protected by a Protector's aura!");
+        }
+
         // RÈGLE 1 : Non-Adjacent (Distance > 1)
         if (getDistance(source, target) <= 1) {
             throw new IllegalArgumentException("Target must be non-adjacent (distance > 1)");

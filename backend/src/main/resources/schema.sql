@@ -188,17 +188,19 @@ INSERT INTO ref_scenario (id, name, description) VALUES
                                                      (4, 'Cogneurs', 'Déplacements forcés et contrôle agressif'),
                                                      (5, 'Némésis', 'Réaction automatique aux mouvements ennemis'),
                                                      (6, 'Rôdeurs', 'Déplacements stratégiques et support'),
-                                                     (7, 'Chasseurs', 'Capture à distance et élimination directe')
+                                                     (7, 'Chasseurs', 'Capture à distance et élimination directe'),
+                                                     (8, 'Duo Animal', 'Maîtrisez le Vieil Ours et son Ourson')
     ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO scenario_character (scenario_id, character_id) VALUES
                                                                (1, 'LEADER'), (1, 'ACROBAT'), (1, 'CAVALRY'),
                                                                (2, 'LEADER'), (2, 'ILLUSIONIST'), (2, 'MANIPULATOR'),
-                                                               (3, 'LEADER'), (3, 'JAILER'), (3, 'PROTECTOR'),
+                                                               (3, 'LEADER'), (3, 'JAILER'), (3, 'PROTECTOR'), (3, 'OLD_BEAR'),
                                                                (4, 'LEADER'), (4, 'BRAWLER'), (4, 'GRAPPLER'),
                                                                (5, 'LEADER'), (5, 'NEMESIS'),
-                                                               (6, 'LEADER'), (6, 'PROWLER'), (6, 'INNKEEPER'),
-                                                               (7, 'LEADER'), (7, 'ARCHER'), (7, 'ASSASSIN')
+                                                               (6, 'LEADER'), (6, 'PROWLER'), (6, 'INNKEEPER'), (6, 'OLD_BEAR'),
+                                                               (7, 'LEADER'), (7, 'ARCHER'), (7, 'ASSASSIN'),
+                                                               (8, 'LEADER'), (8, 'OLD_BEAR'), (8, 'BRAWLER')
     ON CONFLICT DO NOTHING;
 
 -- C. COMPÉTENCES

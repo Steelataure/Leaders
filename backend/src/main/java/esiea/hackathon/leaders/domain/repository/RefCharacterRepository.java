@@ -6,5 +6,8 @@ import java.util.List;
 
 public interface RefCharacterRepository {
     Optional<RefCharacterEntity> findById(String id);
+
     List<RefCharacterEntity> findAll();
+
+    List<RefCharacterEntity> findByScenarioId(Integer scenarioId);
 }

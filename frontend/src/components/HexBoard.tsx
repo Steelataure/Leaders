@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   generateBoard,
   getHexagonPoints,
@@ -462,6 +462,8 @@ export default function HexBoard(props: HexBoardProps) {
     const moves = new Set<string>();
 
     // Standard Move: Always 1 tile adjacent
+    if (selectedPiece.characterId === "NEMESIS") return moves;
+
     cells.forEach(cell => {
       if (areAdjacent(selectedPiece.q, selectedPiece.r, cell.q, cell.r) && !findPieceAtCell(cell.q, cell.r)) {
         moves.add(`${cell.q},${cell.r}`);
@@ -488,23 +490,35 @@ export default function HexBoard(props: HexBoardProps) {
   }, [selectedPiece, pieces, phase, cells, isLocalTurn]);
 
   // UI helpers for abilities
+  const isPieceProtected = useCallback((targetPiece: PieceFrontend) => {
+    // Un morceau est protégé s'il s'agit d'un PROTECTEUR ou s'il est adjacent à un PROTECTEUR allié
+    if (targetPiece.characterId === "PROTECTOR") return true;
+    return pieces.some(p =>
+      p.ownerIndex === targetPiece.ownerIndex &&
+      p.characterId === "PROTECTOR" &&
+      areAdjacent(p.q, p.r, targetPiece.q, targetPiece.r)
+    );
+  }, [pieces]);
+
   const illusionistTargets = useMemo(() => {
     if (!selectedPiece || selectedPiece.characterId !== "ILLUSIONIST" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
     const targets = new Set<string>();
     pieces.forEach(p => {
-      if (p.id !== selectedPiece.id && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+      // Un adversaire ne peut pas échanger sa place avec un des protégés
+      const isEnemyProtected = p.ownerIndex !== selectedPiece.ownerIndex && isPieceProtected(p);
+      if (p.id !== selectedPiece.id && !isEnemyProtected && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
     });
     return targets;
-  }, [selectedPiece, pieces, isLocalTurn]);
+  }, [selectedPiece, pieces, isLocalTurn, isPieceProtected]);
 
   const manipulatorTargets = useMemo(() => {
     if (!selectedPiece || selectedPiece.characterId !== "MANIPULATOR" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
     const targets = new Set<string>();
     pieces.forEach(p => {
-      if (p.ownerIndex !== selectedPiece.ownerIndex && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+      if (p.ownerIndex !== selectedPiece.ownerIndex && !isPieceProtected(p) && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
     });
     return targets;
-  }, [selectedPiece, pieces, isLocalTurn]);
+  }, [selectedPiece, pieces, isLocalTurn, isPieceProtected]);
 
   const manipulatorDestinations = useMemo(() => {
     if (!manipulatorTarget) return new Set<string>();
@@ -520,10 +534,10 @@ export default function HexBoard(props: HexBoardProps) {
     if (!selectedPiece || selectedPiece.characterId !== "BRAWLER" || selectedPiece.hasActed || !isLocalTurn) return new Set<string>();
     const targets = new Set<string>();
     pieces.forEach(p => {
-      if (p.ownerIndex !== selectedPiece.ownerIndex && areAdjacent(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+      if (p.ownerIndex !== selectedPiece.ownerIndex && !isPieceProtected(p) && areAdjacent(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
     });
     return targets;
-  }, [selectedPiece, pieces, isLocalTurn]);
+  }, [selectedPiece, pieces, isLocalTurn, isPieceProtected]);
 
   const brawlerDestinations = useMemo(() => {
     if (!brawlerTarget || !selectedPiece) return new Set<string>();
@@ -540,10 +554,13 @@ export default function HexBoard(props: HexBoardProps) {
     const targets = new Set<string>();
     pieces.forEach(p => {
       if (p.id === selectedPiece.id) return;
-      if (isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
+      // Note: Protection only blocks PULL, but we simplify by blocking targeting if it's an enemy protected.
+      // If it's an ally, we don't block because moving towards them is allowed.
+      const isEnemyProtected = p.ownerIndex !== selectedPiece.ownerIndex && isPieceProtected(p);
+      if (!isEnemyProtected && isInLineOfSight(selectedPiece.q, selectedPiece.r, p.q, p.r) && hexDistance(selectedPiece.q, selectedPiece.r, p.q, p.r) > 1 && isPathClear(selectedPiece.q, selectedPiece.r, p.q, p.r)) targets.add(p.id);
     });
     return targets;
-  }, [selectedPiece, pieces, isLocalTurn]);
+  }, [selectedPiece, pieces, isLocalTurn, isPieceProtected]);
 
   const grapplerMoveDestinations = useMemo(() => {
     if (!grapplerTarget || !selectedPiece) return new Set<string>();
@@ -674,8 +691,6 @@ export default function HexBoard(props: HexBoardProps) {
 
   const handlePieceSelect = (piece: PieceFrontend) => {
     // On autorise la sélection de n'importe quelle pièce pour voir ses infos (Scanner)
-    // Sauf Némésis qui est spéciale (à voir si on veut l'autoriser aussi plus tard)
-    if (piece.characterId === "NEMESIS") return;
 
     // Jouer le son si changement de sélection
     if (selectedPiece?.id !== piece.id) playSelect();
