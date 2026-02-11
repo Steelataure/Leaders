@@ -80,6 +80,20 @@ export interface Game {
   eloChangeP1?: number;
   lastTimerUpdate?: string;
   mode?: string;
+  actions: {
+    turnNumber: number;
+    playerIndex: number;
+    actionOrder?: number; // 🆕 Added
+    actionType: string;
+    pieceId: string;
+    fromQ: number;
+    fromR: number;
+    toQ: number;
+    toR: number;
+    targetPieceId?: string;
+    abilityId?: string;
+    characterId?: string;
+  }[];
 }
 
 // Frontend specific types

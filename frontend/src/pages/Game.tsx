@@ -11,6 +11,7 @@ import { BookOpen, Volume2, VolumeX } from "lucide-react";
 
 
 import VictoryScreen from "../components/VictoryScreen";
+import MoveHistory from "../components/MoveHistory";
 import useSound from "use-sound";
 
 // Sons
@@ -21,72 +22,7 @@ import mainMusic from "../sounds/mainMenu.mp3";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 
-const CHARACTER_IMAGES: Record<string, string> = {
-  LEADER_RED: "/image/leaders/leader_red.png",
-  LEADER_BLUE: "/image/leaders/leader_blue.png",
-  ARCHER: "/image/archere.png",
-  BRAWLER: "/image/cogneur.png",
-  PROWLER: "/image/rodeuse.png",
-  CAVALRY: "/image/cavalier.png",
-  ACROBAT: "/image/acrobate.png",
-  ILLUSIONIST: "/image/illusioniste.png",
-  GRAPPLER: "/image/lance-grappin.png",
-  MANIPULATOR: "/image/manipulatrice.png",
-  INNKEEPER: "/image/tavernier.png",
-  JAILER: "/image/geolier.png",
-  PROTECTOR: "/image/protecteur.png",
-  ASSASSIN: "/image/assassin.png",
-  ROYAL_GUARD: "/image/garderoyal.png",
-  VIZIER: "/image/vizir.png",
-  NEMESIS: "/image/nemesis.png",
-  OLD_BEAR: "/image/vieilours_ourson.png",
-  CUB: "/image/vieilours_ourson.png",
-};
-
-// mapping des noms de personnages
-const CHARACTER_NAMES: Record<string, string> = {
-  LEADER: "Leader",
-  ACROBAT: "Acrobate",
-  CAVALRY: "Cavalier",
-  ILLUSIONIST: "Illusionniste",
-  MANIPULATOR: "Manipulatrice",
-  JAILER: "Geôlier",
-  PROTECTOR: "Protecteur",
-  BRAWLER: "Cogneur",
-  GRAPPLER: "Lance-Grappin",
-  NEMESIS: "Némésis",
-  PROWLER: "Rôdeuse",
-  INNKEEPER: "Tavernier",
-  ARCHER: "Archère",
-  ASSASSIN: "Assassin",
-  ROYAL_GUARD: "Garde Royal",
-  VIZIER: "Vizir",
-  OLD_BEAR: "Vieil Ours",
-  CUB: "Ourson",
-};
-
-
-// === CHARACTER DATA MAPPING ===
-const CHARACTER_DATA: Record<string, { name: string; description: string; type: "ACTIVE" | "PASSIVE" | "SPECIAL" }> = {
-  ACROBAT: { name: "Acrobate", description: "Saute en ligne droite par-dessus un Personnage adjacent. Peut effectuer jusqu'à deux sauts consécutifs.", type: "ACTIVE" },
-  GRAPPLER: { name: "Lance-Grappin", description: "Se déplace jusqu’à un Personnage visible en ligne droite ou l’attire jusqu'à lui.", type: "ACTIVE" },
-  CAVALRY: { name: "Cavalier", description: "Se déplace de deux cases en ligne droite.", type: "ACTIVE" },
-  BRAWLER: { name: "Cogneur", description: "Se déplace sur la case d’un ennemi adjacent et le pousse sur l’une des trois cases opposées de votre choix.", type: "ACTIVE" },
-  MANIPULATOR: { name: "Manipulatrice", description: "Déplace d’une case un ennemi visible en ligne droite et non-adjacent.", type: "ACTIVE" },
-  ROYAL_GUARD: { name: "Garde Royal", description: "Se déplace, depuis n’importe quelle case, sur une case adjacente à votre Leader, puis peut ensuite se déplacer d'une case.", type: "ACTIVE" },
-  PROWLER: { name: "Rôdeuse", description: "Se déplace sur n’importe quelle case non-adjacente à un ennemi.", type: "ACTIVE" },
-  ILLUSIONIST: { name: "Illusionniste", description: "Échange de position avec un Personnage visible en ligne droite et non-adjacent.", type: "ACTIVE" },
-  INNKEEPER: { name: "Tavernier", description: "Déplace d'une case un allié adjacent.", type: "ACTIVE" },
-  ARCHER: { name: "Archère", description: "Participe à la capture du Leader adverse à une distance de deux cases en ligne droite. Ne participe pas s’il lui est adjacent.", type: "PASSIVE" },
-  JAILER: { name: "Geôlier", description: "Les ennemis adjacents ayant une compétence active ne peuvent pas l’utiliser. N’interrompt pas une action en cours.", type: "PASSIVE" },
-  ASSASSIN: { name: "Assassin", description: "Capture le Leader adverse, même sans autre allié participant à la capture.", type: "PASSIVE" },
-  PROTECTOR: { name: "Protecteur", description: "Les compétences des ennemis ne peuvent déplacer ni le protecteur, ni ses alliés adjacents.", type: "PASSIVE" },
-  VIZIER: { name: "Vizir", description: "Votre Leader peut se déplacer d’une case supplémentaire lors de son action.", type: "PASSIVE" },
-  OLD_BEAR: { name: "Vieil Ours", description: "Recruté avec l'Ourson (2 pièces, comptent pour 1). L'Ourson ne capture pas le Leader. Déplacez l'un ou les deux à votre tour.", type: "SPECIAL" },
-  NEMESIS: { name: "Némésis", description: "Ne joue pas à son tour. DOIT se déplacer de 2 cases (si possible) à la fin de toute action déplaçant le Leader adverse.", type: "SPECIAL" },
-  LEADER: { name: "Leader", description: "Votre champion. S'il est capturé ou encerclé, la partie est perdue.", type: "SPECIAL" },
-  CUB: { name: "Ourson", description: "Vient avec le Vieil Ours. Ne participe pas à la capture du Leader.", type: "SPECIAL" },
-};
+import { CHARACTER_IMAGES, CHARACTER_NAMES, CHARACTER_DATA } from "../constants/characters";
 
 interface CharacterCard {
   id: string;
@@ -229,6 +165,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   const [selectedPiece, setSelectedPiece] = useState<PieceFrontend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
+  const [showVictoryScreen, setShowVictoryScreen] = useState(false); // 🆕 Delay state
   const [error, setError] = useState<string | null>(null);
   const [localPlayerIndex, setLocalPlayerIndex] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -347,6 +284,18 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
     setUser(currentUser);
   }, []);
 
+  // Game Over Delay Logic
+  useEffect(() => {
+    if (gameState?.status === "FINISHED" || gameState?.status === "FINISHED_CAPTURE" || (gameState?.winnerPlayerIndex !== undefined && gameState?.winnerPlayerIndex !== null)) {
+      const timer = setTimeout(() => {
+        setShowVictoryScreen(true);
+      }, 1000); // 1 second delay
+      return () => clearTimeout(timer);
+    } else {
+      setShowVictoryScreen(false);
+    }
+  }, [gameState?.status, gameState?.winnerPlayerIndex]);
+
   const updateGameState = useCallback((game: any) => {
     const mappedGame = gameApi.mapGameToFrontend(game);
     setGameState(mappedGame);
@@ -442,10 +391,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
     }
 
     try {
-      isLeavingRef.current = true;
+      // isLeavingRef.current = true; // 🛑 Don't set leaving=true on surrender, we want to see the defeat screen
       await gameApi.surrender(gameId, playerId);
       setShowSurrenderModal(false);
-      onBackToLobby();
+      // onBackToLobby(); // 🛑 Don't redirect immediately. Wait for gameState update -> FINISHED -> VictoryScreen
     } catch (e) {
       console.error("Surrender failed", e);
       setError("Échec de l'abandon (Vérifiez votre connexion)");
@@ -566,6 +515,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       const currentUser = user || authService.getUser();
       const playerId = currentUser?.id || sessionId;
       try {
+        if (gameState?.status !== "IN_PROGRESS") return;
         const piece = gameState?.pieces.find((p) => p.id === pieceId);
         if (!piece) return;
 
@@ -609,6 +559,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       const currentUser = user || authService.getUser();
       const playerId = currentUser?.id || sessionId;
       try {
+        if (gameState?.status !== "IN_PROGRESS") return;
         await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination, secondaryDest, playerId);
         console.log("Game: Ability API call success");
         const game = await gameApi.getGameState(gameId);
@@ -629,7 +580,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
   );
 
   const handleSkipActions = useCallback(async () => {
-    if (!gameId || !user?.id) return;
+    if (!gameId || !user?.id || gameState?.status !== "IN_PROGRESS") return;
     try {
       await gameApi.skipActions(gameId, user.id);
       const game = await gameApi.getGameState(gameId);
@@ -668,7 +619,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const handleRecruit = useCallback(
     (cardId: string) => {
-      if (!gameState) return;
+      if (!gameState || gameState.status !== "IN_PROGRESS") return;
       if (isRecruiting) return;
       if (gameState.hasRecruitedThisTurn) {
         alert("Action impossible: Vous avez déjà recruté une unité ce tour-ci.");
@@ -695,7 +646,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
   const confirmPlacement = useCallback(
     async (q: number, r: number) => {
-      if (!gameState || !placementMode) return;
+      if (!gameState || !placementMode || gameState.status !== "IN_PROGRESS") return;
 
       const newPlacements = [...placementMode.placements, { q, r }];
 
@@ -772,29 +723,49 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
     );
   }
 
-  if (!isLeavingRef.current && (gameState.status === "FINISHED_CAPTURE" || gameState.status === "FINISHED" || (gameState.winnerPlayerIndex !== undefined && gameState.winnerPlayerIndex !== null))) {
-    const winnerIndex = gameState.winnerPlayerIndex ?? 0;
-    const loserIndex = winnerIndex === 0 ? 1 : 0;
-    const winnerPieces = gameState.pieces.filter((p) => p.ownerIndex === winnerIndex);
-    const loserPieces = gameState.pieces.filter((p) => p.ownerIndex === loserIndex);
-    const victoryType = gameState.winnerVictoryType || (gameState.status === "FINISHED_CAPTURE" ? "CAPTURE" : "ENCIRCLEMENT");
-    const winnerElo = gameState.players.find((p) => p.playerIndex === winnerIndex)?.elo;
+  const renderVictoryScreen = () => {
+    // Check showVictoryScreen state (delayed) instead of raw status
+    if (showVictoryScreen && !isLeavingRef.current && (gameState.status === "FINISHED_CAPTURE" || gameState.status === "FINISHED" || (gameState.winnerPlayerIndex !== undefined && gameState.winnerPlayerIndex !== null))) {
+      const winnerIndex = gameState.winnerPlayerIndex ?? 0;
+      // Removed unused scores calculation
 
-    return (
-      <VictoryScreen
-        winner={winnerIndex as 0 | 1}
-        victoryType={victoryType as any}
-        onPlayAgain={() => window.location.reload()}
-        onBackToLobby={onBackToLobby}
-        turnNumber={gameState.turnNumber}
-        winnerPieceCount={winnerPieces.length}
-        loserPieceCount={loserPieces.length}
-        winnerElo={winnerElo}
-        winnerEloChange={winnerIndex === 0 ? gameState.eloChangeP0 : gameState.eloChangeP1}
-        loserEloChange={winnerIndex === 0 ? gameState.eloChangeP1 : gameState.eloChangeP0}
-      />
-    );
-  }
+      const winnerPieces = gameState.pieces.filter((p) => p.ownerIndex === winnerIndex);
+      const loserIndex = winnerIndex === 0 ? 1 : 0;
+      const loserPieces = gameState.pieces.filter((p) => p.ownerIndex === loserIndex);
+      const victoryType = gameState.winnerVictoryType || (gameState.status === "FINISHED_CAPTURE" ? "CAPTURE" : "ENCIRCLEMENT");
+      const winnerPlayer = gameState.players.find((p) => p.playerIndex === winnerIndex);
+      const winnerElo = winnerPlayer?.elo;
+
+      // Determine if local player is winner
+      // If localPlayerIndex is undefined (spectator?), default to viewing as is
+      const isLocalPlayerWinner = localPlayerIndex === winnerIndex;
+
+      return (
+        <VictoryScreen
+          winner={winnerIndex as 0 | 1}
+          victoryType={victoryType as any}
+          onPlayAgain={() => window.location.reload()}
+          onBackToLobby={onBackToLobby}
+          turnNumber={gameState.turnNumber}
+          winnerPieceCount={winnerPieces.length}
+          loserPieceCount={loserPieces.length}
+          winnerElo={winnerElo}
+          winnerEloChange={winnerIndex === 0 ? gameState.eloChangeP0 : gameState.eloChangeP1}
+          isLocalPlayerWinner={isLocalPlayerWinner}
+          winnerName={winnerPlayer?.username || "Joueur"}
+          game={gameState}
+          reason={
+            (victoryType as string) === "RESIGNATION"
+              ? (isLocalPlayerWinner ? "Abandon de l'adversaire" : "Vous avez abandonné")
+              : (victoryType === "CAPTURE" ? "Leader capturé" : "Encerclement")
+          }
+        />
+      );
+    }
+    return null;
+  };
+
+  // We no longer return early here, so the board renders underneath
 
   const riverCards: CharacterCard[] = (gameState.river || [])
     .filter((c) => c.state === "VISIBLE")
@@ -1160,6 +1131,21 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         </div>
       )}
 
+      {/* MOVE HISTORY (Sidebar Droite - DESKTOP ONLY - Behind Scanner) */}
+      {/* MOVE HISTORY (Sidebar Droite - DESKTOP ONLY - Behind Scanner) */}
+      <div className="hidden md:block absolute top-48 right-8 w-80 bottom-32 z-0 pointer-events-auto opacity-80 hover:opacity-100 transition-opacity">
+        {gameState && gameState.status === "FINISHED" && (
+          <div className="h-full w-full flex flex-col">
+            <div className="bg-slate-950/80 backdrop-blur border-l-4 border-slate-700 p-2 mb-2 rounded-r-xl">
+              <h3 className="font-cyber text-slate-400 text-xs tracking-widest uppercase">JOURNAL DE COMBAT</h3>
+            </div>
+            <div className="flex-1 overflow-hidden rounded-xl border border-white/5 bg-slate-900/50">
+              <MoveHistory game={gameState} variant="embedded" />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* TACTICAL SCANNER (Sidebar Droite - DESKTOP ONLY) */}
       <div className={`
         hidden md:block absolute top-40 right-10 w-80 z-10 perspective-[1000px]
@@ -1230,7 +1216,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
       {/* ACTION BAR (Bottom) */}
       <div className="absolute bottom-4 md:bottom-10 left-1/2 transform -translate-x-1/2 z-20 flex gap-2 md:gap-8 w-full md:w-auto px-4 md:px-0 justify-center">
-        {isMyTurn && (
+        {isMyTurn && gameState.status === "IN_PROGRESS" && (
           <button
             onClick={handleEndTurn}
             className={`flex-1 md:flex-none px-6 md:px-16 py-3 md:py-5 font-black rounded-xl md:rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm md:text-xl border-2 ${allActionsCompleted ? "bg-amber-600 border-amber-400 text-white animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.5)] scale-105 md:scale-110" : "bg-cyan-600 border-cyan-400/50 text-white hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"}`}
@@ -1293,6 +1279,9 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       )}
       {/* MULTIPLAYER CHAT */}
       <ChatPanel sessionId={sessionId} user={user} isMyTurn={!!isMyTurn} />
+
+      {/* VICTORY OVERLAY */}
+      {renderVictoryScreen()}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap');

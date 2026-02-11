@@ -80,17 +80,26 @@ class WebSocketService {
         }
     }
 
-    subscribeToChat(sessionId: string, callback: (message: any) => void) {
+    subscribeToChat(sessionId: string, callback: (message: any) => void): () => void {
+        let subscription: any = null;
+        let checkInterval: any = null;
+
         if (!this.connected) {
-            const checkInterval = setInterval(() => {
+            checkInterval = setInterval(() => {
                 if (this.connected) {
                     clearInterval(checkInterval);
-                    this.doSubscribe(`/topic/chat/${sessionId}`, callback);
+                    checkInterval = null;
+                    subscription = this.doSubscribe(`/topic/chat/${sessionId}`, callback);
                 }
             }, 100);
         } else {
-            this.doSubscribe(`/topic/chat/${sessionId}`, callback);
+            subscription = this.doSubscribe(`/topic/chat/${sessionId}`, callback);
         }
+
+        return () => {
+            if (checkInterval) clearInterval(checkInterval);
+            if (subscription) subscription.unsubscribe();
+        };
     }
 
     sendMessage(sessionId: string, payload: any) {
@@ -104,7 +113,7 @@ class WebSocketService {
 
     private doSubscribe(topic: string, callback: (data: any) => void) {
         console.log(`Attempting to subscribe to ${topic}`);
-        this.client.subscribe(topic, (message: Message) => {
+        return this.client.subscribe(topic, (message: Message) => {
             console.log(`Received message on ${topic}:`, message.body);
             if (message.body) {
                 const data = JSON.parse(message.body);

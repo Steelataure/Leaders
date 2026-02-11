@@ -170,6 +170,28 @@ public class ActionService {
             }
         }
 
+        gameService.logAction(
+                source.getGameId(),
+                esiea.hackathon.leaders.domain.model.enums.ActionType.ABILITY,
+                game.getTurnNumber(),
+                playerId != null
+                        && !playerId.equals(esiea.hackathon.leaders.application.services.AiService.AI_PLAYER_ID)
+                        && game.getPlayers().stream()
+                                .anyMatch(p -> p.getUserId().equals(playerId) && p.getPlayerIndex() == 1)
+                                        ? 1
+                                        : (playerId == null || playerId.equals(
+                                                esiea.hackathon.leaders.application.services.AiService.AI_PLAYER_ID)
+                                                        ? game.getCurrentPlayerIndex()
+                                                        : game.getCurrentPlayerIndex()),
+                source.getId(),
+                source.getQ() != null ? source.getQ().intValue() : null,
+                source.getR() != null ? source.getR().intValue() : null,
+                destination != null ? (int) destination.q() : null,
+                destination != null ? (int) destination.r() : null,
+                target != null ? target.getId() : null,
+                abilityId,
+                source.getCharacterId());
+
         // Vérifier si la SOURCE est un Leader qui a bougé
         triggerNemesisIfLeaderMoved(source, updatedPieces);
 
@@ -217,6 +239,13 @@ public class ActionService {
             p.setHasActedThisTurn(true);
         }
         pieceRepository.saveAll(playerPieces);
+
+        gameService.logAction(
+                gameId,
+                esiea.hackathon.leaders.domain.model.enums.ActionType.PASS,
+                game.getTurnNumber(),
+                currentPlayer.getPlayerIndex(),
+                null, null, null, null, null, null, null, null);
     }
 
     private void checkAndApplyVictory(GameEntity game) {

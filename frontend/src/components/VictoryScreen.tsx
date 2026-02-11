@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import RankBadge from "./RankBadge";
+import MoveHistory from "./MoveHistory"; // 🆕
+import type { GameFrontend } from "../api/gameApi"; // 🆕
 
 /**
  * Composant VictoryScreen - Écran de victoire DYNAMIQUE
@@ -17,12 +19,17 @@ interface VictoryScreenProps {
   onPlayAgain: () => void;
   onBackToLobby: () => void;
   // 🆕 Props dynamiques
+  game?: GameFrontend; // 🆕 Added for history
   turnNumber?: number;
   winnerPieceCount?: number;
   loserPieceCount?: number;
   winnerElo?: number; // 🆕 Added optionally
   winnerEloChange?: number; // 🆕 Added
   loserEloChange?: number; // 🆕 Added
+  isLocalPlayerWinner?: boolean; // 🆕 Added for context
+  winnerName?: string; // 🆕 Added for animation
+  reason?: string; // 🆕 Added for specifics
+  onViewBoard?: () => void; // 🆕 Added to minify
 }
 
 // === CONSTANTES ===
@@ -277,7 +284,7 @@ function StyledButton({
     <button
       onClick={onClick}
       className={`
-        relative px-8 py-4 rounded-xl font-bold text-lg
+        relative px-8 py-4 rounded-xl font-bold text-lg w-full sm:w-auto
         transition-all duration-300 ease-out
         hover:scale-105 hover:-translate-y-1
         active:scale-95
@@ -343,22 +350,45 @@ export default function VictoryScreen({
   loserPieceCount = 0,
   winnerElo = 0,
   winnerEloChange = 0,
-  // loserEloChange = 0,
-}: VictoryScreenProps) {
+  isLocalPlayerWinner = true, // Default to true for backward compatibility
+  winnerName = "Joueur",
+  reason = "",
+  game, // 🆕
+}: VictoryScreenProps & { isLocalPlayerWinner?: boolean; winnerName?: string; reason?: string }) {
   const [isVisible, setIsVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const playerConfig = PLAYER_CONFIG[winner];
+  // Config for local player state (Victory vs Defeat)
+  const titleText = isLocalPlayerWinner ? "VICTOIRE !" : "DÉFAITE...";
+  const titleColor = isLocalPlayerWinner ? playerConfig.color : "#ef4444"; // Red for defeat
+  const scoreText = `${winnerPieceCount} - ${loserPieceCount}`;
+
   const victoryConfig = VICTORY_CONFIG[victoryType];
 
   useEffect(() => {
-    const timer1 = setTimeout(() => setIsVisible(true), 100);
-    const timer2 = setTimeout(() => setShowContent(true), 500);
+    const timer1 = setTimeout(() => setIsVisible(true), 500); // Delayed start for overlay effect
+    const timer2 = setTimeout(() => setShowContent(true), 1000);
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
   }, []);
+
+  if (isMinimized) {
+    return (
+      <div className="absolute top-20 right-4 z-50 animate-in fade-in slide-in-from-top-10 flex flex-col gap-2">
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="bg-slate-900/90 backdrop-blur border border-white/20 text-white px-6 py-3 rounded-xl font-bold font-cyber shadow-[0_0_20px_rgba(0,0,0,0.5)] hover:bg-slate-800 transition-all flex items-center gap-2"
+        >
+          <span>🏆</span>
+          <span>RÉSULTATS</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -409,115 +439,121 @@ export default function VictoryScreen({
         .animate-slide-up-delayed-3 { animation: slide-up 0.6s ease-out forwards; animation-delay: 0.6s; opacity: 0; }
       `}</style>
 
+      {/* OVERLAY WRAPPER with pointer-events-none by default, content auto */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 z-[100] flex items-center justify-center transition-all duration-1000 ${isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         style={{
-          background: `radial-gradient(circle at center, ${playerConfig.bgGlow} 0%, rgba(15, 23, 42, 0.98) 70%)`,
-          backdropFilter: "blur(8px)",
+          background: isLocalPlayerWinner
+            ? `radial-gradient(circle at center, ${playerConfig.bgGlow} 0%, rgba(15, 23, 42, 0.9) 80%)`
+            : `radial-gradient(circle at center, rgba(239, 68, 68, 0.15) 0%, rgba(15, 23, 42, 0.95) 80%)`,
+          backdropFilter: "blur(4px)",
         }}
       >
-        <GlowingRings color={playerConfig.color} />
-        <SparkleStars color={playerConfig.colorLight} />
-        <ConfettiSystem winnerColor={playerConfig.color} />
+        {isLocalPlayerWinner && <GlowingRings color={playerConfig.color} />}
+        {isLocalPlayerWinner && <SparkleStars color={playerConfig.colorLight} />}
+        {isLocalPlayerWinner && <ConfettiSystem winnerColor={playerConfig.color} />}
 
         {showContent && (
-          <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-2xl">
-            {/* Trophée */}
-            <div className="mb-6 animate-slide-up">
-              <AnimatedTrophy color={playerConfig.color} />
-            </div>
+          <div className="relative z-10 w-full max-w-7xl px-4 flex flex-col md:flex-row items-stretch justify-center gap-8 h-[85vh]">
 
-            {/* Titre VICTOIRE */}
-            <h1
-              className="text-6xl md:text-8xl font-black mb-4 animate-slide-up-delayed-1 animate-title-glow"
-              style={{ color: playerConfig.color }}
-            >
-              VICTOIRE !
-            </h1>
+            {/* LEFT PANEL: RESULTS & BUTTONS */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center animate-slide-up">
 
-            {/* Nom du gagnant */}
-            <div className="animate-slide-up-delayed-1">
-              <div className="flex flex-col items-center gap-2 mb-6">
-                <div className="flex items-center justify-center gap-4">
-                  <span className="text-4xl">{playerConfig.emoji}</span>
-                  <h2
-                    className={`text-3xl md:text-5xl font-black bg-gradient-to-r ${playerConfig.gradient} bg-clip-text text-transparent uppercase tracking-wider italic`}
-                  >
-                    {playerConfig.name}
-                  </h2>
-                  <span className="text-4xl">{playerConfig.emoji}</span>
-                </div>
-                {winnerElo !== undefined && (
-                  <div className="mt-2 scale-125">
-                    <RankBadge elo={winnerElo} size="md" />
-                  </div>
+              {/* Trophée or Skull */}
+              <div className="mb-6">
+                {isLocalPlayerWinner ? (
+                  <AnimatedTrophy color={playerConfig.color} />
+                ) : (
+                  <div className="text-8xl animate-bounce-slow grayscale transition-all duration-1000 hover:grayscale-0">💀</div>
                 )}
               </div>
-            </div>
 
-            {/* 🆕 Type de victoire AMÉLIORÉ */}
-            <div className="animate-slide-up-delayed-2 mb-8">
-              <div
-                className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl border-2"
-                style={{
-                  backgroundColor: `${playerConfig.color}15`,
-                  borderColor: `${playerConfig.color}40`,
-                }}
+              {/* Titre */}
+              <h1
+                className="text-5xl md:text-7xl font-black mb-2 animate-title-glow"
+                style={{ color: titleColor }}
               >
-                <span className="text-4xl">{victoryConfig.icon}</span>
-                <div className="text-left">
-                  <p className="text-white font-bold text-xl">
-                    {victoryConfig.label}
-                  </p>
-                  <p className="text-slate-300 text-sm">
-                    {victoryConfig.description}
-                  </p>
+                {titleText}
+              </h1>
+
+              {/* Score Msg */}
+              <div className="mb-6">
+                <p className="font-cyber text-lg md:text-xl text-white tracking-widest uppercase">
+                  <span style={{ color: playerConfig.color }}>{winnerName}</span> a gagné <span className="font-mono font-bold text-amber-400">{scoreText}</span>
+                </p>
+              </div>
+
+              {/* Raison */}
+              <div className="mb-8 w-full max-w-md">
+                <div
+                  className="flex items-center gap-4 px-6 py-3 rounded-2xl border-2 w-full"
+                  style={{
+                    backgroundColor: `${playerConfig.color}15`,
+                    borderColor: `${playerConfig.color}40`,
+                  }}
+                >
+                  <span className="text-3xl">{victoryConfig.icon}</span>
+                  <div className="text-left">
+                    <p className="text-white font-bold text-lg leading-tight">
+                      {reason || victoryConfig.label}
+                    </p>
+                    <p className="text-slate-300 text-xs">
+                      {victoryConfig.description}
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-4 gap-2 mb-8 w-full max-w-lg bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🎯</div>
+                  <div className="font-bold text-lg">{turnNumber}</div>
+                  <div className="text-[10px] text-slate-400 uppercase">Tours</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">⚔️</div>
+                  <div className="font-bold text-lg text-green-400">{winnerPieceCount}</div>
+                  <div className="text-[10px] text-slate-400 uppercase">Gagnant</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">💀</div>
+                  <div className="font-bold text-lg text-red-400">{loserPieceCount}</div>
+                  <div className="text-[10px] text-slate-400 uppercase">Perdant</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">📈</div>
+                  <div className="font-bold text-lg text-blue-400">{(winnerEloChange ?? 0) >= 0 ? `+${winnerEloChange}` : winnerEloChange}</div>
+                  <div className="text-[10px] text-slate-400 uppercase">Elo</div>
+                </div>
+              </div>
+
+              {/* Boutons */}
+              <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md justify-center">
+                <StyledButton
+                  variant="primary"
+                  color={playerConfig.color}
+                  onClick={onPlayAgain}
+                >
+                  🔄 Rejouer
+                </StyledButton>
+
+                <StyledButton variant="secondary" onClick={() => setIsMinimized(true)}>
+                  👁️ Plateau
+                </StyledButton>
+                <StyledButton variant="secondary" onClick={onBackToLobby}>
+                  🏠 Accueil
+                </StyledButton>
               </div>
             </div>
 
-            {/* 🆕 Stats DYNAMIQUES */}
-            <div className="animate-slide-up-delayed-2 flex gap-4 mb-10 bg-slate-900/50 backdrop-blur-sm rounded-2xl px-6 py-4 border border-slate-700/50">
-              <StatCard value={turnNumber} label="Tours joués" icon="🎯" />
-              <div className="w-px bg-slate-700" />
-              <StatCard
-                value={winnerPieceCount}
-                label="Unités gagnant"
-                icon="⚔️"
-              />
-              <div className="w-px bg-slate-700" />
-              <StatCard
-                value={loserPieceCount}
-                label="Unités perdant"
-                icon="💀"
-              />
-              <div className="w-px bg-slate-700" />
-              <StatCard
-                value={(winnerEloChange ?? 0) >= 0 ? `+${winnerEloChange ?? 0}` : (winnerEloChange ?? 0)}
-                label="Variation ELO"
-                icon="📈"
-              />
-            </div>
+            {/* RIGHT PANEL: HISTORY (ALWAYS VISIBLE) */}
+            {game && (
+              <div className="w-full md:w-96 flex-shrink-0 animate-slide-up-delayed-2 h-64 md:h-auto">
+                <MoveHistory game={game} variant="embedded" />
+              </div>
+            )}
 
-            {/* Boutons */}
-            <div className="animate-slide-up-delayed-3 flex flex-col sm:flex-row gap-4">
-              <StyledButton
-                variant="primary"
-                color={playerConfig.color}
-                onClick={onPlayAgain}
-              >
-                🔄 Rejouer
-              </StyledButton>
-              <StyledButton variant="secondary" onClick={onBackToLobby}>
-                🏠 Retour au lobby
-              </StyledButton>
-            </div>
-
-            {/* Message fun */}
-            <p className="mt-8 text-slate-500 text-sm animate-slide-up-delayed-3">
-              « Tactique, audace et stratégie distingueront les véritables
-              Leaders ! »
-            </p>
           </div>
         )}
       </div>

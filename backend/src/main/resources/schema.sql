@@ -159,6 +159,24 @@ CREATE TABLE IF NOT EXISTS recruitment_card (
     banned_by_index SMALLINT CHECK (banned_by_index IN (0, 1))
     );
 
+CREATE TABLE IF NOT EXISTS game_action (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id UUID NOT NULL REFERENCES game(id) ON DELETE CASCADE,
+    turn_number INT NOT NULL,
+    player_index SMALLINT NOT NULL CHECK (player_index IN (0, 1)),
+    action_order INT,
+    action_type VARCHAR(50) NOT NULL,
+    piece_id UUID,
+    from_q INT,
+    from_r INT,
+    to_q INT,
+    to_r INT,
+    target_piece_id UUID,
+    ability_id VARCHAR(30) REFERENCES ability(id),
+    character_id VARCHAR(30) REFERENCES ref_character(id),
+    created_at TIMESTAMP DEFAULT NOW()
+    );
+
 -- ==================================================================================
 -- 3. DONNÉES DE RÉFÉRENCE (IDs ANGLAIS pour Java)
 -- ==================================================================================

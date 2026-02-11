@@ -197,6 +197,20 @@ public class RecruitmentService {
         game.setRecruitmentCount(game.getRecruitmentCount() + 1);
         gameRepository.save(game);
 
+        if (!createdPieces.isEmpty()) {
+            PieceEntity mainPiece = createdPieces.get(0);
+            gameService.logAction(
+                    gameId,
+                    esiea.hackathon.leaders.domain.model.enums.ActionType.RECRUIT,
+                    game.getTurnNumber(),
+                    playerIndex.intValue(),
+                    mainPiece.getId(),
+                    null, null,
+                    (int) mainPiece.getQ(), (int) mainPiece.getR(),
+                    null, null,
+                    mainPiece.getCharacterId());
+        }
+
         // 7. Remplissage de la rivière
         refillRiver(gameId, emptySlot);
 

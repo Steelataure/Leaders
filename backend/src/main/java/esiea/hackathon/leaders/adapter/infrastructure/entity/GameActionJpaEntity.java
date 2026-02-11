@@ -10,7 +10,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "game_action")
-@Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class GameActionJpaEntity {
 
     @Id
@@ -55,16 +58,11 @@ public class GameActionJpaEntity {
     @Column(name = "to_r")
     private Integer toR;
 
+    @Column(name = "ability_id")
+    private String abilityId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ability_id")
-    @ToString.Exclude
-    private AbilityJpaEntity ability;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "character_id")
-    @ToString.Exclude
-    private RefCharacterJpaEntity character;
+    @Column(name = "character_id")
+    private String characterId;
 
     // --- METADATA ---
     @CreationTimestamp

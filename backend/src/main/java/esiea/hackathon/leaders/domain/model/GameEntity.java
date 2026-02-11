@@ -40,4 +40,5 @@ public class GameEntity {
     private List<GamePlayerEntity> players;
     private List<PieceEntity> pieces;
     private List<RecruitmentCardEntity> cards;
+    private List<GameActionEntity> actions;
 }

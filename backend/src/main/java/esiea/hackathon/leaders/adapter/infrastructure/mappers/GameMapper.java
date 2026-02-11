@@ -51,6 +51,9 @@ public class GameMapper {
                                 .scenarioId(entity.getScenarioId())
                                 .lastTimerUpdate(entity.getLastTimerUpdate())
                                 .aiDifficulty(entity.getAiDifficulty())
+                                .actions(entity.getActions() != null ? entity.getActions().stream()
+                                                .map(GameMapper::toActionDomain)
+                                                .collect(Collectors.toList()) : null)
                                 .build();
         }
 
@@ -91,6 +94,12 @@ public class GameMapper {
                                         .collect(Collectors.toList()));
                 }
 
+                if (domain.getActions() != null) {
+                        entity.setActions(domain.getActions().stream()
+                                        .map(a -> toActionJpa(a, entity))
+                                        .collect(Collectors.toList()));
+                }
+
                 return entity;
         }
 
@@ -126,6 +135,56 @@ public class GameMapper {
                                 .playerIndex(domain.getPlayerIndex())
                                 .isFirstTurnCompleted(domain.isFirstTurnCompleted())
                                 .game(gameRef)
+                                .build();
+        }
+
+        public static esiea.hackathon.leaders.domain.model.GameActionEntity toActionDomain(
+                        esiea.hackathon.leaders.adapter.infrastructure.entity.GameActionJpaEntity entity) {
+                if (entity == null)
+                        return null;
+                return esiea.hackathon.leaders.domain.model.GameActionEntity.builder()
+                                .id(entity.getId())
+                                .turnNumber(entity.getTurnNumber())
+                                .playerIndex(entity.getPlayerIndex())
+                                .actionOrder(entity.getActionOrder())
+                                .actionType(entity.getActionType())
+                                .pieceId(entity.getPieceId())
+                                .fromQ(entity.getFromQ())
+                                .fromR(entity.getFromR())
+                                .toQ(entity.getToQ())
+                                .toR(entity.getToR())
+                                .targetPieceId(entity.getTargetPieceId())
+                                .createdAt(entity.getCreatedAt())
+                                .ability(entity.getAbilityId() != null
+                                                ? esiea.hackathon.leaders.domain.model.AbilityEntity.builder()
+                                                                .id(entity.getAbilityId()).build()
+                                                : null)
+                                .character(entity.getCharacterId() != null
+                                                ? esiea.hackathon.leaders.domain.model.RefCharacterEntity.builder()
+                                                                .id(entity.getCharacterId()).build()
+                                                : null)
+                                .build();
+        }
+
+        public static esiea.hackathon.leaders.adapter.infrastructure.entity.GameActionJpaEntity toActionJpa(
+                        esiea.hackathon.leaders.domain.model.GameActionEntity domain, GameJpaEntity gameEntity) {
+                if (domain == null)
+                        return null;
+                return esiea.hackathon.leaders.adapter.infrastructure.entity.GameActionJpaEntity.builder()
+                                .id(domain.getId())
+                                .game(gameEntity)
+                                .turnNumber(domain.getTurnNumber())
+                                .playerIndex(domain.getPlayerIndex())
+                                .actionOrder(domain.getActionOrder())
+                                .actionType(domain.getActionType())
+                                .pieceId(domain.getPieceId())
+                                .fromQ(domain.getFromQ())
+                                .fromR(domain.getFromR())
+                                .toQ(domain.getToQ())
+                                .toR(domain.getToR())
+                                .targetPieceId(domain.getTargetPieceId())
+                                .abilityId(domain.getAbility() != null ? domain.getAbility().getId() : null)
+                                .characterId(domain.getCharacter() != null ? domain.getCharacter().getId() : null)
                                 .build();
         }
 }

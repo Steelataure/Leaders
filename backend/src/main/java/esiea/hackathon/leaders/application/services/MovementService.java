@@ -26,12 +26,12 @@ import java.util.UUID;
 public class MovementService {
 
     private final PieceRepository pieceRepository;
-    private final RefCharacterRepository characterRepository;
+    private final GameRepository gameRepository;
+    private final GameService gameService;
     private final MoveStrategyFactory strategyFactory;
     private final NemesisBehavior nemesisBehavior;
-    private final GameRepository gameRepository;
     private final VictoryService victoryService; // 🆕 Injection du VictoryService
-    private final GameService gameService;
+    private final RefCharacterRepository characterRepository;
 
     @Transactional
     public PieceEntity movePiece(UUID pieceId, short toQ, short toR, UUID playerId) {
@@ -91,12 +91,36 @@ public class MovementService {
                             + ")");
         }
 
+        // Store current position for logging
+        short fromQ = pieceEntity.getQ();
+        short fromR = pieceEntity.getR();
+
         // Application du déplacement
         pieceEntity.setQ(toQ);
         pieceEntity.setR(toR);
         pieceEntity.setHasActedThisTurn(true);
 
         PieceEntity savedPiece = pieceRepository.save(pieceEntity);
+
+        gameService.logAction(
+                savedPiece.getGameId(),
+                esiea.hackathon.leaders.domain.model.enums.ActionType.MOVE,
+                game.getTurnNumber(),
+                // The playerIndex resolution below is a bit hacky, better to trust
+                // game.currentPlayerIndex for the active turn
+                playerId != null
+                        && !playerId.equals(esiea.hackathon.leaders.application.services.AiService.AI_PLAYER_ID)
+                        && game.getPlayers().stream()
+                                .anyMatch(p -> p.getUserId().equals(playerId) && p.getPlayerIndex() == 1)
+                                        ? 1
+                                        : (playerId == null || playerId.equals(
+                                                esiea.hackathon.leaders.application.services.AiService.AI_PLAYER_ID)
+                                                        ? game.getCurrentPlayerIndex()
+                                                        : game.getCurrentPlayerIndex()),
+                savedPiece.getId(),
+                (int) fromQ, (int) fromR,
+                (int) toQ, (int) toR,
+                null, null, savedPiece.getCharacterId());
 
         // Trigger Némésis (si un Leader a bougé)
         triggerNemesisIfLeaderMoved(savedPiece, savedPiece.getGameId());

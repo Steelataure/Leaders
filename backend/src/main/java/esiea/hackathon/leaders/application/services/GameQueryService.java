@@ -124,6 +124,27 @@ public class GameQueryService {
                 }
 
                 // 6. DTO final
+                List<esiea.hackathon.leaders.application.dto.response.GameActionDto> actions = game.getActions() != null
+                                ? game.getActions().stream()
+                                                .map(a -> new esiea.hackathon.leaders.application.dto.response.GameActionDto(
+                                                                a.getTurnNumber(),
+                                                                a.getPlayerIndex(),
+                                                                a.getActionType(),
+                                                                a.getPieceId(),
+                                                                a.getFromQ(),
+                                                                a.getFromR(),
+                                                                a.getToQ(),
+                                                                a.getToR(),
+                                                                a.getTargetPieceId(),
+                                                                a.getAbility() != null
+                                                                                ? a.getAbility().getId().toString()
+                                                                                : null,
+                                                                a.getCharacter() != null
+                                                                                ? a.getCharacter().getId().toString()
+                                                                                : null))
+                                                .toList()
+                                : List.of();
+
                 return new GameStateDto(
                                 game.getId(),
                                 game.getStatus(),
@@ -143,6 +164,7 @@ public class GameQueryService {
                                 game.getEloChangeP1(),
                                 pieces,
                                 river,
-                                players);
+                                players,
+                                actions);
         }
 }

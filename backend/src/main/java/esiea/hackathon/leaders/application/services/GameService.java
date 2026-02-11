@@ -141,6 +141,44 @@ public class GameService {
         finishGame(gameId, winnerIndex, esiea.hackathon.leaders.domain.model.enums.VictoryType.RESIGNATION);
     }
 
+    @Transactional
+    public void logAction(UUID gameId, esiea.hackathon.leaders.domain.model.enums.ActionType type,
+            int turn, int playerIndex, UUID pieceId, Integer fQ, Integer fR,
+            Integer tQ, Integer tR, UUID targetId, String abilityId, String charId) {
+        GameEntity game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        int order = (game.getActions() != null) ? game.getActions().size() + 1 : 1;
+
+        esiea.hackathon.leaders.domain.model.GameActionEntity action = esiea.hackathon.leaders.domain.model.GameActionEntity
+                .builder()
+                .game(game)
+                .turnNumber(turn)
+                .playerIndex(playerIndex)
+                .actionOrder(order)
+                .actionType(type)
+                .pieceId(pieceId)
+                .fromQ(fQ)
+                .fromR(fR)
+                .toQ(tQ)
+                .toR(tR)
+                .targetPieceId(targetId)
+                .createdAt(LocalDateTime.now())
+                .ability(abilityId != null
+                        ? esiea.hackathon.leaders.domain.model.AbilityEntity.builder().id(abilityId).build()
+                        : null)
+                .character(charId != null
+                        ? esiea.hackathon.leaders.domain.model.RefCharacterEntity.builder().id(charId).build()
+                        : null)
+                .build();
+
+        if (game.getActions() == null) {
+            game.setActions(new java.util.ArrayList<>());
+        }
+        game.getActions().add(action);
+        gameRepository.save(game);
+    }
+
     private void updateSessionStatusToFinished(UUID gameId) {
         try {
             // GameID is the same as SessionID

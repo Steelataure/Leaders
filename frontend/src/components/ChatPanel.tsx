@@ -35,12 +35,17 @@ export default function ChatPanel({ sessionId, user, isMyTurn }: ChatPanelProps)
     useEffect(() => {
         if (!sessionId) return;
 
-        webSocketService.subscribeToChat(sessionId, (message) => {
+        const unsubscribe = webSocketService.subscribeToChat(sessionId, (message) => {
             setMessages((prev) => [...prev, message]);
             if (!isOpenRef.current) {
                 setUnreadCount((prev) => prev + 1);
             }
         });
+
+        // Cleanup on unmount or sessionId change
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, [sessionId]);
 
     useEffect(() => {

@@ -87,4 +87,9 @@ public class GameJpaEntity {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<GamePlayerJpaEntity> players;
+
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<GameActionJpaEntity> actions;
 }
