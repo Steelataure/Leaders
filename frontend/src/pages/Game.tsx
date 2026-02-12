@@ -858,25 +858,35 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
 
       {/* UTILITY MODALS & OVERLAYS move below or kept here */}
 
-      {/* MODALS */}
+      {/* MODALS: RECRUITMENT & ABILITY TARGETING */}
       {placementMode && (
-        <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-amber-950/90 backdrop-blur-xl border-2 border-amber-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
-          <p className="text-amber-400 font-bold text-xs md:text-sm uppercase tracking-wider">
+        <div className="absolute bottom-40 left-1/2 transform -translate-x-1/2 z-40 px-6 py-2 bg-amber-950/90 backdrop-blur-xl border border-amber-500/50 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-pulse flex items-center gap-4">
+          <p className="text-amber-400 font-bold text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap">
             {placementMode.characterId === "OLD_BEAR" && placementMode.placements.length === 1
               ? "📍 Placez l'Ourson (2/2)"
               : `📍 Placez ${placementMode.cardName} sur une case dorée`
             }
           </p>
-          <button onClick={() => setPlacementMode(null)} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
+          <button
+            onClick={() => setPlacementMode(null)}
+            className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 border border-amber-500/30 rounded-full text-[9px] font-black transition-all"
+          >
+            ANNULER
+          </button>
         </div>
       )}
 
       {activeTarget && !showGrapplerModal && (
-        <div className="absolute top-24 md:top-32 left-1/2 transform -translate-x-1/2 z-40 px-4 md:px-8 py-3 md:py-4 bg-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/50 rounded-2xl animate-pulse w-[90%] md:w-auto text-center">
-          <p className="text-cyan-400 font-bold text-xs md:text-sm uppercase tracking-wider">
+        <div className="absolute bottom-40 left-1/2 transform -translate-x-1/2 z-40 px-6 py-2 bg-slate-900/90 backdrop-blur-xl border border-cyan-500/50 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.2)] animate-pulse flex items-center gap-4">
+          <p className="text-cyan-400 font-bold text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap">
             🎯 {activeTargetName}: Choisissez la destination
           </p>
-          <button onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }} className="mt-3 w-full px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-[10px] md:text-xs font-bold">✖ ANNULER</button>
+          <button
+            onClick={() => { setManipulatorTarget(null); setBrawlerTarget(null); setGrapplerTarget(null); setInnkeeperTarget(null); }}
+            className="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-200 border border-cyan-500/30 rounded-full text-[9px] font-black transition-all"
+          >
+            ANNULER
+          </button>
         </div>
       )}
 
