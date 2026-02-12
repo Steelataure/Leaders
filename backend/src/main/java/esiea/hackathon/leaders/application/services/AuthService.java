@@ -61,33 +61,41 @@ public class AuthService {
                 user.getEmail(),
                 user.getUsername(),
                 user.getElo(),
+                user.getAvatar(),
                 List.of("USER"));
+    }
+
+    public UserDto updateAvatar(UUID userId, String avatar) {
+        UserCredentialsEntity user = userCredentialsRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setAvatar(avatar);
+        user = userCredentialsRepository.save(user);
+        return mapToDto(user);
     }
 
     public List<UserDto> getLeaderboard() {
         java.util.List<UserDto> leaderboard = new java.util.ArrayList<>();
         userCredentialsRepository.findTop10ByOrderByEloDesc().forEach(user -> {
-            leaderboard.add(new UserDto(
-                    user.getId(),
-                    user.getEmail(),
-                    user.getUsername(),
-                    user.getElo(),
-                    List.of("USER")));
+            leaderboard.add(mapToDto(user));
         });
         return leaderboard;
+    }
+
+    private UserDto mapToDto(UserCredentialsEntity user) {
+        return new UserDto(
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getElo(),
+                user.getAvatar(),
+                List.of("USER"));
     }
 
     private LoginResponseDto createLoginResponse(UserCredentialsEntity user) {
         // DUMMY IMPLEMENTATION: No real JWT/Security yet
         String dummyToken = "dummy-token-" + UUID.randomUUID();
 
-        UserDto userDto = new UserDto(
-                user.getId(),
-                user.getEmail(),
-                user.getUsername(),
-                user.getElo(),
-                List.of("USER") // Default role
-        );
+        UserDto userDto = mapToDto(user);
 
         return new LoginResponseDto(dummyToken, userDto);
     }

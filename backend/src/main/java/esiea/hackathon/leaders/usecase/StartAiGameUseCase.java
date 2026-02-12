@@ -31,6 +31,9 @@ public class StartAiGameUseCase {
                 GameJpaEntity gameRef = springGameRepository.findById(gameId)
                                 .orElseThrow(() -> new RuntimeException("Game not found after creation: " + gameId));
 
+                // PERSIST DIFFICULTY
+                gameRef.setAiDifficulty(difficulty);
+
                 // Ensure players list is initialized
                 if (gameRef.getPlayers() == null) {
                         gameRef.setPlayers(new java.util.ArrayList<>());

@@ -27,7 +27,7 @@ public class ApplicationConfig implements WebMvcConfigurer {
             @org.springframework.lang.NonNull org.springframework.web.servlet.config.annotation.CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOriginPatterns("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);

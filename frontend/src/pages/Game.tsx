@@ -763,6 +763,7 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
           winnerEloChange={winnerIndex === 0 ? gameState.eloChangeP0 : gameState.eloChangeP1}
           isLocalPlayerWinner={isLocalPlayerWinner}
           winnerName={winnerPlayer?.username || "Joueur"}
+          winnerAvatar={winnerPlayer?.avatar}
           reason={
             (victoryType as string) === "RESIGNATION"
               ? (isLocalPlayerWinner ? "Abandon de l'adversaire" : "Vous avez abandonné")
@@ -805,7 +806,11 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         {/* P0 (Blue) */}
         <div className={`flex items-center gap-1 md:gap-4 transition-all ${gameState.currentPlayerIndex === 0 ? "opacity-100" : "opacity-40"}`}>
           <div className="w-6 h-6 md:w-16 md:h-16 rounded-full border border-cyan-500 bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-            <img src="/image/garderoyal.png" className="w-full h-full object-cover" />
+            <img
+              src={gameState.players.find(p => p.playerIndex === 0)?.avatar ? CHARACTER_IMAGES[gameState.players.find(p => p.playerIndex === 0)!.avatar!] : "/image/garderoyal.png"}
+              className="w-full h-full object-cover"
+              alt="Avatar P0"
+            />
           </div>
           <div className="flex flex-col">
             <h2 className="hidden md:block font-cyber text-xl lg:text-3xl font-black text-white tracking-wider bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent uppercase italic truncate max-w-[150px]">
@@ -838,7 +843,11 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         {/* P1 (Red) */}
         <div className={`flex flex-row-reverse items-center gap-1 md:gap-4 transition-all ${gameState.currentPlayerIndex === 1 ? "opacity-100" : "opacity-40"}`}>
           <div className="w-6 h-6 md:w-16 md:h-16 rounded-full border border-rose-500 bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-[0_0_15px_rgba(244,63,94,0.3)]">
-            <img src="/image/garderoyal.png" className="w-full h-full object-cover grayscale" />
+            <img
+              src={gameState.players.find(p => p.playerIndex === 1)?.avatar ? CHARACTER_IMAGES[gameState.players.find(p => p.playerIndex === 1)!.avatar!] : "/image/garderoyal.png"}
+              className="w-full h-full object-cover grayscale"
+              alt="Avatar P1"
+            />
           </div>
           <div className="flex flex-col items-end">
             <h2 className="hidden md:block font-cyber text-xl lg:text-3xl font-black text-white tracking-wider bg-gradient-to-l from-white to-rose-400 bg-clip-text text-transparent uppercase italic truncate max-w-[150px] text-right">

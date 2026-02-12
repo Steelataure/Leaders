@@ -9,6 +9,7 @@ export interface User {
     email: string;
     username: string;
     elo: number;
+    avatar?: string;
     roles: string[];
 }
 

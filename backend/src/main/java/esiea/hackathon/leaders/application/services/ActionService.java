@@ -129,29 +129,18 @@ public class ActionService {
 
         // Validation de l'action
         source.setHasActedThisTurn(true);
-
-        // FIX: Re-fetch managed entities to ensure coordinate changes are saved
-        // correctly
-        // and avoid stale state issues (especially for Brawler/Illusionist)
-        PieceEntity managedSource = pieceRepository.findById(source.getId()).get();
-        managedSource.setQ(source.getQ());
-        managedSource.setR(source.getR());
-        managedSource.setHasActedThisTurn(true);
-        pieceRepository.saveAndFlush(managedSource);
+        pieceRepository.saveAndFlush(source);
 
         if (target != null) {
-            PieceEntity managedTarget = pieceRepository.findById(target.getId()).get();
-            managedTarget.setQ(target.getQ());
-            managedTarget.setR(target.getR());
-            pieceRepository.saveAndFlush(managedTarget);
+            pieceRepository.saveAndFlush(target);
 
-            log("DEBUG: Source (" + source.getCharacterId() + ") saved at " + managedSource.getQ() + ","
-                    + managedSource.getR());
-            log("DEBUG: Target (" + target.getCharacterId() + ") saved at " + managedTarget.getQ() + ","
-                    + managedTarget.getR());
+            log("DEBUG: Source (" + source.getCharacterId() + ") saved at " + source.getQ() + ","
+                    + source.getR());
+            log("DEBUG: Target (" + target.getCharacterId() + ") saved at " + target.getQ() + ","
+                    + target.getR());
         } else {
-            log("DEBUG: Source (" + source.getCharacterId() + ") saved at " + managedSource.getQ() + ","
-                    + managedSource.getR());
+            log("DEBUG: Source (" + source.getCharacterId() + ") saved at " + source.getQ() + ","
+                    + source.getR());
         }
 
         // 🆕 SCÉNARIO 5 : Trigger Némésis si un Leader a été déplacé par une capacité

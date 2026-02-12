@@ -76,16 +76,20 @@ public class GameQueryService {
                                                                 username = "IA";
                                                         }
                                                         Integer elo = null;
+                                                        String avatar = null;
                                                         if (userId != null) {
                                                                 var user = userCredentialsRepository.findById(userId);
                                                                 if (user.isPresent()) {
                                                                         username = user.get().getUsername();
                                                                         elo = user.get().getElo();
+                                                                        avatar = user.get().getAvatar();
                                                                         System.out.println(
                                                                                         "DEBUG: Found authenticated user: "
                                                                                                         + username
                                                                                                         + " (ELO: "
-                                                                                                        + elo + ")");
+                                                                                                        + elo
+                                                                                                        + ", AVATAR: "
+                                                                                                        + avatar + ")");
                                                                 } else {
                                                                         System.out.println(
                                                                                         "DEBUG: No UserCredentials found for UUID: "
@@ -101,6 +105,7 @@ public class GameQueryService {
                                                                         : game.getEloChangeP1();
 
                                                         return new PlayerDto(userId, username, elo, playerEloChange,
+                                                                        avatar,
                                                                         p.getPlayerIndex());
                                                 })
                                                 .toList()

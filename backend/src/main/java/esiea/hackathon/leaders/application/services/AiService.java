@@ -43,82 +43,20 @@ public class AiService {
 
     // ...
 
-    private double evaluateMoveHard(PieceEntity piece, HexCoord dest, List<PieceEntity> allPieces,
-            List<PieceEntity> enemyPieces) {
-        double score = 0;
-
-        // 1. MATERIAL & KILL INSTINCT
-        PieceEntity target = enemyPieces.stream()
-                .filter(e -> e.getQ() == dest.q() && e.getR() == dest.r())
-                .findFirst().orElse(null);
-
-        if (target != null) {
-            if ("LEADER".equals(target.getCharacterId()))
-                return 1000000.0; // CHECKMATE ! HUGE SCORE (1M)
-            score += 150.0; // Kill unit (Was 100) -> Encourage trading
-        }
-
-        // 1b. PASSIVE INSTANT WIN CHECKS (New)
-        PieceEntity enemyLeader = enemyPieces.stream()
-                .filter(e -> "LEADER".equals(e.getCharacterId()))
-                .findFirst().orElse(null);
-
-        if (enemyLeader != null) {
-            int distToEnemyLeader = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
-
-            // ASSASSIN: If I am Assassin and I move adjacent to Leader -> I WIN
-            if ("ASSASSIN".equals(piece.getCharacterId()) && distToEnemyLeader == 1) {
-                return 1000000.0;
-            }
-
-            // ARCHER: If I am Archer and I move to range 2 (Line) -> High Pressure (Almost
-            // Win if supported)
-            if ("ARCHER".equals(piece.getCharacterId()) && distToEnemyLeader == 2
-                    && isInLoS(piece, enemyLeader.getQ(), enemyLeader.getR())) { // Note: isInLoS uses piece Q/R, we
-                                                                                 // need dest Q/R
-                // Wait, isInLoS takes PieceEntity p1. We need to check LoS from DEST.
-                if (isInLoSCoords(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR())) {
-                    score += 500.0; // Massive pressure
-                }
-            }
-        }
-
-        // 2. SAFETY (Deep Simulation)
-        // Check if this move leads to death (Minimax-lite)
-        if (aiSimulationService != null) {
-            double riskScore = aiSimulationService.evaluateFutureRisk(allPieces, piece, dest);
-            // Risk is negative.
-            // If risk is -100 (Lose Unit) and Score is +150 (Kill Unit) -> Net +50 -> TAKES
-            // THE TRADE.
-            // If risk is -1M (Lose Leader) -> Net Huge Negative -> AVOID.
-            score += riskScore;
-        }
-
-        // 3. POSITIONAL
-        // Control center
-        int distToCenter = distance(dest.q(), dest.r(), 0, 0);
-        score -= (distToCenter * 2.0);
-
-        // Aggression towards enemy leader
-        if (enemyLeader != null) {
-            int distError = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
-            score -= (distError * 8.0); // Closer is better (Was 5.0)
-        }
-
-        // 4. PROTECTION
-        // If I am NOT leader, am I shielding my leader?
-        if (!"LEADER".equals(piece.getCharacterId())) {
-            PieceEntity myLeader = allPieces.stream()
-                    .filter(p -> "LEADER".equals(p.getCharacterId()) && p.getOwnerIndex() == 1)
-                    .findFirst().orElse(null);
-            if (myLeader != null) {
-                int distToLeader = distance(dest.q(), dest.r(), myLeader.getQ(), myLeader.getR());
-                if (distToLeader == 1)
-                    score += 20.0; // Guarding
-            }
-        }
-
-        return score;
+    private double getPieceValue(String charId) {
+        return switch (charId) {
+            case "LEADER" -> 10000.0; // Extremely high value
+            case "ASSASSIN" -> 150.0; // Most dangerous unit
+            case "CAVALRY" -> 120.0;
+            case "ILLUSIONIST" -> 110.0;
+            case "ARCHER" -> 90.0;
+            case "BRAWLER" -> 70.0;
+            case "OLD_BEAR" -> 100.0;
+            case "VIZIER" -> 95.0;
+            case "PROWLER" -> 90.0;
+            case "GRAPPLER" -> 85.0;
+            default -> 60.0;
+        };
     }
 
     // Fixed UUID for the AI Player
@@ -206,17 +144,11 @@ public class AiService {
         double bestScore = -Double.MAX_VALUE;
 
         for (PieceEntity piece : myPieces) {
-            // A. Check Moves
+            // A. Check Standard Moves
             try {
                 List<HexCoord> validMoves = movementService.getValidMovesForPiece(piece.getId());
                 for (HexCoord dest : validMoves) {
-                    double score;
-                    if (difficulty == esiea.hackathon.leaders.domain.model.enums.AiDifficulty.HARD) {
-                        score = evaluateMoveHard(piece, dest, allPieces, enemyPieces);
-                    } else {
-                        score = evaluateMove(piece, dest, allPieces, enemyPieces);
-                        score += (new Random().nextDouble() * 0.5); // Randomness for Easy
-                    }
+                    double score = evaluateOmegaMove(piece, dest, allPieces, enemyPieces, difficulty);
 
                     if (score > bestScore) {
                         bestScore = score;
@@ -226,24 +158,20 @@ public class AiService {
             } catch (Exception e) {
             }
 
-            // B. Check Abilities
+            // B. Check Abilities (Simplified Unified Logic)
             try {
-                // ILLUSIONIST: Swap
-                if ("ILLUSIONIST".equals(piece.getCharacterId())) {
+                String charId = piece.getCharacterId();
+                if ("ILLUSIONIST".equals(charId)) {
                     for (PieceEntity enemy : enemyPieces) {
                         if (isInLoS(piece, enemy)
                                 && distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) > 1
                                 && esiea.hackathon.leaders.domain.utils.HexUtils.isPathClear(
                                         new HexCoord(piece.getQ(), piece.getR()),
-                                        new HexCoord(enemy.getQ(), enemy.getR()),
-                                        allPieces)) {
-                            double score = 40.0; // Base: Better than simple move
-                            if ("LEADER".equals(enemy.getCharacterId()))
-                                score += 2000.0; // Aggressive Swap
-
-                            // If swapping puts enemy Leader in danger, boost more?
-                            // (Simple heuristic: Swap is almost always good if it disrupts enemy)
-
+                                        new HexCoord(enemy.getQ(), enemy.getR()), allPieces)) {
+                            double score = evaluateOmegaMove(piece,
+                                    new HexCoord((short) enemy.getQ(), (short) enemy.getR()), allPieces, enemyPieces,
+                                    difficulty);
+                            score += 150.0; // Ability Utility
                             if (score > bestScore) {
                                 bestScore = score;
                                 bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
@@ -252,89 +180,71 @@ public class AiService {
                         }
                     }
                 }
-
-                // INNKEEPER: Assist allies
-                if ("INNKEEPER".equals(piece.getCharacterId())) {
-                    List<PieceEntity> allies = allPieces.stream()
-                            .filter(p -> p.getOwnerIndex() == 1 && !p.getId().equals(piece.getId()))
-                            .collect(Collectors.toList());
-                    for (PieceEntity ally : allies) {
-                        if (distance(piece.getQ(), piece.getR(), ally.getQ(), ally.getR()) == 1) {
-                            for (HexCoord d : getAdjacentCoords(ally.getQ(), ally.getR())) {
-                                if (isCellEmpty(d, allPieces)) {
-                                    double score = 15.0; // Nice utility
-                                    if (score > bestScore) {
-                                        bestScore = score;
-                                        bestMove = new Move(piece, d, "INNKEEPER_ASSIST", ally.getId(), d);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // PROWLER: Stealth
-                if ("PROWLER".equals(piece.getCharacterId())) {
-                    PieceEntity leader = enemyPieces.stream().filter(e -> "LEADER".equals(e.getCharacterId()))
-                            .findFirst().orElse(null);
-                    if (leader != null) {
-                        for (int q = -3; q <= 3; q++) {
-                            for (int r = -3; r <= 3; r++) {
-                                if (Math.abs(q + r) <= 3) {
-                                    HexCoord d = new HexCoord((short) q, (short) r);
-                                    if (isCellEmpty(d, allPieces)) {
-                                        // Prowler stealth to Range 2 of Leader = High Pressure
-                                        boolean isSafe = enemyPieces.stream()
-                                                .noneMatch(e -> distance(d.q(), d.r(), e.getQ(), e.getR()) == 1);
-                                        if (isSafe) {
-                                            int distToLeader = distance(d.q(), d.r(), leader.getQ(), leader.getR());
-                                            if (distToLeader <= 2) {
-                                                double score = 50.0; // High threat positioning
-                                                if (score > bestScore) {
-                                                    bestScore = score;
-                                                    bestMove = new Move(piece, d, "PROWLER_STEALTH", null, d);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // GRAPPLER: Hook
-                if ("GRAPPLER".equals(piece.getCharacterId())) {
+                if ("GRAPPLER".equals(charId)) {
                     for (PieceEntity enemy : enemyPieces) {
                         int dist = distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR());
-                        if (dist > 1 && isInLoS(piece, enemy)
+                        if (dist > 1 && dist <= 3 && isInLoS(piece, enemy)
                                 && esiea.hackathon.leaders.domain.utils.HexUtils.isPathClear(
                                         new HexCoord(piece.getQ(), piece.getR()),
-                                        new HexCoord(enemy.getQ(), enemy.getR()),
-                                        allPieces)) {
-                            double pullScore = 45.0; // Strong control
-                            if ("LEADER".equals(enemy.getCharacterId()))
-                                pullScore += 2000.0; // Aggressive Hook
+                                        new HexCoord(enemy.getQ(), enemy.getR()), allPieces)) {
 
-                            int dq = enemy.getQ() - piece.getQ();
-                            int dr = enemy.getR() - piece.getR();
-                            int dirQ = dq / dist;
-                            int dirR = dr / dist;
+                            int dirQ = (enemy.getQ() - piece.getQ()) / dist;
+                            int dirR = (enemy.getR() - piece.getR()) / dist;
                             HexCoord pullDest = new HexCoord((short) (piece.getQ() + dirQ),
                                     (short) (piece.getR() + dirR));
+
                             if (isCellEmpty(pullDest, allPieces)) {
-                                if (pullScore > bestScore) {
-                                    bestScore = pullScore;
-                                    bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
-                                            "GRAPPLE_HOOK", enemy.getId(), null);
+                                // MODE 2: MOVE (Grappler moves to pullDest)
+                                double scoreMove = evaluateOmegaMove(piece, pullDest, allPieces, enemyPieces,
+                                        difficulty);
+                                scoreMove += 100.0;
+                                if (scoreMove > bestScore) {
+                                    bestScore = scoreMove;
+                                    bestMove = new Move(piece, pullDest, "GRAPPLE_HOOK", enemy.getId(), null);
+                                }
+
+                                // MODE 1: PULL (Target moves to pullDest)
+                                // Heuristic: pulling closer is good, especially if it's the leader or a high
+                                // value piece
+                                double scorePull = getPieceValue(enemy.getCharacterId()) * 0.5;
+                                scorePull += 50.0;
+                                // Penalty if pulling puts Grappler in danger (simulation but with piece at
+                                // current pos)
+                                double risk = aiSimulationService.evaluateDeepRisk(allPieces, piece,
+                                        new HexCoord(piece.getQ(), piece.getR()));
+                                scorePull += risk * 0.1;
+
+                                if (scorePull > bestScore) {
+                                    bestScore = scorePull;
+                                    // PULL mode is triggered when destination is null
+                                    bestMove = new Move(piece, null, "GRAPPLE_HOOK", enemy.getId(), null);
                                 }
                             }
                         }
                     }
                 }
-
-                // BRAWLER: Push
-                if ("BRAWLER".equals(piece.getCharacterId())) {
+                if ("PROWLER".equals(charId)) {
+                    List<HexCoord> candidates = new ArrayList<>();
+                    for (int q = -3; q <= 3; q++) {
+                        for (int r = -3; r <= 3; r++) {
+                            if (Math.abs(q + r) <= 3)
+                                candidates.add(new HexCoord((short) q, (short) r));
+                        }
+                    }
+                    Collections.shuffle(candidates);
+                    for (HexCoord d : candidates) {
+                        if (isCellEmpty(d, allPieces) && enemyPieces.stream()
+                                .noneMatch(e -> distance(d.q(), d.r(), e.getQ(), e.getR()) == 1)) {
+                            double score = evaluateOmegaMove(piece, d, allPieces, enemyPieces, difficulty);
+                            score += 80.0;
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMove = new Move(piece, d, "PROWLER_STEALTH", null, d);
+                            }
+                        }
+                    }
+                }
+                if ("BRAWLER".equals(charId)) {
                     for (PieceEntity enemy : enemyPieces) {
                         if (distance(piece.getQ(), piece.getR(), enemy.getQ(), enemy.getR()) == 1) {
                             int dirQ = enemy.getQ() - piece.getQ();
@@ -342,13 +252,32 @@ public class AiService {
                             HexCoord pushDest = new HexCoord((short) (enemy.getQ() + dirQ),
                                     (short) (enemy.getR() + dirR));
                             if (pushDest.isValid() && isCellEmpty(pushDest, allPieces)) {
-                                double score = 30.0;
-                                if ("LEADER".equals(enemy.getCharacterId()))
-                                    score += 2000.0; // Aggressive Push
+                                double score = evaluateOmegaMove(piece,
+                                        new HexCoord((short) enemy.getQ(), (short) enemy.getR()), allPieces,
+                                        enemyPieces, difficulty);
+                                score += 50.0;
                                 if (score > bestScore) {
                                     bestScore = score;
                                     bestMove = new Move(piece, new HexCoord((short) enemy.getQ(), (short) enemy.getR()),
                                             "BRAWLER_PUSH", enemy.getId(), pushDest);
+                                }
+                            }
+                        }
+                    }
+                }
+                if ("INNKEEPER".equals(charId)) {
+                    List<PieceEntity> allies = allPieces.stream()
+                            .filter(p -> p.getOwnerIndex() == 1 && !p.getId().equals(piece.getId())).toList();
+                    for (PieceEntity ally : allies) {
+                        if (distance(piece.getQ(), piece.getR(), ally.getQ(), ally.getR()) == 1) {
+                            for (HexCoord d : getAdjacentCoords(ally.getQ(), ally.getR())) {
+                                if (isCellEmpty(d, allPieces)) {
+                                    double score = evaluateOmegaMove(piece, d, allPieces, enemyPieces, difficulty);
+                                    score += 60.0;
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestMove = new Move(piece, d, "INNKEEPER_ASSIST", ally.getId(), d);
+                                    }
                                 }
                             }
                         }
@@ -417,7 +346,11 @@ public class AiService {
             return false;
         }
 
-        // Check cards
+        esiea.hackathon.leaders.domain.model.enums.AiDifficulty difficulty = game.getAiDifficulty();
+        if (difficulty == null) {
+            difficulty = esiea.hackathon.leaders.domain.model.enums.AiDifficulty.EASY;
+        }
+
         List<RecruitmentCardEntity> visibleCards = cardRepository.findAllByGameId(gameId).stream()
                 .filter(c -> c.getState() == CardState.VISIBLE)
                 .collect(Collectors.toList());
@@ -427,12 +360,28 @@ public class AiService {
             return false;
         }
 
-        // Pick random card or logic
-        RecruitmentCardEntity cardToBuy = visibleCards.get(new Random().nextInt(visibleCards.size()));
+        // Pick card logic
+        RecruitmentCardEntity cardToBuy;
+        if (difficulty == esiea.hackathon.leaders.domain.model.enums.AiDifficulty.EXPERT) {
+            // EXPERT: Prioritize high value characters + aggressive deck building
+            cardToBuy = visibleCards.stream()
+                    .max((c1, c2) -> {
+                        double v1 = getPieceValue(c1.getCharacter().getId());
+                        double v2 = getPieceValue(c2.getCharacter().getId());
+                        // If P2 has more pieces, AI becomes desperate for power
+                        return Double.compare(v1, v2);
+                    })
+                    .orElse(visibleCards.get(0));
+        } else {
+            // EASY/HARD: Pick random card
+            cardToBuy = visibleCards.get(new Random().nextInt(visibleCards.size()));
+        }
 
         // Check if max units reached
         long myUnitCount = pieceRepository.findByGameId(gameId).stream().filter(p -> p.getOwnerIndex() == 1).count();
-        if (myUnitCount >= 5) {
+        // Expert AI needs 6 total pieces (1 leader + 5 units)
+        int maxUnits = (difficulty == esiea.hackathon.leaders.domain.model.enums.AiDifficulty.EXPERT) ? 6 : 5;
+        if (myUnitCount >= maxUnits) {
             log("DEBUG: AI cannot recruit (Max units reached: " + myUnitCount + ")");
             return false;
         }
@@ -516,6 +465,77 @@ public class AiService {
         } catch (Exception e) {
             log("Failed to notify Update from AI: " + e.getMessage());
         }
+    }
+
+    private double evaluateOmegaMove(PieceEntity piece, HexCoord dest, List<PieceEntity> allPieces,
+            List<PieceEntity> enemyPieces, esiea.hackathon.leaders.domain.model.enums.AiDifficulty difficulty) {
+
+        if (difficulty == esiea.hackathon.leaders.domain.model.enums.AiDifficulty.EASY) {
+            return evaluateMove(piece, dest, allPieces, enemyPieces) + (new Random().nextDouble() * 2.0);
+        }
+
+        if (difficulty == esiea.hackathon.leaders.domain.model.enums.AiDifficulty.HARD) {
+            double score = evaluateMove(piece, dest, allPieces, enemyPieces);
+            if (aiSimulationService != null) {
+                score += aiSimulationService.evaluateDeepRisk(allPieces, piece, dest);
+            }
+            return score;
+        }
+
+        // --- EXPERT / OMEGA LOGIC ---
+        double score = 0;
+
+        // 1. MATERIAL & KILL INSTINCT (Scale * 100)
+        PieceEntity target = enemyPieces.stream()
+                .filter(e -> e.getQ() == dest.q() && e.getR() == dest.r())
+                .findFirst().orElse(null);
+
+        if (target != null) {
+            String charId = target.getCharacterId();
+            if ("LEADER".equals(charId))
+                return 1000000.0; // OMEGA: WIN NOW
+
+            double targetValue = getPieceValue(charId);
+            score += (targetValue * 100.0);
+
+            // AGGRESSIVE TRADING
+            long myCount = allPieces.stream().filter(p -> p.getOwnerIndex() == 1).count();
+            long enemyCount = enemyPieces.size();
+            if (myCount > enemyCount) {
+                score += 500.0;
+            }
+        }
+
+        // 2. STRATEGIC POSITIONING
+        PieceEntity enemyLeader = enemyPieces.stream()
+                .filter(e -> "LEADER".equals(e.getCharacterId()))
+                .findFirst().orElse(null);
+
+        if (enemyLeader != null) {
+            int distAfter = distance(dest.q(), dest.r(), enemyLeader.getQ(), enemyLeader.getR());
+            score -= (distAfter * 20.0);
+            if (distAfter == 1)
+                score += 500.0;
+        }
+
+        // 3. OMEGA SIMULATION
+        if (aiSimulationService != null) {
+            double risk = aiSimulationService.evaluateDeepRisk(allPieces, piece, dest);
+            score += (risk * 2.0);
+        }
+
+        // 4. PHALANX
+        long alliesNearby = allPieces.stream()
+                .filter(p -> p.getOwnerIndex() == 1 && !p.getId().equals(piece.getId())
+                        && distance(dest.q(), dest.r(), p.getQ(), p.getR()) == 1)
+                .count();
+        score += (alliesNearby * 50.0);
+
+        // Center control
+        int distToCenter = distance(dest.q(), dest.r(), 0, 0);
+        score -= (distToCenter * 10.0);
+
+        return score;
     }
 
     private double evaluateMove(PieceEntity piece, HexCoord dest, List<PieceEntity> allPieces,
@@ -624,10 +644,6 @@ public class AiService {
 
     private boolean isInLoS(PieceEntity p1, int q2, int r2) {
         return p1.getQ() == q2 || p1.getR() == r2 || (p1.getQ() + p1.getR() == q2 + r2);
-    }
-
-    private boolean isInLoSCoords(int q1, int r1, int q2, int r2) {
-        return q1 == q2 || r1 == r2 || (q1 + r1 == q2 + r2);
     }
 
     private record Move(PieceEntity piece, HexCoord dest, String abilityId, UUID targetId, HexCoord abilityDest) {

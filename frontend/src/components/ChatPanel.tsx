@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Terminal, MessageSquare } from 'lucide-react';
 import { webSocketService } from '../services/WebSocketService';
+import { CHARACTER_IMAGES } from '../constants/characters';
 
 interface ChatMessage {
     sessionId: string;
     senderId: string;
     senderName: string;
+    senderAvatar?: string;
     content: string;
     timestamp: string;
 }
@@ -62,6 +64,7 @@ export default function ChatPanel({ sessionId, user, isMyTurn }: ChatPanelProps)
             sessionId,
             senderId: user.id,
             senderName: user.username || "ANONYME",
+            senderAvatar: user.avatar,
             content: inputValue.trim()
         };
 
@@ -120,7 +123,12 @@ export default function ChatPanel({ sessionId, user, isMyTurn }: ChatPanelProps)
                                 const isMe = String(msg.senderId) === String(user?.id);
                                 return (
                                     <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                                        <div className="flex items-center gap-2 mb-1">
+                                        <div className={`flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                            {msg.senderAvatar && (
+                                                <div className="w-4 h-4 rounded-full overflow-hidden border border-white/10 shrink-0">
+                                                    <img src={CHARACTER_IMAGES[msg.senderAvatar]} className="w-full h-full object-cover" alt="avatar" />
+                                                </div>
+                                            )}
                                             <span className={`text-[10px] font-mono font-bold uppercase ${isMe ? 'text-cyan-400' : 'text-amber-400'}`}>
                                                 {msg.senderName}
                                             </span>

@@ -35,4 +35,11 @@ public class AuthController {
     public ResponseEntity<java.util.List<esiea.hackathon.leaders.application.dto.response.UserDto>> getLeaderboard() {
         return ResponseEntity.ok(authService.getLeaderboard());
     }
+
+    @PatchMapping("/avatar")
+    public ResponseEntity<esiea.hackathon.leaders.application.dto.response.UserDto> updateAvatar(
+            @RequestParam java.util.UUID userId,
+            @RequestParam String avatar) {
+        return ResponseEntity.ok(authService.updateAvatar(userId, avatar));
+    }
 }

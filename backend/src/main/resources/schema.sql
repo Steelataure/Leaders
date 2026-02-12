@@ -53,9 +53,13 @@ CREATE TABLE IF NOT EXISTS user_credentials (
     password VARCHAR(255) NOT NULL,
     username VARCHAR(255),
     elo INT DEFAULT 1000,
+    avatar VARCHAR(255),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
     );
+
+-- Migration for existing tables
+ALTER TABLE user_credentials ADD COLUMN IF NOT EXISTS avatar VARCHAR(255);
 
 -- ==================================================================================
 -- 2. TABLES MÉTIER (Types ENUM remplacés par VARCHAR pour compatibilité JPA)

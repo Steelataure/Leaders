@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CHARACTER_IMAGES } from "../constants/characters";
 
 /**
  * Composant VictoryScreen - Écran de victoire DYNAMIQUE
@@ -24,6 +25,7 @@ interface VictoryScreenProps {
   loserEloChange?: number; // 🆕 Added
   isLocalPlayerWinner?: boolean; // 🆕 Added for context
   winnerName?: string; // 🆕 Added for animation
+  winnerAvatar?: string; // 🆕 Added
   reason?: string; // 🆕 Added for specifics
   onViewBoard?: () => void; // 🆕 Added to minify
 }
@@ -323,8 +325,9 @@ export default function VictoryScreen({
   winnerEloChange = 0,
   isLocalPlayerWinner = true, // Default to true for backward compatibility
   winnerName = "Joueur",
+  winnerAvatar = "",
   reason = "",
-}: VictoryScreenProps & { isLocalPlayerWinner?: boolean; winnerName?: string; reason?: string }) {
+}: VictoryScreenProps & { isLocalPlayerWinner?: boolean; winnerName?: string; winnerAvatar?: string; reason?: string }) {
   const [isVisible, setIsVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -446,11 +449,17 @@ export default function VictoryScreen({
                 {titleText}
               </h1>
 
-              {/* Score Msg */}
               <div className="mb-6">
-                <p className="font-cyber text-lg md:text-xl text-white tracking-widest uppercase">
-                  <span style={{ color: playerConfig.color }}>{winnerName}</span> a gagné <span className="font-mono font-bold text-amber-400">{scoreText}</span>
-                </p>
+                <div className="flex items-center justify-center gap-4">
+                  {winnerAvatar && (
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full border-2 border-amber-400 overflow-hidden shadow-[0_0_20px_rgba(251,191,36,0.5)]">
+                      <img src={CHARACTER_IMAGES[winnerAvatar]} className="w-full h-full object-cover" alt="winner avatar" />
+                    </div>
+                  )}
+                  <p className="font-cyber text-lg md:text-xl text-white tracking-widest uppercase">
+                    <span style={{ color: playerConfig.color }}>{winnerName}</span> a gagné <span className="font-mono font-bold text-amber-400">{scoreText}</span>
+                  </p>
+                </div>
               </div>
 
               {/* Raison */}

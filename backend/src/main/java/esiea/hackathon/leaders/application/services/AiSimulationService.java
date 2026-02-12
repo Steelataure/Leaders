@@ -10,17 +10,8 @@ import java.util.stream.Collectors;
 @Service
 public class AiSimulationService {
 
-    /**
-     * Simulates the board state after a candidate move and evaluates the danger.
-     * Returns a "Risk Score" (Negative value) representing how dangerous this move
-     * is.
-     * 0.0 means safe. -Infinity means fatal.
-     */
     public double evaluateFutureRisk(List<PieceEntity> currentBoard, PieceEntity movingPiece, HexCoord dest) {
-        // 1. Clone the board to create a "Future State"
         List<PieceEntity> futureBoard = cloneBoard(currentBoard);
-
-        // 2. Apply the move in the simulation
         PieceEntity simPiece = futureBoard.stream()
                 .filter(p -> p.getId().equals(movingPiece.getId()))
                 .findFirst().orElse(null);
@@ -30,12 +21,129 @@ public class AiSimulationService {
             simPiece.setR(dest.r());
         }
 
-        // 3. Remove captured piece if any
+        futureBoard
+                .removeIf(p -> p.getQ() == dest.q() && p.getR() == dest.r() && !p.getId().equals(movingPiece.getId()));
+        return calculateEnemyThreats(futureBoard, 1);
+    }
+
+    /**
+     * More advanced simulation for Expert AI.
+     */
+    public double evaluateDeepRisk(List<PieceEntity> currentBoard, PieceEntity movingPiece, HexCoord dest) {
+        List<PieceEntity> futureBoard = cloneBoard(currentBoard);
+        PieceEntity simPiece = futureBoard.stream()
+                .filter(p -> p.getId().equals(movingPiece.getId()))
+                .findFirst().orElse(null);
+
+        if (simPiece != null) {
+            simPiece.setQ(dest.q());
+            simPiece.setR(dest.r());
+        }
+
         futureBoard
                 .removeIf(p -> p.getQ() == dest.q() && p.getR() == dest.r() && !p.getId().equals(movingPiece.getId()));
 
-        // 4. Evaluate Enemy Responses
-        return calculateEnemyThreats(futureBoard, 1); // AI is usually player 1
+        double riskScore = calculateEnemyThreats(futureBoard, 1);
+
+        // --- Expert Specific Logic: Ability Combo Prediction ---
+        int enemyIndex = 0; // Player
+        List<PieceEntity> enemyPieces = futureBoard.stream().filter(p -> p.getOwnerIndex() == enemyIndex).toList();
+        List<PieceEntity> myPieces = futureBoard.stream().filter(p -> p.getOwnerIndex() == 1).toList();
+        PieceEntity myLeader = myPieces.stream().filter(p -> "LEADER".equals(p.getCharacterId())).findFirst()
+                .orElse(null);
+
+        if (myLeader != null) {
+            for (PieceEntity enemy : enemyPieces) {
+                // Predictive Combo: Illusionist Swap + Another Piece Capture
+                if ("ILLUSIONIST".equals(enemy.getCharacterId())) {
+                    if (isInLoS(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR())) {
+                        // If I am swapped, am I in range of ANY other enemy?
+                        HexCoord swapPos = new HexCoord(enemy.getQ(), enemy.getR());
+                        for (PieceEntity otherEnemy : enemyPieces) {
+                            if (otherEnemy.getId().equals(enemy.getId()))
+                                continue;
+                            if (distance(swapPos.q(), swapPos.r(), otherEnemy.getQ(), otherEnemy.getR()) == 1) {
+                                riskScore -= 50000.0; // Very dangerous lethal setup
+                            }
+                        }
+                    }
+                }
+
+                // Predictive Combo: Grappler Pull + Sandwich Surround
+                if ("GRAPPLER".equals(enemy.getCharacterId())) {
+                    int d = distance(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR());
+                    if (d > 1 && d <= 3 && isInLoS(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR())) {
+                        // Heuristic: Being pulled closer to a group of enemies is bad
+                        long nearbyEnemies = enemyPieces.stream()
+                                .filter(e -> distance(enemy.getQ(), enemy.getR(), e.getQ(), e.getR()) <= 2)
+                                .count();
+                        if (nearbyEnemies >= 2)
+                            riskScore -= 10000.0;
+                    }
+                }
+
+                // Lethal Threat Detection: Can ANY player piece move and capture leader next
+                // turn?
+                // This is already partially handled by dist==1 in calculateEnemyThreats,
+                // but let's add specific check for Archer/Cavalry/Acrobat combo potential.
+                if ("ARCHER".equals(enemy.getCharacterId())) {
+                    if (distance(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR()) == 3) {
+                        riskScore -= 1000.0;
+                    }
+                }
+
+                if ("CAVALRY".equals(enemy.getCharacterId())) {
+                    int d = distance(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR());
+                    if (d <= 3 && isInLoS(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR())) {
+                        riskScore -= 100000.0; // Avoid being in charge lanes
+                    }
+                }
+
+                if ("ASSASSIN".equals(enemy.getCharacterId())) {
+                    int d = distance(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR());
+                    if (d == 2) {
+                        riskScore -= 50000.0;
+                    }
+                }
+
+                // --- LETHAL VISION: Lane Detection ---
+                // If this move puts Leader in a line with Archer/Cavalry/etc.
+                if (isInLoS(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR())) {
+                    if ("CAVALRY".equals(enemy.getCharacterId()))
+                        riskScore -= 20000.0;
+                    if ("ARCHER".equals(enemy.getCharacterId()))
+                        riskScore -= 10000.0;
+                    if ("LANCIER".equals(enemy.getCharacterId()))
+                        riskScore -= 5000.0;
+                }
+            }
+
+            // --- SANDWICH PREVENTION ---
+            // If Leader is between 2 enemies on the same axis
+            for (int i = 0; i < enemyPieces.size(); i++) {
+                for (int j = i + 1; j < enemyPieces.size(); j++) {
+                    PieceEntity e1 = enemyPieces.get(i);
+                    PieceEntity e2 = enemyPieces.get(j);
+                    if (isSandwiched(myLeader.getQ(), myLeader.getR(), e1, e2)) {
+                        riskScore -= 80000.0;
+                    }
+                }
+            }
+        }
+
+        // --- GOD MODE: PANIC RETURN ---
+        if (riskScore <= -1e5)
+            return -1e9; // Fatal or Highly likely fatal
+
+        return riskScore;
+    }
+
+    private boolean isSandwiched(int q, int r, PieceEntity e1, PieceEntity e2) {
+        // Simple check: if myLeader is exactly between e1 and e2 in a line
+        int d1 = distance(q, r, e1.getQ(), e1.getR());
+        int d2 = distance(q, r, e2.getQ(), e2.getR());
+        int d12 = distance(e1.getQ(), e1.getR(), e2.getQ(), e2.getR());
+        return (d1 == 1 && d2 == 1 && d12 == 2); // Classic sandwich
     }
 
     private double calculateEnemyThreats(List<PieceEntity> board, int myOwnerIndex) {
@@ -50,96 +158,59 @@ public class AiSimulationService {
                 .findFirst().orElse(null);
 
         if (myLeader == null)
-            return -999999.0; // Already dead (Panic!)
+            return -999999.0; // Leader is dead (Panic!)
 
-        for (PieceEntity enemy : enemyPieces) {
-            String charId = enemy.getCharacterId();
-            int dist = distance(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR());
-            boolean inLos = isInLoS(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR());
+        // --- GLOBAL PROTECTION: Check threats for EVERY piece ---
+        for (PieceEntity myPiece : myPieces) {
+            double pieceWeight = "LEADER".equals(myPiece.getCharacterId()) ? 1.0 : 0.4;
+            double pieceHazard = 0.0;
 
-            // --- 1. KILL THREATS (Capture) ---
+            for (PieceEntity enemy : enemyPieces) {
+                int dist = distance(enemy.getQ(), enemy.getR(), myPiece.getQ(), myPiece.getR());
+                boolean inLos = isInLoS(enemy.getQ(), enemy.getR(), myPiece.getQ(), myPiece.getR());
+                String charId = enemy.getCharacterId();
 
-            // Standard Move Capture (Range 1)
-            if (dist == 1)
-                return -100000.0;
+                // 1. DIRECT CAPTURE THREATS (Next turn)
+                if (dist == 1) {
+                    pieceHazard -= 1500.0; // Standard capture
+                }
 
-            // CAVALRY: Move 2 straight
-            if ("CAVALRY".equals(charId) && dist == 2 && inLos)
-                return -100000.0;
+                // Special capture units
+                if ("CAVALRY".equals(charId) && dist <= 2 && inLos)
+                    pieceHazard -= 1500.0;
+                if ("ARCHER".equals(charId) && dist == 2 && inLos)
+                    pieceHazard -= 1200.0;
+                if ("ASSASSIN".equals(charId) && dist == 2)
+                    pieceHazard -= 2000.0;
+                if ("ACROBAT".equals(charId) && dist == 2 && inLos) {
+                    HexCoord mid = getMidPoint(enemy.getQ(), enemy.getR(), myPiece.getQ(), myPiece.getR());
+                    if (!isCellEmpty(mid.q(), mid.r(), board)) {
+                        pieceHazard -= 1000.0;
+                    }
+                }
 
-            // ACROBAT: Jump over 1 unit (Range 2)
-            if ("ACROBAT".equals(charId) && dist == 2 && inLos) {
-                // Check if there is a unit to jump over (middle hex)
-                HexCoord mid = getMidPoint(enemy.getQ(), enemy.getR(), myLeader.getQ(), myLeader.getR());
-                if (!isCellEmpty(mid.q(), mid.r(), board))
-                    return -100000.0;
+                // 2. DISPLACEMENT / CONTROL THREATS
+                if (dist > 1 && dist <= 3 && inLos) {
+                    if ("GRAPPLER".equals(charId))
+                        pieceHazard -= 400.0;
+                    if ("ILLUSIONIST".equals(charId))
+                        pieceHazard -= 500.0;
+                    if ("MANIPULATOR".equals(charId))
+                        pieceHazard -= 200.0;
+                }
+
+                // --- SETUP PREDICTION: Anticipating Sandwich ---
+                if (dist == 1) {
+                    for (PieceEntity otherEnemy : enemyPieces) {
+                        if (otherEnemy.getId().equals(enemy.getId()))
+                            continue;
+                        if (isSandwiched(myPiece.getQ(), myPiece.getR(), enemy, otherEnemy)) {
+                            pieceHazard -= 800.0; // Potential sandwich setup
+                        }
+                    }
+                }
             }
-
-            // PROWLER: Stealth (Can jump anywhere non-adjacent to enemies... if Leader is
-            // alone, Prowler can capture?)
-            // Prowler moves to a spot, then next turn captures. But if it can capture THIS
-            // turn, it means it was already close.
-            // Actually Prowler's ability is a MOVE. To capture, it must move ONTO the
-            // leader.
-            // Prowler cannot land adjacent to an enemy. So it cannot capture directly with
-            // ability unless target blocks?
-            // "Se déplace sur n’importe quelle case non-adjacente à un ennemi." -> It
-            // cannot capture with Stealth.
-            // But it can Move normally (dist 1). (Handled above).
-
-            // ASSASSIN: Solo Capture (Passive)
-            // If Assassin moves adjacent (dist 1), it captures. Handled by "Standard Move".
-            // But AI must strictly avoid ending turn adjacent to Assassin.
-            // If Assassin is at dist 2, it can move and kill. (Handled by Standard Move
-            // check if we simulating THEIR turn).
-            // Wait, calculateEnemyThreats checks if THEY can kill US in THEIR next turn.
-
-            // ARCHER: Ranged Capture (Passive)
-            // If Archer is at dist 2 line, and SOMEONE acts as anvil... leader dies.
-            if ("ARCHER".equals(charId) && dist == 2 && inLos) {
-                // Check if there is an anvil (enemy of Archer = my friendly unit?)
-                // No, standard capture is Sandwich. Archer counts as one bun at dist 2.
-                // We need to check if there is an ENEMY (Ally of Archer) at dist 1 opposite to
-                // Archer.
-                // Actually, simpler heuristic: Archer at dist 2 is VERY DANGEROUS.
-                hazardScore -= 2000.0;
-            }
-
-            // --- 2. DISPLACEMENT / CONTROL THREATS ---
-
-            // GRAPPLER: Hook (Range 2-3 Line)
-            if ("GRAPPLER".equals(charId) && dist > 1 && dist <= 3 && inLos) {
-                // Pulls Leader. Dangerous.
-                hazardScore -= 500.0;
-            }
-
-            // ILLUSIONIST: Swap (Range 2-3 Line)
-            if ("ILLUSIONIST".equals(charId) && dist > 1 && dist <= 3 && inLos) {
-                hazardScore -= 600.0; // Swapping Leader is usually death
-            }
-
-            // BRAWLER: Push (Adj) -> Handled by dist=1 check?
-            // Brawler adjacent can push Leader into danger.
-            if ("BRAWLER".equals(charId) && dist == 1) {
-                hazardScore -= 300.0;
-            }
-
-            // MANIPULATOR: Move 1 (Range 2-3?)
-            // "Déplace d’une case un ennemi visible en ligne droite et non-adjacent."
-            if ("MANIPULATOR".equals(charId) && dist > 1 && inLos) {
-                hazardScore -= 200.0;
-            }
-
-            // JAILER: Block (Adj)
-            if ("JAILER".equals(charId) && dist == 1) {
-                hazardScore -= 100.0; // Annoying but not fatal immediately
-            }
-
-            // OLD_BEAR / CUB (Just standard units)
-
-            // General Proximity Danger (Swarm)
-            if (dist <= 2)
-                hazardScore -= 50.0;
+            hazardScore += (pieceHazard * pieceWeight);
         }
 
         return hazardScore;

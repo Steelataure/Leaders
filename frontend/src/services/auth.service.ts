@@ -68,5 +68,13 @@ export const authService = {
 
     async getLeaderboard(): Promise<User[]> {
         return await apiClient.get<User[]>('/auth/leaderboard');
+    },
+
+    async updateAvatar(userId: string, avatar: string): Promise<User> {
+        const user = await apiClient.patch<User>(`/auth/avatar?userId=${userId}&avatar=${encodeURIComponent(avatar)}`, {});
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        }
+        return user;
     }
 };

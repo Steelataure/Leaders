@@ -4,6 +4,7 @@ public class ChatMessageDto {
     private String sessionId;
     private String senderId;
     private String senderName;
+    private String senderAvatar;
     private String content;
     private long timestamp;
 
@@ -11,10 +12,11 @@ public class ChatMessageDto {
         this.timestamp = System.currentTimeMillis();
     }
 
-    public ChatMessageDto(String sessionId, String senderId, String senderName, String content) {
+    public ChatMessageDto(String sessionId, String senderId, String senderName, String senderAvatar, String content) {
         this.sessionId = sessionId;
         this.senderId = senderId;
         this.senderName = senderName;
+        this.senderAvatar = senderAvatar;
         this.content = content;
         this.timestamp = System.currentTimeMillis();
     }
@@ -42,6 +44,14 @@ public class ChatMessageDto {
 
     public void setSenderName(String senderName) {
         this.senderName = senderName;
+    }
+
+    public String getSenderAvatar() {
+        return senderAvatar;
+    }
+
+    public void setSenderAvatar(String senderAvatar) {
+        this.senderAvatar = senderAvatar;
     }
 
     public String getContent() {

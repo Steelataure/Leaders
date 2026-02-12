@@ -33,6 +33,8 @@ public class UserCredentialsEntity {
     @Builder.Default
     private int elo = 1000;
 
+    private String avatar;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

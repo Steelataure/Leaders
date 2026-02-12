@@ -3,6 +3,7 @@ import { authService } from "../services/auth.service";
 import { joinPublicQueue, createPrivateSession, joinPrivateSession, cancelSearch, createGame, createAiGame, API_BASE_URL } from "../api/gameApi";
 import { webSocketService } from "../services/WebSocketService";
 import type { User } from "../types/auth.types";
+import { CHARACTER_IMAGES } from "../constants/characters";
 import RankBadge from "../components/RankBadge";
 import Leaderboard from "../components/Leaderboard";
 import { Rain } from "../components/Rain";
@@ -24,6 +25,7 @@ export default function Lobby({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [volume, setVolume] = useState(0);
   const [sfxEnabled, setSfxEnabled] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -238,10 +240,14 @@ export default function Lobby({
                 {user && user.username !== "Joueur" ? user.username : "SESSION INVITÉ"}
               </span>
             </div>
-            <div className="xs:hidden">
-              <UserIcon className={`w-5 h-5 ${user && user.username !== "Joueur" ? 'text-cyan-400' : 'text-slate-400'}`} />
+            <div className="flex items-center gap-2">
+              {user && user.username !== "Joueur" && user.avatar ? (
+                <img src={CHARACTER_IMAGES[user.avatar]} className="w-6 h-6 rounded-full border border-cyan-500/50 object-cover" alt="Avatar" />
+              ) : (
+                <UserIcon className={`w-5 h-5 ${user && user.username !== "Joueur" ? 'text-cyan-400' : 'text-slate-400'}`} />
+              )}
+              {user && user.username !== "Joueur" && <RankBadge elo={user.elo} size="sm" showElo={true} />}
             </div>
-            {user && user.username !== "Joueur" && <RankBadge elo={user.elo} size="sm" showElo={true} />}
           </button>
 
           {dropdownOpen && (
@@ -270,6 +276,13 @@ export default function Lobby({
                     <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center"><LogOut className="w-4 h-4" /></div>
                     DÉCONNEXION
                   </button>
+                  <button
+                    onClick={() => { setAvatarModalOpen(true); setDropdownOpen(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-cyan-400 hover:bg-cyan-500/10 rounded transition-colors flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center"><UserIcon className="w-4 h-4" /></div>
+                    CHANGER D'AVATAR
+                  </button>
                 </div>
               )}
             </div>
@@ -279,12 +292,11 @@ export default function Lobby({
 
       {/* MAIN LAYOUT */}
       <div className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col lg:flex-row gap-6 md:gap-8 items-stretch justify-center lg:h-[calc(100vh-100px)] pb-12 overflow-y-auto lg:overflow-hidden">
-
         {/* LEFT: ACTION PANEL */}
         <div className="flex-[2] flex flex-col gap-6 h-full">
 
           {/* HERO / PLAY */}
-          <div className="flex-1 bg-gradient-to-br from-slate-900/90 to-black/90 backdrop-blur-md border-l-2 border-cyan-500/50 rounded-r-xl p-8 flex flex-col justify-between group relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] holo-corner bg-scanline">
+          <div className="flex-1 bg-gradient-to-br from-slate-900/90 to-black/90 backdrop-blur-md border-l-2 border-cyan-500/50 rounded-r-xl p-8 flex flex-col justify-between group relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] holo-corner bg-scanline" >
 
             {/* Decorative Lines */}
             <div className="absolute top-0 right-0 w-32 h-1 bg-gradient-to-l from-cyan-500/50 to-transparent" />
@@ -293,9 +305,16 @@ export default function Lobby({
             <div className="relative z-10 w-full">
               {user && user.username !== "Joueur" ? (
                 <div className="flex items-center gap-4 mb-6 bg-cyan-950/20 p-4 rounded-lg border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.1)] backdrop-blur-sm animate-in fade-in slide-in-from-left duration-500">
-                  <div className="relative">
-                    <div className="w-14 h-14 bg-cyan-900/20 rounded hexagon-mask flex items-center justify-center border-2 border-cyan-500/50">
-                      <UserIcon className="w-7 h-7 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
+                  <div className="relative cursor-pointer group/avatar" onClick={() => setAvatarModalOpen(true)}>
+                    <div className="w-14 h-14 bg-cyan-900/20 rounded hexagon-mask flex items-center justify-center border-2 border-cyan-500/50 overflow-hidden relative">
+                      {user.avatar ? (
+                        <img src={CHARACTER_IMAGES[user.avatar]} className="w-full h-full object-cover" alt="Avatar" />
+                      ) : (
+                        <UserIcon className="w-7 h-7 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
+                      )}
+                      <div className="absolute inset-0 bg-cyan-500/20 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+                        <Settings className="w-4 h-4 text-white" />
+                      </div>
                     </div>
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black animate-pulse" />
                   </div>
@@ -354,6 +373,7 @@ export default function Lobby({
                   <option value={0}>⚔️ MODE CLASSÉ</option>
                   <option value={-1}>🤖 VS IA (FACILE)</option>
                   <option value={-2}>😈 VS IA (DIFFICILE)</option>
+                  <option value={-3}>👹 VS IA (EXPERT)</option>
                 </select>
 
                 <button
@@ -364,9 +384,11 @@ export default function Lobby({
                       setIsSearching(false);
                     } else {
                       // VS AI Check
-                      if (selectedScenario === -1 || selectedScenario === -2) {
+                      if (selectedScenario === -1 || selectedScenario === -2 || selectedScenario === -3) {
                         try {
-                          const difficulty = selectedScenario === -2 ? "HARD" : "EASY";
+                          let difficulty: "EASY" | "HARD" | "EXPERT" = "EASY";
+                          if (selectedScenario === -2) difficulty = "HARD";
+                          if (selectedScenario === -3) difficulty = "EXPERT";
                           const gameId = await createAiGame(user?.id || "GUEST", difficulty);
                           onStartGame(gameId);
                         } catch (e) {
@@ -492,12 +514,10 @@ export default function Lobby({
             <Leaderboard />
           </div>
         </div>
-
       </div>
 
       <SystemStatus />
 
-      {/* --- MODALS (Login/Register/Settings) - Styled consistently --- */}
       {loginOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
           <div className="bg-slate-900 border border-cyan-500/30 p-6 md:p-8 rounded-xl w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] relative">
@@ -572,6 +592,49 @@ export default function Lobby({
             <button onClick={() => setAboutOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">✕</button>
             <h2 className="font-orbitron font-bold text-2xl mb-4 text-white">PROTOCOLE LEADERS</h2>
             <p className="font-rajdhani">Version 2.0.4. Système de simulation tactique.</p>
+          </div>
+        </div>
+      )}
+
+      {avatarModalOpen && user && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in zoom-in duration-200">
+          <div className="bg-slate-900/90 border border-cyan-500/30 p-8 rounded-2xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setAvatarModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+              <GlitchText text="✕" />
+            </button>
+
+            <h2 className="font-orbitron text-2xl font-bold text-white mb-8 uppercase tracking-[0.2em] text-center border-b border-cyan-500/20 pb-4">
+              <GlitchText text="SÉLECTION D'AVATAR" />
+            </h2>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+              {Object.keys(CHARACTER_IMAGES).filter(key => key !== "CUB" && !key.startsWith("LEADER_")).map((key) => (
+                <button
+                  key={key}
+                  onClick={async () => {
+                    try {
+                      setIsLoading(true);
+                      const updatedUser = await authService.updateAvatar(user.id, key);
+                      setUser(updatedUser);
+                      setAvatarModalOpen(false);
+                    } catch (err) {
+                      setError("Erreur lors de la mise à jour de l'avatar");
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  className={`
+                    group relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300
+                    ${user.avatar === key ? 'border-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'border-white/10 hover:border-cyan-500/50'}
+                  `}
+                >
+                  <img src={CHARACTER_IMAGES[key]} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2">
+                    <span className="text-[10px] font-orbitron text-cyan-400 font-bold tracking-widest">{key}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

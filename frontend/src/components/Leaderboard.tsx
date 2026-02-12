@@ -3,6 +3,7 @@ import { authService } from "../services/auth.service";
 import type { User } from "../types/auth.types";
 import { Crown, Trophy, Medal } from "lucide-react";
 import RankBadge from "./RankBadge";
+import { CHARACTER_IMAGES } from "../constants/characters";
 
 export default function Leaderboard() {
     const [leaders, setLeaders] = useState<User[]>([]);
@@ -57,9 +58,16 @@ export default function Leaderboard() {
                                     {getRankIcon(index)}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className={`font-rajdhani font-bold text-sm ${index === 0 ? 'text-amber-100' : 'text-slate-200'}`}>
-                                        {user.username}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {user.avatar && (
+                                            <div className="w-5 h-5 rounded-full border border-cyan-500/30 overflow-hidden bg-slate-800">
+                                                <img src={CHARACTER_IMAGES[user.avatar]} className="w-full h-full object-cover" alt="avatar" />
+                                            </div>
+                                        )}
+                                        <span className={`font-rajdhani font-bold text-sm ${index === 0 ? 'text-amber-100' : 'text-slate-200'}`}>
+                                            {user.username}
+                                        </span>
+                                    </div>
                                     <div className="scale-75 origin-left">
                                         <RankBadge elo={user.elo} size="sm" showElo={false} />
                                     </div>
