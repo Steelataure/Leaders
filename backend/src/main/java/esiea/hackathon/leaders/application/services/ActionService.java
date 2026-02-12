@@ -226,7 +226,7 @@ public class ActionService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Current player not found"));
 
-        if (!playerId.equals(currentPlayer.getUserId())) {
+        if (playerId != null && !playerId.equals(currentPlayer.getUserId())) {
             throw new IllegalStateException("Not your turn!");
         }
 

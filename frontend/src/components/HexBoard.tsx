@@ -660,7 +660,7 @@ export default function HexBoard(props: HexBoardProps) {
     if (actionMode === "ABILITY" && isValidAbilityClick && onAbilityUse && selectedPiece) {
       console.log("HexBoard: Special Ability Click detected for", abilityKey);
       let abilityId = "";
-      let targetId = "";
+      let targetId: string | undefined = undefined;
 
       if (selectedPiece.characterId === "PROWLER") {
         abilityId = "PROWLER_STEALTH";
@@ -679,7 +679,7 @@ export default function HexBoard(props: HexBoardProps) {
 
       if (abilityId) {
         console.log("HexBoard: Executing Ability", abilityId, "at", cell.q, cell.r, "target:", targetId);
-        onAbilityUse(selectedPiece.id, abilityId, targetId, { q: cell.q, r: cell.r });
+        onAbilityUse(selectedPiece.id, abilityId, targetId || "", { q: cell.q, r: cell.r });
         playPlacement();
         onSelectPiece(null);
         return;

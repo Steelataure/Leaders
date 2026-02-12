@@ -559,7 +559,10 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
       const currentUser = user || authService.getUser();
       const playerId = currentUser?.id || sessionId;
       try {
-        if (gameState?.status !== "IN_PROGRESS") return;
+        if (gameState?.status !== "IN_PROGRESS") {
+          console.warn("Ability usage blocked: Game not IN_PROGRESS", gameState?.status);
+          return;
+        }
         await gameApi.useAbility(gameId, pieceId, abilityId, targetId, destination, secondaryDest, playerId);
         console.log("Game: Ability API call success");
         const game = await gameApi.getGameState(gameId);
@@ -571,24 +574,33 @@ export default function Game({ gameId, sessionId: propSessionId, onBackToLobby }
         setGrapplerTarget(null);
         setGrapplerMode(null);
         setInnkeeperTarget(null);
-      } catch (err) {
-        console.error("Ability error:", err);
-        alert("Erreur lors de l'utilisation de la compétence: " + err);
+      } catch (err: any) {
+        console.error("Ability error details:", err);
+        console.error("Ability error message:", err.message);
+        console.error("Ability error stack:", err.stack);
+        alert("Erreur compétence: " + (err.message || JSON.stringify(err)));
       }
     },
-    [gameId],
+    [gameId, gameState, user, sessionId],
   );
 
   const handleSkipActions = useCallback(async () => {
-    if (!gameId || !user?.id || gameState?.status !== "IN_PROGRESS") return;
+    const currentUser = user || authService.getUser();
+    const playerId = currentUser?.id || sessionId;
+
+    if (!gameId || !playerId || gameState?.status !== "IN_PROGRESS") {
+      console.warn("Skip action blocked:", { gameId, hasPlayerId: !!playerId, status: gameState?.status });
+      return;
+    }
     try {
-      await gameApi.skipActions(gameId, user.id);
+      await gameApi.skipActions(gameId, playerId);
       const game = await gameApi.getGameState(gameId);
       updateGameState(game);
     } catch (err: any) {
+      console.error("Skip action error:", err);
       alert(err.message);
     }
-  }, [gameId, user?.id, updateGameState]);
+  }, [gameId, user, sessionId, gameState?.status, updateGameState]);
 
   // Filtrage des interactions du plateau selon le mode
   const handleBoardAbilityUse = (pid: string, aid: string, tid: string, dest?: { q: number; r: number }) => {

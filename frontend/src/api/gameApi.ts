@@ -259,7 +259,11 @@ export async function movePiece(
   const res = await fetch(`${BASE_URL}/pieces/${pieceId}/move`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ toQ, toR, playerId }),
+    body: JSON.stringify({
+      toQ,
+      toR,
+      playerId: (playerId && playerId.trim() !== "") ? playerId : null
+    }),
   });
 
   if (!res.ok) {
@@ -285,10 +289,10 @@ export async function useAbility(
     body: JSON.stringify({
       sourceId,
       abilityId,
-      targetId: targetId || null,
+      targetId: (targetId && targetId.trim() !== "") ? targetId : null,
       destination: destination || null,
       secondaryDestination: secondaryDestination || null,
-      playerId: playerId || null,
+      playerId: (playerId && playerId.trim() !== "") ? playerId : null,
     }),
   });
 
@@ -304,7 +308,9 @@ export async function skipActions(gameId: string, playerId: string): Promise<voi
   const res = await fetch(`${BASE_URL}/games/${gameId}/skip-actions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ playerId }),
+    body: JSON.stringify({
+      playerId: (playerId && playerId.trim() !== "") ? playerId : null
+    }),
   });
 
   if (!res.ok) {
@@ -317,7 +323,9 @@ export async function surrender(gameId: string, playerId: string): Promise<void>
   const res = await fetch(`${BASE_URL}/games/${gameId}/surrender`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ playerId }),
+    body: JSON.stringify({
+      playerId: (playerId && playerId.trim() !== "") ? playerId : null
+    }),
   });
 
   if (!res.ok) {
